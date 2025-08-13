@@ -9,7 +9,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 contract CrowdFund {
     // State variables
     address public projectOwner;
-    address public protocol;
+    address public constant protocol =
+        0x3989F40a2b256004A2866Ab0805859d30605Ca4a;
     mapping(address => uint256) public contributorsToAmountContributed;
     mapping(address => bool) public hasContributed;
     address[] public contributors;
@@ -37,7 +38,7 @@ contract CrowdFund {
             "Zero address cannot be projectOwner"
         );
         projectOwner = _projectOwner;
-        protocol = msg.sender;
+        // protocol is always the designated address
     }
 
     // Calculate protocol fee (5% of contribution)
