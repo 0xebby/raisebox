@@ -13,7 +13,7 @@ contract CrowdFund {
         0x3989F40a2b256004A2866Ab0805859d30605Ca4a;
     mapping(address => uint256) public contributorsToAmountContributed;
     mapping(address => bool) public hasContributed;
-    address[] public contributors;
+    address[] private contributors;
     uint256 public totalAmountContributed;
     uint256 public totalProtocolFees;
     uint256 private constant PROTOCOL_FEE = 5; // 5%
@@ -112,4 +112,31 @@ contract CrowdFund {
     // Allow contract to receive ETH
     /// @notice Allow contract to receive ETH directly
     receive() external payable {}
+
+    // notes of task for commit message:
+    // 1. added getter functions
+    // 2. added getter function tests
+    // 3. tested contribute function
+
+    // getter functions
+
+    function getContributors() public view returns (address[] memory) {
+        return contributors;
+    }
+
+    function getAmountContributedByContributor(address _contributor) public view returns (uint256) {
+        return contributorsToAmountContributed[_contributor];
+    }
+
+    function getProtocolFee(uint256 amountToContribute) public view returns (uint256) {
+        return calculateProtocolFees(amountToContribute);
+    }
+
+    function getTotalAmountContributed() public view returns (uint256) {
+        return totalAmountContributed;
+    }
+
+    function getTotalProtocolFees() public view returns (uint256) {
+        return totalProtocolFees;
+    }
 }
