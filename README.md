@@ -1,7 +1,7 @@
-# CrowdFund Smart Contract
+# smartCrowdFunder
 
 ## Overview
-CrowdFund is a decentralized crowdfunding smart contract built in Solidity. It allows contributors to fund a project, collects protocol fees, and enables the project owner and protocol to withdraw funds securely. The contract is designed for deployment on EVM-compatible blockchains (e.g., Sepolia, Ethereum mainnet, etc.).
+smartCrowdFunder is a decentralized crowdfunding smart contract built in Solidity. It allows contributors to fund a project, collects protocol fees, and enables the project owner and protocol to withdraw funds securely. The contract is designed for deployment on EVM-compatible blockchains (e.g., Sepolia, Ethereum mainnet, etc.).
 
 ## Features
 - **Contribution:** Anyone can contribute ETH to a project, subject to a minimum contribution of 0.00001 ether == 1e15.

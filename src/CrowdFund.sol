@@ -129,7 +129,7 @@ contract CrowdFund {
     }
 
     function getProtocolFee(uint256 amountToContribute) public view returns (uint256) {
-        return calculateProtocolFees(amountToContribute);
+        return calculateProtocolFees(amountToContribute); // updated the implementation for this
     }
 
     function getTotalAmountContributed() public view returns (uint256) {
