@@ -9,8 +9,9 @@ contract DeployCrowdFund is Script {
 
     function run() public {
         vm.startBroadcast();
-        crowdFund = new CrowdFund(0x32E29476f95e446A4f717d25825BA882c5874F04);
+        crowdFund = new CrowdFund();
         // 0x32e29476f95e446a4f717d25825ba882c5874f04;
+        //0x32E29476f95e446A4f717d25825BA882c5874F04
         vm.stopBroadcast();
     }
 
