@@ -17,7 +17,7 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
     uint256 public constant MAX_PERCENTAGE = 100; 
 
     // percent of the amount raised by the project that goes to protocol
-    uint256 private constant PROTOCOL_FEE = 2; // 2%
+    uint256 private constant PROTOCOL_FEE = 2; // 2%   
 
     // protocol address - raisebox
     address payable public protocol;
