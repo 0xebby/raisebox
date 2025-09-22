@@ -14,7 +14,7 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
     // MINIMUM_CONTRIBUTION = 0.01 ether; // 1e16
     uint256 public constant MINIMUM_CONTRIBUTION = 0.01 ether;
 
-    uint256 public constant MAX_PERCENTAGE = 100;
+    uint256 public constant MAX_PERCENTAGE = 100; // max 100%
 
     // percent of the amount raised by the project that goes to protocol
     uint256 private constant PROTOCOL_FEE = 2; // 2%
