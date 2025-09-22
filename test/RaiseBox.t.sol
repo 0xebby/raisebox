@@ -44,14 +44,22 @@ contract TestRaiseBox is Test {
         raiseBoxStorage = new RaiseBoxStorage();
 
         // deploy project creation contract with CA of main contract above
-        raiseBoxProjectCreationContract = new RaiseBox(address(raiseBoxStorage));
+        raiseBoxProjectCreationContract = new RaiseBox(
+            address(raiseBoxStorage)
+        );
 
         // set the address of the project creation contract so it can be referenced
-        raiseBoxStorage.setProjectCreationContractAddress(address(raiseBoxProjectCreationContract));
+        raiseBoxStorage.setProjectCreationContractAddress(
+            address(raiseBoxProjectCreationContract)
+        );
 
-        raiseBoxContributionContract = new RaiseBoxContribution(address(raiseBoxStorage));
+        raiseBoxContributionContract = new RaiseBoxContribution(
+            address(raiseBoxStorage)
+        );
 
-        raiseBoxStorage.setContributionContractAddress(address(raiseBoxContributionContract));
+        raiseBoxStorage.setContributionContractAddress(
+            address(raiseBoxContributionContract)
+        );
         // raiseBoxProposalContract = new RaiseBoxProposal(
         //     address(raiseBoxStorage),
         //     address(raiseBoxProjectCreationContract)
@@ -76,28 +84,71 @@ contract TestRaiseBox is Test {
     function test_address() public {
         vm.prank(alice);
         bytes32 projectId1 = raiseBoxProjectCreationContract.createProject(
-            "starknet", "zero knowledge proof trades, trading should be aprivate affair", 300 ether, 35 days
+            "starknet",
+            "zero knowledge proof trades, trading should be aprivate affair",
+            300 ether,
+            35 days
         );
 
-        bytes32 projectID = keccak256(abi.encode("fake project", 5000 ether, block.timestamp, "fake value"));
+        advanceBlockTime(block.timestamp + 78 weeks);
+
+        vm.prank(alice);
+        bytes32 projectId2 = raiseBoxProjectCreationContract.createProject(
+            "starknet 2",
+            "ai swarmp",
+            3000 ether,
+            35 days
+        );
+
+        advanceBlockTime(block.timestamp + 78 weeks);
+
+        vm.prank(alice);
+        bytes32 projectId3 = raiseBoxProjectCreationContract.createProject(
+            "starknet 3",
+            "ai swarmp",
+            450 ether,
+            35 days
+        );
+
+        advanceBlockTime(block.timestamp + 78 weeks);
+
+        vm.prank(alice);
+        bytes32 projectId4 = raiseBoxProjectCreationContract.createProject(
+            "starknet 3",
+            "ai swarmp",
+            450 ether,
+            35 days
+        );
+
+        // bytes32 projectID = keccak256(
+        //     abi.encode(
+        //         "fake project",
+        //         5000 ether,
+        //         block.timestamp,
+        //         "fake value",
+        //         alice
+        //     )
+        // );
 
         address projectCreationCA = address(raiseBoxProjectCreationContract);
 
-        vm.prank(projectCreationCA);
+        // raiseBoxStorage.updateIDsStorage(projectID);
 
-        raiseBoxStorage.updateStorage(
-            projectID,
-            "fake project",
-            address(0x1),
-            "fake value proposition",
-            5000 ether,
-            10 days,
-            true,
-            block.timestamp,
-            0,
-            0,
-            1
-        );
+        // vm.prank(alice);
+
+        // raiseBoxStorage.updateStorage(
+        //     projectID,
+        //     "fake project",
+        //     address(0x1),
+        //     "fake value proposition",
+        //     5000 ether,
+        //     10 days,
+        //     true,
+        //     block.timestamp,
+        //     0,
+        //     0,
+        //     1
+        // );
 
         // vm.prank(ben);
         // bytes32 projectId11 = raiseBoxProjectCreationContract.createProject(
@@ -148,7 +199,7 @@ contract TestRaiseBox is Test {
         //     projectId1
         // );
 
-        raiseBoxStorage.getProjectInfo(projectID);
+        // raiseBoxStorage.getProjectInfo(projectID);
     }
 
     // function testHostProposal() public {

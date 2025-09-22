@@ -124,7 +124,8 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
 
     // ----------------------------------------------------------------------- functions -------------------------------------------------------------------------  //
 
-    mapping(address projectOwner => uint256 lastProjectCreationTime) public i_lastProjectCreation;
+    mapping(address projectOwner => uint256 lastProjectCreationTime)
+        public i_lastProjectCreation;
 
     uint256 public constant PER_PROJECT_CREATION_COOLDOWN = 78 weeks; // [1 year and 6 months] before same project can create another raise on raisebox
 
@@ -141,13 +142,15 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
         uint256 amountToRaise_,
         uint256 duration_
     ) public returns (bytes32) {
-
         // when project is created on raisebox
         uint256 timeCreated;
 
         // checks that a project cannot create more than one project within 78 weeks
         if (projectCountPerProjectOwner[msg.sender] > 0) {
-            if (PER_PROJECT_CREATION_COOLDOWN > (block.timestamp - i_lastProjectCreation[msg.sender])) {
+            if (
+                PER_PROJECT_CREATION_COOLDOWN >
+                (block.timestamp - i_lastProjectCreation[msg.sender])
+            ) {
                 revert RaiseBox_createProject_AlreadyHaveALiveProject();
             }
         }
@@ -157,21 +160,31 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
         require(bytes(projectName_).length > 0, "Enter valid project name");
         //need to check if project with similar project doesn't already exist
 
-        require(bytes(valueProposition_).length > 0, "Enter valid problem statement");
+        require(
+            bytes(valueProposition_).length > 0,
+            "Enter valid problem statement"
+        );
 
         require(amountToRaise_ != 0, "Cannot raise 0 funds");
 
         require(duration_ != 0, "Enter valid duration");
 
-        require(duration_ <= 60 days, "Cannot host a raise on raisebox for more than 60 days");
+        require(
+            duration_ <= 60 days,
+            "Cannot host a raise on raisebox for more than 60 days"
+        );
         // max duration is 60 days -- 2 months
 
         // generate projectID:
-        bytes32 projectID = keccak256(abi.encode(projectName_, amountToRaise_, timeCreated, valueProposition_, msg.sender));
-
-        // raiseBoxStorage.getIDs().push(projectID);
-
-        // bytes32[] storage IDs = raiseBoxStorage.s_raiseBoxProjectIDs;
+        bytes32 projectID = keccak256(
+            abi.encode(
+                projectName_,
+                amountToRaise_,
+                timeCreated,
+                valueProposition_,
+                msg.sender
+            )
+        );
 
         bool doesProjectExists = raiseBoxStorage.getProjectExist(projectID);
 
@@ -180,6 +193,7 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
         }
 
         timeCreated = block.timestamp;
+        
         if (!doesProjectExists) {
             raiseBoxStorage.updateStorage(
                 projectID,
@@ -195,8 +209,6 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
                 projectCountPerProjectOwner[msg.sender] += 1
             );
         }
-
-        bool doesProjectExistsAfterCreation = raiseBoxStorage.getProjectExist(projectID);
 
         projectIndex++;
         i_lastProjectCreation[msg.sender] = timeCreated;
@@ -218,32 +230,6 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
 
         return projectID;
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
 
     // function calProtocolFees(
     //     bytes32 projectId_
