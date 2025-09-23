@@ -23,15 +23,20 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage {
     // contributions/users related state variables:
     mapping(address => uint256) public contributorsToAmountContributed; // not project dependent
 
-    mapping(address contributor => mapping(bytes32 projectId => uint256 amtContributed)) public
-        amountContributedToProject;
+    mapping(address contributor => mapping(bytes32 projectId => uint256 amtContributed))
+        public amountContributedToProject;
 
     mapping(bytes32 => address[]) private contributors;
 
     // amount per contribution
-    mapping(address => mapping(bytes32 => uint256)) public amountPerContribution;
+    mapping(address => mapping(bytes32 => uint256))
+        public amountPerContribution;
 
     uint256 public constant MAX_CONTRIBUTION_PERCENTAGE = 20; // 2% OF AMOUNT TO RAISE
+
+    // tracks total amounts contributed to project
+
+    uint256 public totalContributionsToProject;
 
     // contribution state enum
     enum ContributionState {
@@ -53,7 +58,12 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage {
     error RaiseBoxContribution_contribute_ContributionAboveMax(uint256);
 
     // contribution related events:
-    event Contributed(address indexed user, uint256 indexed amount, bytes32 indexed projectId, uint256 amountRaised);
+    event Contributed(
+        address indexed user,
+        uint256 indexed amount,
+        bytes32 indexed projectId,
+        uint256 amountRaised
+    );
 
     // constructor(address raiseBoxCoreaddress_) {
     //     raiseBoxCoreaddress = raiseBoxCoreaddress_;
@@ -64,7 +74,10 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage {
         raiseBoxCore = ICore(raiseBoxCoreAddress);
     }
 
-    function contribute(uint256 amount, bytes32 projectId) external payable nonReentrant {
+    function contribute(
+        uint256 amount,
+        bytes32 projectId
+    ) external payable nonReentrant {
         // projectId should be filled automatically via UI for project clicked by user
 
         // Checks
@@ -97,26 +110,35 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage {
         }
 
         uint256 amtToRaise = raiseBoxCore.getAmountToRaise(projectId);
-        uint256 amountRaisedByProject = raiseBoxCore.getAmountRaisedByProject(projectId);
+        // uint256 amountRaisedByProject = raiseBoxCore.getAmountRaisedByProject(
+        //     projectId
+        // );
 
         uint256 maxContribution = calMaxContribution(projectId, amtToRaise);
 
-        if (amountContributedToProject[msg.sender][projectId] + amount > maxContribution) {
-            revert RaiseBoxContribution_contribute_ContributionAboveMax(amtToRaise);
+        if (
+            amountContributedToProject[msg.sender][projectId] + amount >
+            maxContribution
+        ) {
+            revert RaiseBoxContribution_contribute_ContributionAboveMax(
+                amtToRaise
+            );
         }
 
-        if (amountRaisedByProject == amtToRaise) {
+        if (totalContributionsToProject == amtToRaise) {
             revert RaiseBox_RaiseEnded(projectId);
         }
 
-        uint256 amountToTarget = (amtToRaise - amountRaisedByProject);
-        uint256 totalToRaise = (amount + amountRaisedByProject);
+        uint256 amountToTarget = (amtToRaise - totalContributionsToProject);
+        uint256 totalToRaise = (amount + totalContributionsToProject);
 
         require(
             (totalToRaise <= amtToRaise),
             string(
                 abi.encodePacked(
-                    "Cannot over contribute: you can contribute only:", amountToTarget.toString(), " ether more"
+                    "Cannot over contribute: you can contribute only:",
+                    amountToTarget.toString(),
+                    " ether more"
                 )
             )
         );
@@ -126,31 +148,42 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage {
 
         amountPerContribution[msg.sender][projectId] = amount;
 
+        totalContributionsToProject += amount;
+
         // raiseBoxCore.updateAmountRaisedByProject(projectId, amount);
 
-        raiseBoxCore.updateStorage(
-            projectId,
-            "name",
+        if (totalContributionsToProject == amtToRaise) {
+            raiseBoxCore.updateStorage(
+                projectId,
+                "name",
+                msg.sender,
+                "cook",
+                100 ether,
+                3 days,
+                true,
+                block.timestamp,
+                totalContributionsToProject,
+                0,
+                0
+            );
+        }
+
+        emit Contributed(
             msg.sender,
-            "cook",
-            100 ether,
-            3 days,
-            true,
-            block.timestamp,
-            amount, // this is the only thing that will be updated and written to state, the rest are placeholders
-            0,
-            0
+            amount,
+            projectId,
+            raiseBoxCore.getAmountRaisedByProject(projectId)
         );
 
-        emit Contributed(msg.sender, amount, projectId, raiseBoxCore.getAmountRaisedByProject(projectId));
-
         // Interactions
-        (bool successfullyContributed,) = raiseBoxProtocol.call{value: amount}(""); // funds sent to protocol for safekeeping pending release to project
+        (bool successfullyContributed, ) = raiseBoxProtocol.call{value: amount}(
+            ""
+        ); // funds sent to protocol for safekeeping pending release to project
         if (!successfullyContributed) {
             revert RaiseBoxContribution_ContributionFailed();
         }
 
-        if (amountRaisedByProject == amtToRaise) {
+        if (totalContributionsToProject == amtToRaise) {
             emit RaiseBox_RaisePassed(amtToRaise);
         }
     }
@@ -186,7 +219,10 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage {
     //     remainingWei = raisedWei >= targetWei ? 0 : targetWei - raisedWei;
     // }
 
-    function calMaxContribution(bytes32 projectId, uint256 amountToRaise) internal returns (uint256) {
+    function calMaxContribution(
+        bytes32 projectId,
+        uint256 amountToRaise
+    ) internal returns (uint256) {
         return ((MAX_CONTRIBUTION_PERCENTAGE * amountToRaise) / 100);
     }
 
