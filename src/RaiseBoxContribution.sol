@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 // import {RaiseBox} from "../src/RaiseBox.sol";
 
-import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
+// import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
 import {IRaiseBoxContribution} from "../src/interfaces/IRaiseBoxContribution.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
@@ -11,11 +11,10 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {RaiseBoxStorage} from "../src/RaiseBoxStorage.sol";
 import {ICore} from "../src/interfaces/ICore.sol";
 
-contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage {
-    address raiseBoxCoreaddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3;
-    IRaiseBoxProjectCreation public immutable i_raiseBoxCore;
+contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage, IRaiseBoxContribution {
+    // address raiseBoxCoreaddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3;
 
-    ICore public raiseBoxCore;
+    ICore public raiseBoxCore; // the central contract that holds main storage of raisebox
 
     using Strings for uint256;
     using Address for address;
@@ -23,20 +22,20 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage {
     // contributions/users related state variables:
     mapping(address => uint256) public contributorsToAmountContributed; // not project dependent
 
-    mapping(address contributor => mapping(bytes32 projectId => uint256 amtContributed))
-        public amountContributedToProject;
+    mapping(address contributor => mapping(bytes32 projectId => uint256 amtContributed)) public
+        amountContributedToProject;
 
     mapping(bytes32 => address[]) private contributors;
 
-    // amount per contribution
-    mapping(address => mapping(bytes32 => uint256))
-        public amountPerContribution;
+    mapping(bytes32 => mapping(address => bool)) private hasContributed;
+
+    mapping(address => mapping(bytes32 => uint256[])) public contributionsToProjectArray; // array of contributions per user per project
 
     uint256 public constant MAX_CONTRIBUTION_PERCENTAGE = 20; // 2% OF AMOUNT TO RAISE
 
-    // tracks total amounts contributed to project
+    // tracks total amount contributed to project
 
-    uint256 public totalContributionsToProject;
+    mapping(bytes32 => uint256) public totalContributionsToProject;
 
     // contribution state enum
     enum ContributionState {
@@ -54,30 +53,17 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage {
     error RaiseBoxContribution_RaiseBoxProtocolUnset();
     error RaiseBoxContribution_ContributeAmountRemaining(uint256);
     error RaiseContribution_ContributionEnded(uint256);
-
-    error RaiseBoxContribution_contribute_ContributionAboveMax(uint256);
+    error RaiseBoxContribution_contribute_ContributionAboveMax(uint256, string);
+    error RaiseBoxContribution_getMaxContributionAllowedForProject_CannotBeZero();
 
     // contribution related events:
-    event Contributed(
-        address indexed user,
-        uint256 indexed amount,
-        bytes32 indexed projectId,
-        uint256 amountRaised
-    );
-
-    // constructor(address raiseBoxCoreaddress_) {
-    //     raiseBoxCoreaddress = raiseBoxCoreaddress_;
-    //     i_raiseBoxCore = IRaiseBoxCore(raiseBoxCoreaddress_);
-    // }
+    event Contributed(address indexed user, uint256 indexed amount, bytes32 indexed projectId, uint256 amountRaised);
 
     constructor(address raiseBoxCoreAddress) RaiseBoxStorage() {
         raiseBoxCore = ICore(raiseBoxCoreAddress);
     }
 
-    function contribute(
-        uint256 amount,
-        bytes32 projectId
-    ) external payable nonReentrant {
+    function contribute(uint256 amount, bytes32 projectId) external payable nonReentrant {
         // projectId should be filled automatically via UI for project clicked by user
 
         // Checks
@@ -86,7 +72,10 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage {
             revert RaiseBoxContribution_InvalidProject();
         }
 
-        address projectOwner = raiseBoxCore.getProject(projectId).projectOwner;
+        // get valid project from storage
+        ProjectInfo memory project = raiseBoxCore.getProject(projectId);
+
+        address projectOwner = project.projectOwner;
         if (projectOwner == address(0)) {
             revert RaiseBoxContribution_InvalidProject();
         }
@@ -104,41 +93,39 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage {
             revert RaiseBoxContribution_ValueSentMismatch();
         }
 
-        address payable raiseBoxProtocol = raiseBoxCore.getProtocol();
-        if (raiseBoxProtocol == address(0)) {
-            revert RaiseBoxContribution_RaiseBoxProtocolUnset();
-        }
+        // if (raiseBoxProtocol == address(0)) {
+        //     revert RaiseBoxContribution_RaiseBoxProtocolUnset();
+        // }
 
-        uint256 amtToRaise = raiseBoxCore.getAmountToRaise(projectId);
-        // uint256 amountRaisedByProject = raiseBoxCore.getAmountRaisedByProject(
-        //     projectId
-        // );
+        uint256 amtToRaise = project.amountToRaise;
 
         uint256 maxContribution = calMaxContribution(projectId, amtToRaise);
+        uint256 amountToTarget = (amtToRaise - totalContributionsToProject[projectId]);
 
-        if (
-            amountContributedToProject[msg.sender][projectId] + amount >
-            maxContribution
-        ) {
+        if (amountContributedToProject[msg.sender][projectId] + amount > maxContribution) {
             revert RaiseBoxContribution_contribute_ContributionAboveMax(
-                amtToRaise
+                amtToRaise,
+                string(
+                    abi.encodePacked(
+                        "Cannot over contribute: you can contribute only:",
+                        (amountToTarget / 1e18).toString(),
+                        " ether more to this project"
+                    )
+                )
             );
         }
 
-        if (totalContributionsToProject == amtToRaise) {
+        if (totalContributionsToProject[projectId] == amtToRaise) {
             revert RaiseBox_RaiseEnded(projectId);
         }
 
-        uint256 amountToTarget = (amtToRaise - totalContributionsToProject);
-        uint256 totalToRaise = (amount + totalContributionsToProject);
+        uint256 totalToRaise = (amount + totalContributionsToProject[projectId]);
 
         require(
             (totalToRaise <= amtToRaise),
             string(
                 abi.encodePacked(
-                    "Cannot over contribute: you can contribute only:",
-                    amountToTarget.toString(),
-                    " ether more"
+                    "Cannot over contribute: you can contribute only:", amountToTarget.toString(), " ether more"
                 )
             )
         );
@@ -146,13 +133,19 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage {
         // Effects
         amountContributedToProject[msg.sender][projectId] += amount;
 
-        amountPerContribution[msg.sender][projectId] = amount;
+        contributionsToProjectArray[msg.sender][projectId].push(amount);
 
-        totalContributionsToProject += amount;
+        totalContributionsToProject[projectId] += amount;
 
-        // raiseBoxCore.updateAmountRaisedByProject(projectId, amount);
+        if (!hasContributed[projectId][msg.sender]) {
+            contributors[projectId].push(msg.sender);
+            hasContributed[projectId][msg.sender] = true;
+        }
 
-        if (totalContributionsToProject == amtToRaise) {
+        // only update storage when raise has passed,
+        // i.e. the amount to raise by project has been raised successfully
+        // instead of updating storage everytime a contribution is made, wasteful
+        if (totalContributionsToProject[projectId] == amtToRaise) {
             raiseBoxCore.updateStorage(
                 projectId,
                 "name",
@@ -162,7 +155,7 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage {
                 3 days,
                 true,
                 block.timestamp,
-                totalContributionsToProject,
+                totalContributionsToProject[projectId], // only field updated
                 0,
                 0
             );
@@ -172,64 +165,56 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage {
             msg.sender,
             amount,
             projectId,
-            raiseBoxCore.getAmountRaisedByProject(projectId)
+            raiseBoxCore.getAmountRaisedByProject(projectId) // this should show that the main storage has been updated with totalContributionsToProject[projectid]
         );
 
         // Interactions
-        (bool successfullyContributed, ) = raiseBoxProtocol.call{value: amount}(
-            ""
-        ); // funds sent to protocol for safekeeping pending release to project
+        // get protocol address so funds can be sent there:
+        address payable raiseBoxProtocol = raiseBoxCore.getProtocol();
+        (bool successfullyContributed,) = raiseBoxProtocol.call{value: amount}(""); // funds sent to protocol for safekeeping pending release to project
         if (!successfullyContributed) {
             revert RaiseBoxContribution_ContributionFailed();
         }
 
-        if (totalContributionsToProject == amtToRaise) {
+        if (totalContributionsToProject[projectId] == amtToRaise) {
             emit RaiseBox_RaisePassed(amtToRaise);
         }
     }
 
     receive() external payable {}
 
-    // function getContributions(
-    //     address contributor,
-    //     bytes32 projectId
-    // ) external view returns (uint256) {
-    //     return amountContributedToProject[contributor][projectId];
-    // }
+    // INTERNAL FUNCTIONS
 
-    // function getContributors(
-    //     bytes32 projectId
-    // ) external view returns (address[] memory) {
-    //     return contributors[projectId];
-    // }
-
-    // function getTotalAmountContributedByContributor(
-    //     address _contributor,
-    //     bytes32 _projectId
-    // ) public view returns (uint256) {
-    //     return amountContributedToProject[_contributor][_projectId];
-    // }
-
-    // function getRemainingContributionInEth(
-    //     bytes32 projectId
-    // ) external returns (uint256 remainingWei) {
-    //     uint256 targetWei = i_raiseBoxCore.getAmountToRaise(projectId);
-    //     uint256 raisedWei = i_raiseBoxCore.getAmountRaisedByProject(projectId);
-
-    //     remainingWei = raisedWei >= targetWei ? 0 : targetWei - raisedWei;
-    // }
-
-    function calMaxContribution(
-        bytes32 projectId,
-        uint256 amountToRaise
-    ) internal returns (uint256) {
+    function calMaxContribution(bytes32 projectId, uint256 amountToRaise) internal returns (uint256) {
         return ((MAX_CONTRIBUTION_PERCENTAGE * amountToRaise) / 100);
     }
 
-    // function getMaxContribution(
-    //     bytes32 projectId,
-    //     uint256 amtToRaise
-    // ) external returns (uint256) {
-    //     return calMaxContribution(projectId, amtToRaise);
-    // }
+    // EXTERNAL/GETTER FUNCTIONS
+
+    function getMaxContributionAllowedForProject(bytes32 projectId) external returns (uint256) {
+        uint256 amountToRaise = raiseBoxCore.getAmountToRaise(projectId);
+        if (amountToRaise == 0) {
+            revert RaiseBoxContribution_getMaxContributionAllowedForProject_CannotBeZero();
+        }
+        return calMaxContribution(projectId, amountToRaise);
+    }
+
+    function getContributors(bytes32 projectId) external view returns (address[] memory) {
+        return contributors[projectId];
+    }
+
+    function getContributionsToProject(address user, bytes32 projectId)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        return contributionsToProjectArray[user][projectId];
+    }
+
+    function getTotalContributionsToProject(bytes32 projectId) external returns (uint256 contributionsReceived) {
+        if (!raiseBoxCore.getProjectExist(projectId)) {
+            revert RaiseBox_getProject_InvalidProjectId();
+        }
+        return totalContributionsToProject[projectId];
+    }
 }

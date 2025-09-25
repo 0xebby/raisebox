@@ -44,22 +44,14 @@ contract TestRaiseBox is Test {
         raiseBoxStorage = new RaiseBoxStorage();
 
         // deploy project creation contract with CA of main contract above
-        raiseBoxProjectCreationContract = new RaiseBox(
-            address(raiseBoxStorage)
-        );
+        raiseBoxProjectCreationContract = new RaiseBox(address(raiseBoxStorage));
 
         // set the address of the project creation contract so it can be referenced
-        raiseBoxStorage.setProjectCreationContractAddress(
-            address(raiseBoxProjectCreationContract)
-        );
+        raiseBoxStorage.setProjectCreationContractAddress(address(raiseBoxProjectCreationContract));
 
-        raiseBoxContributionContract = new RaiseBoxContribution(
-            address(raiseBoxStorage)
-        );
+        raiseBoxContributionContract = new RaiseBoxContribution(address(raiseBoxStorage));
 
-        raiseBoxStorage.setContributionContractAddress(
-            address(raiseBoxContributionContract)
-        );
+        raiseBoxStorage.setContributionContractAddress(address(raiseBoxContributionContract));
         // raiseBoxProposalContract = new RaiseBoxProposal(
         //     address(raiseBoxStorage),
         //     address(raiseBoxProjectCreationContract)
@@ -84,41 +76,17 @@ contract TestRaiseBox is Test {
     function test_address() public {
         vm.prank(alice);
         bytes32 projectId1 = raiseBoxProjectCreationContract.createProject(
-            "starknet",
-            "zero knowledge proof trades, trading should be aprivate affair",
-            300 ether,
-            35 days
+            "starknet", "zero knowledge proof trades, trading should be aprivate affair", 300 ether, 35 days
         );
 
-        advanceBlockTime(block.timestamp + 78 weeks);
-
-        vm.prank(alice);
-        bytes32 projectId2 = raiseBoxProjectCreationContract.createProject(
-            "starknet 2",
-            "ai swarmp",
-            3000 ether,
-            35 days
+        vm.prank(owner);
+        bytes32 ownerProjectId = raiseBoxProjectCreationContract.createProject(
+            "memeland", "building the largest decentralized meme platform", 5000 ether, 50 days
         );
 
-        advanceBlockTime(block.timestamp + 78 weeks);
+        assertEq(raiseBoxStorage.getProjectExist(ownerProjectId), true);
 
-        vm.prank(alice);
-        bytes32 projectId3 = raiseBoxProjectCreationContract.createProject(
-            "starknet 3",
-            "ai swarmp",
-            450 ether,
-            35 days
-        );
-
-        advanceBlockTime(block.timestamp + 78 weeks);
-
-        vm.prank(alice);
-        bytes32 projectId4 = raiseBoxProjectCreationContract.createProject(
-            "starknet 3",
-            "ai swarmp",
-            450 ether,
-            35 days
-        );
+        // advanceBlockTime(block.timestamp + 78 weeks);
 
         // bytes32 projectID = keccak256(
         //     abi.encode(
@@ -200,6 +168,194 @@ contract TestRaiseBox is Test {
         // );
 
         // raiseBoxStorage.getProjectInfo(projectID);
+    }
+
+    function testContributeUpdatesStatesCorrectly() public {
+        vm.startPrank(alice);
+        bytes32 projectID1 = raiseBoxProjectCreationContract.createProject(
+            "project 1", "solve testnet sybil with zkp", 10 ether, 30 days
+        );
+        vm.stopPrank();
+
+        raiseBoxStorage.getProjectExist(projectID1);
+
+        raiseBoxContributionContract.getMaxContributionAllowedForProject(projectID1);
+
+        raiseBoxStorage.getAmountToRaise(projectID1);
+
+        vm.startPrank(owner);
+        bytes32 projectID2 = raiseBoxProjectCreationContract.createProject(
+            "project 2", "solve high gas fees in ethereum using transaction bundling", 500 ether, 30 days
+        );
+        vm.stopPrank();
+
+        raiseBoxStorage.getAmountToRaise(projectID2);
+
+        raiseBoxContributionContract.getMaxContributionAllowedForProject(projectID2);
+
+        // contribution
+
+        vm.prank(joe);
+        raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, projectID1);
+
+        vm.prank(ben);
+        raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, projectID1);
+
+        vm.prank(owner);
+        raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, projectID1);
+
+        vm.prank(alice);
+        raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, projectID1);
+
+        vm.startPrank(address(0x50));
+        vm.deal(address(0x50), 100 ether);
+        raiseBoxContributionContract.contribute{value: 1 ether}(1 ether, projectID1);
+        vm.stopPrank();
+
+        vm.startPrank(address(0x30));
+        vm.deal(address(0x30), 100 ether);
+        raiseBoxContributionContract.contribute{value: 0.5 ether}(0.5 ether, projectID1);
+        vm.stopPrank();
+
+        vm.startPrank(address(0x30));
+        vm.deal(address(0x30), 100 ether);
+        raiseBoxContributionContract.contribute{value: 0.5 ether}(0.5 ether, projectID1);
+        vm.stopPrank();
+
+        vm.startPrank(address(0x30));
+        vm.deal(address(0x30), 100 ether);
+        raiseBoxContributionContract.contribute{value: 0.5 ether}(0.5 ether, projectID2);
+        vm.stopPrank();
+
+        address prot = raiseBoxStorage.getProtocol();
+        console.log(prot.balance);
+        raiseBoxContributionContract.getTotalContributionsToProject(projectID1);
+        raiseBoxStorage.getProject(projectID1);
+
+        raiseBoxContributionContract.getContributors(projectID1);
+
+        raiseBoxContributionContract.getContributionsToProject(address(0x30), projectID1);
+
+        bytes32 projectID3 = keccak256(abi.encode("fake project", 5000 ether, block.timestamp, "fake value", alice));
+
+        // vm.prank(joe);
+        // raiseBoxContributionContract.contribute{value: 5 ether}(
+        //     5 ether,
+        //     projectID3
+        // );
+
+        raiseBoxStorage.getProject(projectID2);
+
+        raiseBoxContributionContract.getTotalContributionsToProject(projectID2);
+
+        raiseBoxContributionContract.getContributionsToProject(joe,projectID1);
+
+        // vm.prank(ben);
+        // raiseBoxContributionContract.contribute{value: 7 ether}(
+        //     7 ether,
+        //     projectID2
+        // );
+
+        // console.log(raiseBoxStorage.getAmountRaisedByProject(projectID1));
+        // console.log(raiseBoxStorage.getAmountRaisedByProject(projectID2));
+
+        // uint256 totalAmountContributedByJoeToProject1 = raiseBoxContributionContract
+        //         .getContributions(joe, projectID1);
+        // assertEq(
+        //     totalAmountContributedByJoeToProject1,
+        //     2 ether,
+        //     "Joe's contributions to project 1: 2 ether"
+        // );
+
+        // uint256 totalAmountContributedByJoeToProject2 = raiseBoxContributionContract
+        //         .getContributions(joe, projectID2);
+        // assertEq(
+        //     totalAmountContributedByJoeToProject2,
+        //     5 ether,
+        //     "Joe's contributions to project 2: 5 ether"
+        // );
+
+        // uint256 totalAmountRaisedByProject1 = raiseBoxProjectCreationContract
+        //     .getAmountRaisedByProject(projectID1);
+
+        // assertEq(
+        //     totalAmountRaisedByProject1,
+        //     4 ether,
+        //     "Joe and Ben Contributed total of 4 ethers"
+        // );
+
+        // // ben contribution checks
+
+        // uint256 totalAmountContributedByBenToProject1 = raiseBoxContributionContract
+        //         .getContributions(ben, projectID1);
+        // assertEq(
+        //     totalAmountContributedByBenToProject1,
+        //     2 ether,
+        //     "Ben's contributions to project 1: 2 ether"
+        // );
+
+        // uint256 totalAmountContributedByBenToProject2 = raiseBoxContributionContract
+        //         .getContributions(ben, projectID2);
+        // assertEq(
+        //     totalAmountContributedByBenToProject2,
+        //     7 ether,
+        //     "Ben's contributions to project 2: 7 ether"
+        // );
+
+        // uint256 totalAmountRaisedByProject2 = raiseBoxProjectCreationContract
+        //     .getAmountRaisedByProject(projectID2);
+
+        // assertEq(
+        //     totalAmountRaisedByProject2,
+        //     12 ether,
+        //     "Joe and Ben Contributed total of 12 ethers toproject 2"
+        // );
+        // uint256 protocolBal = raiseBoxProjectCreationContract.getProtocol().balance;
+
+        // assertEq(
+        //     protocolBal,
+        //     16 ether,
+        //     "project1: 4 ether + project2: 12 ether"
+        // );
+
+        // vm.prank(alice);
+        // raiseBoxContributionContract.contribute{value: 7 ether}(
+        //     7 ether,
+        //     projectID1
+        // );
+
+        // alice contributed again to project 2
+        // vm.prank(alice);
+        // raiseBoxContributionContract.contribute{value: 48 ether}(
+        //     48 ether,
+        //     projectID2
+        // );
+
+        // vm.prank(alice);
+        // raiseBoxContributionContract.contribute{value: 2 ether}(
+        //     2 ether,
+        //     projectID2
+        // );
+
+        // uint256 protocolFeesFromProject2 = raiseBoxProjectCreationContract.getFeesFromProject(
+        //     projectID2
+        // );
+        // console.log(protocolFeesFromProject2);
+
+        // vm.prank(alice);
+        // raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, 2);
+
+        // vm.prank(alice);
+        // raiseBoxContributionContract.contribute{value: 1 ether}(
+        //     1 ether,
+        //     projectID1
+        // );
+
+        // vm.prank(alice);
+        // raiseBoxContributionContract.contribute{value: 11 ether}(11 ether, 1);
+
+        // vm.prank(alice);
+        // raiseBoxContributionContract.contribute{value: 1 ether}(1 ether, 1);
     }
 
     // function testHostProposal() public {
@@ -358,155 +514,6 @@ contract TestRaiseBox is Test {
     //     //     0,
     //     //     // "project creation"
     //     // );
-    // }
-
-    // function testContributeUpdatesStatesCorrectly() public {
-    //     vm.startPrank(alice);
-    //     bytes32 projectID1 = raiseBoxProjectCreationContract.createProject(
-    //         "project 1",
-    //         "solve testnet sybil with zkp",
-    //         100 ether,
-    //         30 days
-    //     );
-    //     vm.stopPrank();
-
-    //     vm.startPrank(owner);
-    //     bytes32 projectID2 = raiseBoxProjectCreationContract.createProject(
-    //         "project 2",
-    //         "solve high gas fees in ethereum using transaction bundling",
-    //         500 ether,
-    //         30 days
-    //     );
-    //     vm.stopPrank();
-
-    //     raiseBoxStorage.getProjectInfo(projectID2);
-
-    //     // contribution
-
-    //     vm.prank(joe);
-    //     raiseBoxContributionContract.contribute{value: 2 ether}(
-    //         2 ether,
-    //         projectID1
-    //     );
-
-    //     // vm.prank(ben);
-    //     // raiseBoxContributionContract.contribute{value: 2 ether}(
-    //     //     2 ether,
-    //     //     projectID1
-    //     // );
-
-    //     // vm.prank(joe);
-    //     // raiseBoxContributionContract.contribute{value: 5 ether}(
-    //     //     5 ether,
-    //     //     projectID2
-    //     // );
-
-    //     // vm.prank(ben);
-    //     // raiseBoxContributionContract.contribute{value: 7 ether}(
-    //     //     7 ether,
-    //     //     projectID2
-    //     // );
-
-    //     // console.log(raiseBoxStorage.getAmountRaisedByProject(projectID1));
-    //     // console.log(raiseBoxStorage.getAmountRaisedByProject(projectID2));
-
-    //     // uint256 totalAmountContributedByJoeToProject1 = raiseBoxContributionContract
-    //     //         .getContributions(joe, projectID1);
-    //     // assertEq(
-    //     //     totalAmountContributedByJoeToProject1,
-    //     //     2 ether,
-    //     //     "Joe's contributions to project 1: 2 ether"
-    //     // );
-
-    //     // uint256 totalAmountContributedByJoeToProject2 = raiseBoxContributionContract
-    //     //         .getContributions(joe, projectID2);
-    //     // assertEq(
-    //     //     totalAmountContributedByJoeToProject2,
-    //     //     5 ether,
-    //     //     "Joe's contributions to project 2: 5 ether"
-    //     // );
-
-    //     // uint256 totalAmountRaisedByProject1 = raiseBoxProjectCreationContract
-    //     //     .getAmountRaisedByProject(projectID1);
-
-    //     // assertEq(
-    //     //     totalAmountRaisedByProject1,
-    //     //     4 ether,
-    //     //     "Joe and Ben Contributed total of 4 ethers"
-    //     // );
-
-    //     // // ben contribution checks
-
-    //     // uint256 totalAmountContributedByBenToProject1 = raiseBoxContributionContract
-    //     //         .getContributions(ben, projectID1);
-    //     // assertEq(
-    //     //     totalAmountContributedByBenToProject1,
-    //     //     2 ether,
-    //     //     "Ben's contributions to project 1: 2 ether"
-    //     // );
-
-    //     // uint256 totalAmountContributedByBenToProject2 = raiseBoxContributionContract
-    //     //         .getContributions(ben, projectID2);
-    //     // assertEq(
-    //     //     totalAmountContributedByBenToProject2,
-    //     //     7 ether,
-    //     //     "Ben's contributions to project 2: 7 ether"
-    //     // );
-
-    //     // uint256 totalAmountRaisedByProject2 = raiseBoxProjectCreationContract
-    //     //     .getAmountRaisedByProject(projectID2);
-
-    //     // assertEq(
-    //     //     totalAmountRaisedByProject2,
-    //     //     12 ether,
-    //     //     "Joe and Ben Contributed total of 12 ethers toproject 2"
-    //     // );
-    //     // uint256 protocolBal = raiseBoxProjectCreationContract.getProtocol().balance;
-
-    //     // assertEq(
-    //     //     protocolBal,
-    //     //     16 ether,
-    //     //     "project1: 4 ether + project2: 12 ether"
-    //     // );
-
-    //     // vm.prank(alice);
-    //     // raiseBoxContributionContract.contribute{value: 7 ether}(
-    //     //     7 ether,
-    //     //     projectID1
-    //     // );
-
-    //     // alice contributed again to project 2
-    //     // vm.prank(alice);
-    //     // raiseBoxContributionContract.contribute{value: 48 ether}(
-    //     //     48 ether,
-    //     //     projectID2
-    //     // );
-
-    //     // vm.prank(alice);
-    //     // raiseBoxContributionContract.contribute{value: 2 ether}(
-    //     //     2 ether,
-    //     //     projectID2
-    //     // );
-
-    //     // uint256 protocolFeesFromProject2 = raiseBoxProjectCreationContract.getFeesFromProject(
-    //     //     projectID2
-    //     // );
-    //     // console.log(protocolFeesFromProject2);
-
-    //     // vm.prank(alice);
-    //     // raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, 2);
-
-    //     // vm.prank(alice);
-    //     // raiseBoxContributionContract.contribute{value: 1 ether}(
-    //     //     1 ether,
-    //     //     projectID1
-    //     // );
-
-    //     // vm.prank(alice);
-    //     // raiseBoxContributionContract.contribute{value: 11 ether}(11 ether, 1);
-
-    //     // vm.prank(alice);
-    //     // raiseBoxContributionContract.contribute{value: 1 ether}(1 ether, 1);
     // }
 
     // function testRemainingContribution() public {
