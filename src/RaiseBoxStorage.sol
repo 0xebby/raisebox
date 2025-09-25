@@ -41,19 +41,17 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
 
     // events:
 
-    event RaiseBox_RaisePassed(uint256);
+    event RaiseBox_RaisePassed(uint256 amountToRaise);
 
     event StorageUpdatedWithProjectCreationDetails(bytes32);
 
-    event RaiseBoxStorage_IDsStorageSuccessfullyUpdated(
-        bool IDexists,
-        bytes32 projectId
-    );
+    event RaiseBoxStorage_IDsStorageSuccessfullyUpdated(bool IDexists, bytes32 projectId);
 
     // test errors:
     error RaiseBox_updateStorage_CallNotFromRaiseBoxProjectCreationContract();
     error InvalidContract();
     error RaiseBox_updateStorage_NotAValidProjectID();
+    error RaiseBoxStorage_getProtocol_RaiseBoxProtocolUnset();
 
     // projectID (Keccak hash) to projectInfo
     mapping(bytes32 => ProjectInfo) public projectIDToProject;
@@ -87,29 +85,18 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
     //     s_raiseBoxProjectIDs;
     // }
 
-    function setProjectCreationContractAddress(
-        address contractAddressToSet
-    ) external onlyOwner {
+    function setProjectCreationContractAddress(address contractAddressToSet) external onlyOwner {
         require(contractAddressToSet != address(0), "zero address not allowed");
 
-        require(
-            raiseBoxCreationContractAddress == address(0),
-            "project creation contract already set"
-        );
+        require(raiseBoxCreationContractAddress == address(0), "project creation contract already set");
 
         raiseBoxCreationContractAddress = contractAddressToSet;
 
         // event ProjectCreationContractSet(address contractAddress);
-
     }
 
-    function setContributionContractAddress(
-        address contractAddressToSet
-    ) external onlyOwner {
-        require(
-            raiseBoxContributionContractAddress == address(0),
-            "contribution contract already set"
-        );
+    function setContributionContractAddress(address contractAddressToSet) external onlyOwner {
+        require(raiseBoxContributionContractAddress == address(0), "contribution contract already set");
 
         raiseBoxContributionContractAddress = contractAddressToSet;
     }
@@ -117,10 +104,7 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
     function updateIDsStorage(bytes32 projectId) internal {
         IDexists[projectId] = true;
 
-        emit RaiseBoxStorage_IDsStorageSuccessfullyUpdated(
-            IDexists[projectId],
-            projectId
-        );
+        emit RaiseBoxStorage_IDsStorageSuccessfullyUpdated(IDexists[projectId], projectId);
     }
 
     function getIDsFromStorage() external returns (bytes32 id) {
@@ -130,6 +114,9 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
     }
 
     function getProtocol() public view returns (address payable) {
+        if (protocol == address(0)) {
+            revert RaiseBoxStorage_getProtocol_RaiseBoxProtocolUnset();
+        }
         return (protocol);
     }
 
@@ -137,33 +124,25 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
         return MINIMUM_CONTRIBUTION;
     }
 
-    function getProject(
-        bytes32 id
-    ) public returns (ProjectInfo memory projectInfo) {
-        if (!projectIDToProject[id].projectExists) {
+    function getProject(bytes32 projectId) public returns (ProjectInfo memory projectInfo) {
+        if (!this.getProjectExist(projectId)) {
             revert RaiseBox_getProject_InvalidProjectId();
         }
-        require(
-            projectIDToProject[id].projectExists != false,
-            "Project does not exist"
-        );
-        projectInfo = projectIDToProject[id];
+        projectInfo = projectIDToProject[projectId];
     }
 
-    function getAmountToRaise(
-        bytes32 projectId
-    ) external view returns (uint256) {
-        require(
-            projectIDToProject[projectId].amountToRaise != 0,
-            "amount to raise cannot be 0"
-        );
+    function getAmountToRaise(bytes32 projectId) external view returns (uint256) {
+        if (!this.getProjectExist(projectId)) {
+            revert RaiseBox_getProject_InvalidProjectId();
+        }
         return projectIDToProject[projectId].amountToRaise;
     }
 
-    function getAmountRaisedByProject(
-        bytes32 projectId_
-    ) external returns (uint256) {
-        return projectIDToProject[projectId_].amountRaisedByProject;
+    function getAmountRaisedByProject(bytes32 projectId) external returns (uint256) {
+        if (!this.getProjectExist(projectId)) {
+            revert RaiseBox_getProject_InvalidProjectId();
+        }
+        return projectIDToProject[projectId].amountRaisedByProject;
     }
 
     function getProtocolFeeAddress() external view returns (address) {
@@ -176,22 +155,9 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
     //     return projectIDToProject[projectID];
     // }
 
-    function getProjectInfo(
-        bytes32 projectID
-    )
+    function getProjectInfo(bytes32 projectID)
         external
-        returns (
-            string memory,
-            address,
-            string memory,
-            uint256,
-            uint256,
-            bytes32,
-            bool,
-            uint256,
-            uint256,
-            uint256
-        )
+        returns (string memory, address, string memory, uint256, uint256, bytes32, bool, uint256, uint256, uint256)
     {
         // get from storage
         ProjectInfo storage projectInfo;
@@ -211,21 +177,19 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
     }
 
     function getProjectExist(bytes32 projectID) external view returns (bool) {
+        
         ProjectInfo storage projectInfo;
 
         projectInfo = projectIDToProject[projectID];
 
-        if (projectInfo.projectExists) {
+        if (projectInfo.projectExists == true) {
             return true;
         } else {
             return false;
         }
     }
 
-    function updateAmountRaisedByProject(
-        bytes32 projectID,
-        uint256 amount
-    ) internal returns (uint256 amountRaised) {
+    function updateAmountRaisedByProject(bytes32 projectID, uint256 amount) internal returns (uint256 amountRaised) {
         ProjectInfo storage projectInfo;
 
         projectInfo = projectIDToProject[projectID];
@@ -273,9 +237,7 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
         }
     }
 
-    function getProjectCreator(
-        bytes32 projectId
-    ) external view returns (address) {
+    function getProjectCreator(bytes32 projectId) external view returns (address) {
         ProjectInfo storage projectInfo;
 
         projectInfo = projectIDToProject[projectId];
@@ -306,8 +268,7 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
         projectInfo.duration = duration;
         projectInfo.projectExists = exist;
         projectInfo.timeCreated = timeCreated;
-        projectInfo
-            .numberOfProjectsCreatedByProjectOwner = numberOfProjectsCreatedByProjectOwner;
+        projectInfo.numberOfProjectsCreatedByProjectOwner = numberOfProjectsCreatedByProjectOwner;
 
         emit StorageUpdatedWithProjectCreationDetails(projectId);
     }

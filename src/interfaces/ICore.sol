@@ -23,10 +23,6 @@ interface ICore {
 
     function getMinimumContribution() external view returns (uint256);
 
-    // function getAmountToRaise(
-    //     bytes32 projectId
-    // ) external view returns (uint256);
-
     function getAmountRaisedByProject(bytes32 projectId_) external returns (uint256);
 
     function getProtocolFeeAddress() external view returns (address);
@@ -37,14 +33,9 @@ interface ICore {
         external
         returns (string memory, address, string memory, uint256, uint256, bytes32, bool, uint256, uint256, uint256);
 
-    function getProjectExist(bytes32 projectID) external view returns (bool);
+    function getProjectExist(bytes32 projectID) external returns (bool);
 
-    function getAmountToRaise(bytes32 projectId) external view returns (uint256);
-
-    // function updateAmountRaisedByProject(
-    //     bytes32 projectID,
-    //     uint256 amount
-    // ) external;
+    function getAmountToRaise(bytes32 projectId) external returns (uint256);
 
     function updateStorage(
         bytes32 projectId,
@@ -59,10 +50,7 @@ interface ICore {
         uint256 _noOfProposalsHosted,
         uint256 _numberOfProjectsCreatedByProjectOwner
     )
-        // string calldata whichContract
         external;
 
     function getOwner() external view returns (address);
-
-    //  function getIDs() external;
 }
