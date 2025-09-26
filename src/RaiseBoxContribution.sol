@@ -203,11 +203,7 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage, IRaiseBoxCont
         return contributors[projectId];
     }
 
-    function getContributionsToProject(address user, bytes32 projectId)
-        external
-        view
-        returns (uint256[] memory)
-    {
+    function getContributionsToProject(address user, bytes32 projectId) external view returns (uint256[] memory) {
         return contributionsToProjectArray[user][projectId];
     }
 

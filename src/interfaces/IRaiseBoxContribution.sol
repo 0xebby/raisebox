@@ -10,9 +10,5 @@ interface IRaiseBoxContribution {
 
     function getTotalContributionsToProject(bytes32 projectId) external returns (uint256 contributions);
 
-    function getContributionsToProject(address user, bytes32 projectId)
-        external
-        view
-        returns (uint256[] memory);
-
+    function getContributionsToProject(address user, bytes32 projectId) external view returns (uint256[] memory);
 }
