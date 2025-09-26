@@ -47,11 +47,15 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
 
     event RaiseBoxStorage_IDsStorageSuccessfullyUpdated(bool IDexists, bytes32 projectId);
 
+    event RaiseBoxStorage_ProjectCreationContractSet(address contractAddress);
+
     // test errors:
     error RaiseBox_updateStorage_CallNotFromRaiseBoxProjectCreationContract();
     error InvalidContract();
     error RaiseBox_updateStorage_NotAValidProjectID();
     error RaiseBoxStorage_getProtocol_RaiseBoxProtocolUnset();
+    error RaiseBoxStorage_setProjectCreation_InvalidContract();
+    error RaiseBoxStorage_setProjectCreation_ContractAlreadySet();
 
     // projectID (Keccak hash) to projectInfo
     mapping(bytes32 => ProjectInfo) public projectIDToProject;
@@ -86,13 +90,16 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
     // }
 
     function setProjectCreationContractAddress(address contractAddressToSet) external onlyOwner {
-        require(contractAddressToSet != address(0), "zero address not allowed");
-
-        require(raiseBoxCreationContractAddress == address(0), "project creation contract already set");
+        if (contractAddressToSet == address(0)) {
+            revert RaiseBoxStorage_setProjectCreation_InvalidContract();
+        }
+        if (raiseBoxCreationContractAddress != address(0)) {
+            revert RaiseBoxStorage_setProjectCreation_ContractAlreadySet();
+        }
 
         raiseBoxCreationContractAddress = contractAddressToSet;
 
-        // event ProjectCreationContractSet(address contractAddress);
+        emit RaiseBoxStorage_ProjectCreationContractSet(raiseBoxCreationContractAddress);
     }
 
     function setContributionContractAddress(address contractAddressToSet) external onlyOwner {
