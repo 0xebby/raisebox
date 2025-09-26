@@ -248,7 +248,7 @@ contract TestRaiseBox is Test {
 
         raiseBoxContributionContract.getTotalContributionsToProject(projectID2);
 
-        raiseBoxContributionContract.getContributionsToProject(joe,projectID1);
+        raiseBoxContributionContract.getContributionsToProject(joe, projectID1);
 
         // vm.prank(ben);
         // raiseBoxContributionContract.contribute{value: 7 ether}(

@@ -49,8 +49,7 @@ interface ICore {
         uint256 _amountRaisedByProject,
         uint256 _noOfProposalsHosted,
         uint256 _numberOfProjectsCreatedByProjectOwner
-    )
-        external;
+    ) external;
 
     function getOwner() external view returns (address);
 }

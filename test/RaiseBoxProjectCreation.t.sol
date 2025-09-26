@@ -44,22 +44,14 @@ contract RaiseBoxProjectCreationTest is Test {
         raiseBoxStorage = new RaiseBoxStorage();
 
         // deploy project creation contract with CA of main contract above
-        raiseBoxProjectCreationContract = new RaiseBox(
-            address(raiseBoxStorage)
-        );
+        raiseBoxProjectCreationContract = new RaiseBox(address(raiseBoxStorage));
 
         // set the address of the project creation contract so it can be referenced
-        raiseBoxStorage.setProjectCreationContractAddress(
-            address(raiseBoxProjectCreationContract)
-        );
+        raiseBoxStorage.setProjectCreationContractAddress(address(raiseBoxProjectCreationContract));
 
-        raiseBoxContributionContract = new RaiseBoxContribution(
-            address(raiseBoxStorage)
-        );
+        raiseBoxContributionContract = new RaiseBoxContribution(address(raiseBoxStorage));
 
-        raiseBoxStorage.setContributionContractAddress(
-            address(raiseBoxContributionContract)
-        );
+        raiseBoxStorage.setContributionContractAddress(address(raiseBoxContributionContract));
         // raiseBoxProposalContract = new RaiseBoxProposal(
         //     address(raiseBoxStorage),
         //     address(raiseBoxProjectCreationContract)
@@ -84,10 +76,7 @@ contract RaiseBoxProjectCreationTest is Test {
     function testCreateProject() public {
         vm.startPrank(alice);
         bytes32 projectID1 = raiseBoxProjectCreationContract.createProject(
-            "project 1",
-            "solve testnet sybil with zkp",
-            10 ether,
-            30 days
+            "project 1", "solve testnet sybil with zkp", 10 ether, 30 days
         );
         vm.stopPrank();
 
@@ -113,5 +102,8 @@ contract RaiseBoxProjectCreationTest is Test {
         assertEq(amountRaised, 0);
         assertEq(timeCreated, block.timestamp);
         assertEq(proposalsHosted, 0);
+
+        raiseBoxProjectCreationContract.getProjectCreator(projectID1);
+        raiseBoxProjectCreationContract.viewProjectInfo(projectID1);
     }
 }
