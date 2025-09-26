@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {RaiseBoxVoting} from "../src/RaiseBoxVoting.sol";
+// import {RaiseBoxVoting} from "../src/RaiseBoxVoting.sol";
 import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
 import {RaiseBoxFaucet} from "/home/ebby/contracts-2025/crowdfund-faucet-contract/src/RaiseBoxFaucet.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
@@ -9,32 +9,30 @@ import {console} from "../lib/forge-std/src/Test.sol";
 import {RaiseBoxStorage} from "../src/RaiseBoxStorage.sol";
 import {ICore} from "../src/interfaces/ICore.sol";
 
-/// @title RaiseBox - Decentralized crowdfunding contract
+/// @title RaiseBoxProjectCreation Contract - This contract allows users to create crowdfunding projects on RaiseBox
 /// @author 0xcoda
-/// @notice This contract allows users to contribute ETH, RBT or any other erc20 token all cobnverted to stbales(usdt) to a project, collects protocol fees, and enables withdrawals for project owner and protocol.
-/// @dev Designed for EVM-compatible blockchains. Uses custom errors for gas efficiency.
+/// @notice This contract is part of the RaiseBox crowdfunding platform, enabling project creation and management, updates core storage (RaiseBoxStorage)
+/// @dev This contract interacts with RaiseBoxStorage for data persistence.
 
-contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
+contract RaiseBox is IRaiseBoxProjectCreation {
+    // central contract that holds main storage of raisebox and it's interface
     ICore public raiseBoxCore;
     RaiseBoxStorage public raiseBoxStorage;
 
     using Strings for uint256;
     using Strings for bytes32;
+
     // ----------------------------------------------------------------------- state variables -------------------------------------------------------------------------  //
 
-    // State variables
-
-    // token used on testnet to interact with contract:
-    // for contribution
-    // for protocol fees
-    // for project funds
-    // this contract's currency ----- testnet ---- deployed on sepolia ---- see contract address in constructor
-
-    // crownfund project related state variables
+    // raisebox project creation related state variables:
 
     // ----------------------------------------------------------------------- constants -------------------------------------------------------------------------  //
 
-    uint256 private constant PROPOSAL_APPROVAL_PERCENTAGE = 51; // 51% of contributors vote required for a proposal to pass and  10% funds released
+    // 51% of contributors vote required for a proposal to pass and  10% funds released
+    uint256 private constant PROPOSAL_APPROVAL_PERCENTAGE = 51;
+
+    // [1 year and 6 months] before same project can create another raise on raisebox
+    uint256 public constant PER_PROJECT_CREATION_COOLDOWN = 78 weeks;
 
     // ----------------------------------------------------------------------- structs -------------------------------------------------------------------------  //
 
@@ -44,6 +42,7 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
 
     uint256 public projectIndex;
     mapping(address => uint16) public projectCountPerProjectOwner;
+    mapping(address projectOwner => uint256 lastProjectCreationTime) public i_lastProjectCreation;
 
     // ----------------------------------------------------------------------- enums -------------------------------------------------------------------------  //
 
@@ -64,9 +63,14 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
     error CrowdFund_OnlyProjectOwnerCanCall();
 
     // project creation related errors:
-    error RaiseBox_CreateProject_ProjectAlreadyExist();
+    error RaiseBoxProjectCreation_createProject_ProjectAlreadyExist();
     error RaiseBox_getProjectByIndex_InvalidProjectIndex();
-    error RaiseBox_createProject_AlreadyHaveALiveProject();
+    error RaiseBox_createProject_AlreadyHaveLiveProject();
+    error RaiseBoxProjectCreation_createProject_ZeroAddress();
+    error RaiseBoxProjectCreation_createProject_InvalidValueProp();
+    error RaiseBoxProjectCreation_createProject_CannotRaiseZeroFunds();
+    error RaiseBoxProjectCreation_createProject_DurationAboveAllowed();
+    error RaiseBoxProjectCreation_createProject_DurationCannotBeZero();
 
     // raise related errors:
     error RaiseBox_RaiseFailed();
@@ -98,6 +102,11 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
 
     // ----------------------------------------------------------------------- constructor -------------------------------------------------------------------------  //
 
+    constructor(address raiseBoxCoreAddress) {
+        // raiseBoxCore = ICore(raiseBoxCoreAddress);
+        raiseBoxStorage = RaiseBoxStorage(raiseBoxCoreAddress);
+    }
+
     // ----------------------------------------------------------------------- modifiers -------------------------------------------------------------------------  //
 
     // modifiers:
@@ -117,16 +126,7 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
         _;
     }
 
-    constructor(address raiseBoxCoreAddress) {
-        // raiseBoxCore = ICore(raiseBoxCoreAddress);
-        raiseBoxStorage = RaiseBoxStorage(raiseBoxCoreAddress);
-    }
-
     // ----------------------------------------------------------------------- functions -------------------------------------------------------------------------  //
-
-    mapping(address projectOwner => uint256 lastProjectCreationTime) public i_lastProjectCreation;
-
-    uint256 public constant PER_PROJECT_CREATION_COOLDOWN = 78 weeks; // [1 year and 6 months] before same project can create another raise on raisebox
 
     /**
      *
@@ -134,6 +134,8 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
      * @param valueProposition_ what problem the project is going to solve
      * @param amountToRaise_ amount project wants to raise --in ethers now, usd later
      * @param duration_ duration of the raise -- how long the raise period will last
+     * // 300154 initial gas estimate for createProject function
+     * // 299980 gas after optimizations
      */
     function createProject(
         string memory projectName_,
@@ -147,23 +149,40 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
         // checks that a project cannot create more than one project within 78 weeks
         if (projectCountPerProjectOwner[msg.sender] > 0) {
             if (PER_PROJECT_CREATION_COOLDOWN > (block.timestamp - i_lastProjectCreation[msg.sender])) {
-                revert RaiseBox_createProject_AlreadyHaveALiveProject();
+                revert RaiseBox_createProject_AlreadyHaveLiveProject();
             }
         }
 
-        require(msg.sender != address(0), "zero address cannot host campaign");
+        // require(msg.sender != address(0), "zero address cannot host campaign");
+        if (msg.sender == address(0)) {
+            revert RaiseBoxProjectCreation_createProject_ZeroAddress();
+        }
 
-        require(bytes(projectName_).length > 0, "Enter valid project name");
-        //need to check if project with similar project doesn't already exist
+        // require(bytes(projectName_).length > 0, "Enter valid project name");
+        if (bytes(projectName_).length == 0) {
+            revert RaiseBoxProjectCreation_createProject_ProjectAlreadyExist();
+        }
 
-        require(bytes(valueProposition_).length > 0, "Enter valid problem statement");
+        // require(bytes(valueProposition_).length > 0, "Enter valid problem statement");
+        if (bytes(valueProposition_).length == 0) {
+            revert RaiseBoxProjectCreation_createProject_InvalidValueProp();
+        }
 
-        require(amountToRaise_ != 0, "Cannot raise 0 funds");
+        // require(amountToRaise_ != 0, "Cannot raise 0 funds");
+        if (amountToRaise_ == 0) {
+            revert RaiseBoxProjectCreation_createProject_CannotRaiseZeroFunds();
+        }
 
-        require(duration_ != 0, "Enter valid duration");
+        // require(duration_ != 0, "Enter valid duration");
+        if (duration_ == 0) {
+            revert RaiseBoxProjectCreation_createProject_DurationCannotBeZero();
+        }
 
-        require(duration_ <= 60 days, "Cannot host a raise on raisebox for more than 60 days");
+        // require(duration_ <= 60 days, "Cannot host a raise on raisebox for more than 60 days");
         // max duration is 60 days -- 2 months
+        if (duration_ > 60 days) {
+            revert RaiseBoxProjectCreation_createProject_DurationAboveAllowed();
+        }
 
         // generate projectID:
         bytes32 projectID =
@@ -172,7 +191,7 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
         bool doesProjectExists = raiseBoxStorage.getProjectExist(projectID);
 
         if (doesProjectExists) {
-            revert RaiseBox_CreateProject_ProjectAlreadyExist();
+            revert RaiseBoxProjectCreation_createProject_ProjectAlreadyExist();
         }
 
         timeCreated = block.timestamp;
@@ -212,6 +231,17 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
         );
 
         return projectID;
+    }
+
+    ////////////////////////////////////////////////////////// GETTERS //////////////////////////////////////////////////////////
+
+    function getProjectCreator(bytes32 projectId) external returns (address) {
+        (, address projectCreator,,,,,,,,) = raiseBoxStorage.getProjectInfo(projectId);
+        return projectCreator;
+    }
+
+    function viewProjectInfo(bytes32 projectId) external {
+        raiseBoxStorage.getProjectInfo(projectId);
     }
 
     // function calProtocolFees(
@@ -316,30 +346,6 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
 
     // }
 
-    // function viewProjectInfo(bytes32 projectId) external  {
-    //     ProjectInfo memory projectInfo = this.getProject(projectId);
-    //     console.log(
-    //         string(
-    //             abi.encodePacked(
-    //                 "Name: ",
-    //                 projectInfo.projectName,
-    //                 " | Owner: ",
-    //                 Strings.toHexString(uint160(projectInfo.projectOwner), 20),
-    //                 " | Problem: ",
-    //                 projectInfo.valueProposition,
-    //                 " | Amount To Raise: ",
-    //                 projectInfo.amountToRaise.toString(),
-    //                 " | Duration: ",
-    //                 projectInfo.duration.toString(),
-    //                 " | ID: ",
-    //                 projectInfo.projectID,
-    //                 " | Amount Raised: ",
-    //                 projectInfo.amountRaisedByProject.toString()
-    //             )
-    //         )
-    //     );
-    // }
-
     // function getProtocolFee() public view returns (uint256) {
     //     return PROTOCOL_FEE;
     // }
@@ -356,12 +362,6 @@ contract RaiseBox is IRaiseBoxProjectCreation, RaiseBoxVoting {
     //     return ((PROTOCOL_FEE *
     //         (projectIDToProject[projectId].amountRaisedByProject)) /
     //         MAX_PERCENTAGE);
-    // }
-
-    // function getProjectOwner(
-    //     bytes32 projectId
-    // ) external view returns (address) {
-    //     return projectIDToProject[projectId].projectOwner;
     // }
 
     // function updateAmountRaiseByProject(

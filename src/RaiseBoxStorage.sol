@@ -177,7 +177,6 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
     }
 
     function getProjectExist(bytes32 projectID) external view returns (bool) {
-        
         ProjectInfo storage projectInfo;
 
         projectInfo = projectIDToProject[projectID];
