@@ -41,6 +41,7 @@ contract RaiseBox is IRaiseBoxProjectCreation {
     // mapping(uint256 => ProjectInfo) public projectIndexToProject;
 
     uint256 public projectIndex;
+
     mapping(address => uint16) public projectCountPerProjectOwner;
     mapping(address projectOwner => uint256 lastProjectCreationTime) public i_lastProjectCreation;
 
@@ -111,8 +112,6 @@ contract RaiseBox is IRaiseBoxProjectCreation {
 
     // modifiers:
 
-    // this modifier ensures that only users that have contributed to a raise return true and can vote on proposals
-
     // protocol related modifiers:
     // only protocol functions
     modifier onlyProtocol() {
@@ -134,8 +133,8 @@ contract RaiseBox is IRaiseBoxProjectCreation {
      * @param valueProposition_ what problem the project is going to solve
      * @param amountToRaise_ amount project wants to raise --in ethers now, usd later
      * @param duration_ duration of the raise -- how long the raise period will last
-     * // 300154 initial gas estimate for createProject function
-     * // 299980 gas after optimizations
+     * @dev 300154 initial gas estimate for createProject function
+     * @dev 299980 gas after optimizations
      */
     function createProject(
         string memory projectName_,
@@ -214,6 +213,10 @@ contract RaiseBox is IRaiseBoxProjectCreation {
 
         projectIndex++;
         i_lastProjectCreation[msg.sender] = timeCreated;
+        raiseBoxStorage.incrementProjectCount();
+
+        
+        
 
         // projectIndexToProject[projectIndex] = projectIDToProject[projectID];
 
