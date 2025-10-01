@@ -176,7 +176,7 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
         }
      }
 
-     function getProjectCount() external returns (uint256) { return raiseBoxProjectCounter++; }
+     function getProjectCount() external returns (uint256) { return raiseBoxProjectCounter; }
 
 
 
