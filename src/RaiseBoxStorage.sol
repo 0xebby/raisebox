@@ -96,10 +96,6 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
         // raiseBoxCreationContractAddress = projectCreationContract;
     }
 
-    // function getIDs() external {
-    //     s_raiseBoxProjectIDs;
-    // }
-
     function setProjectCreationContractAddress(address contractAddressToSet) external onlyOwner {
         if (contractAddressToSet == address(0)) {
             revert RaiseBoxStorage_setProjectCreation_InvalidContract();
