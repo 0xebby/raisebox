@@ -8,8 +8,18 @@ import {SafeERC20} from "../@openzeppelin/contracts/token/ERC20/utils/SafeERC20.
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {RaiseBox} from "../src/RaiseBoxProjectCreation.sol";
 
+/**
+ * @title RaiseBoxStorage is the central contract of this protocol
+ * @author 0xebby
+ * @notice it holds the major storage that all other contracts read and update (authorized updates***)
+ * @dev use it's associated interface to get exposed external functions and structs
+ */
+
 contract RaiseBoxStorage is ICore, ERC20, Ownable {
     using SafeERC20 for IERC20;
+
+    // total projects on raisebox
+    uint256 private raiseBoxProjectCounter;
 
     // MINIMUM_CONTRIBUTION = 0.01 ether; // 1e16
     uint256 public constant MINIMUM_CONTRIBUTION = 0.01 ether;
@@ -38,6 +48,7 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
     error RaiseBox_RaiseEnded(bytes32);
 
     error RaiseBoxStorage_updateStorage_wrongCaller();
+    error RaiseBoxStorage_getRaiseBoxProjectCount_CallNotFromProjectCreation();
 
     // events:
 
@@ -155,6 +166,19 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
     function getProtocolFeeAddress() external view returns (address) {
         return protocolFeeAddress;
     }
+
+    function incrementProjectCount() external returns (uint256) { 
+        if (msg.sender != raiseBoxCreationContractAddress ) {
+            revert RaiseBoxStorage_getRaiseBoxProjectCount_CallNotFromProjectCreation();
+            
+        } else {
+            return raiseBoxProjectCounter++;
+        }
+     }
+
+     function getProjectCount() external returns (uint256) { return raiseBoxProjectCounter++; }
+
+
 
     // function getProjectMapping(
     //     bytes32 projectID

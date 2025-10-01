@@ -19,6 +19,8 @@ interface ICore {
     // this function updates the general raiseBox Storage
     // function updateStorage(bytes32 projectId) external virtual;
 
+    function getProjectCount() external returns (uint256);
+
     function getProtocol() external returns (address payable);
 
     function getMinimumContribution() external view returns (uint256);
