@@ -10,10 +10,14 @@ import {RaiseBoxContribution} from "../src/RaiseBoxContribution.sol";
 import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
 import {RaiseBoxProposal} from "../src/RaiseBoxProposal.sol";
 import {RaiseBoxStorage} from "../src/RaiseBoxStorage.sol";
+import {ICore} from "../src/interfaces/ICore.sol";
 
 contract RaiseBoxProjectCreationTest is Test {
     // main contract that holds general storage
     RaiseBoxStorage raiseBoxStorage;
+
+    // core interface
+    ICore raiseBoxCore;
 
     // project creation contract
     RaiseBox raiseBoxProjectCreationContract;
@@ -61,8 +65,6 @@ contract RaiseBoxProjectCreationTest is Test {
         vm.deal(alice, 100 ether);
         vm.deal(joe, 100 ether);
         vm.deal(ben, 100 ether);
-
-        // advanceBlockTime(78 weeks);
     }
 
     /**
@@ -103,7 +105,26 @@ contract RaiseBoxProjectCreationTest is Test {
         assertEq(timeCreated, block.timestamp);
         assertEq(proposalsHosted, 0);
 
-        raiseBoxProjectCreationContract.getProjectCreator(projectID1);
-        raiseBoxProjectCreationContract.viewProjectInfo(projectID1);
+        vm.startPrank(ben);
+        bytes32 projectID2 = raiseBoxProjectCreationContract.createProject(
+            "sentient", "AGI: AI but collectively owned and decentralized", 100 ether, 30 days
+        );
+        vm.stopPrank();
+
+         vm.startPrank(joe);
+        bytes32 projectID3 = raiseBoxProjectCreationContract.createProject(
+            "FeedTheWorld NGO", "operation feed 2,000 kids", 100 ether, 30 days
+        );
+        vm.stopPrank();
+
+        advanceBlockTime(104 weeks); // 2 years
+        vm.startPrank(joe);
+        bytes32 projectID4 = raiseBoxProjectCreationContract.createProject(
+            "NGO", "missionary journey to Rome", 50 ether, 30 days
+        );
+        vm.stopPrank();
+        
+        raiseBoxStorage.getProjectCount();
+        assertEq(raiseBoxStorage.getProjectCount(), 4);
     }
 }
