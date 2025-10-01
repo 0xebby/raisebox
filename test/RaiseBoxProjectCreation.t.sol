@@ -111,7 +111,7 @@ contract RaiseBoxProjectCreationTest is Test {
         );
         vm.stopPrank();
 
-         vm.startPrank(joe);
+        vm.startPrank(joe);
         bytes32 projectID3 = raiseBoxProjectCreationContract.createProject(
             "FeedTheWorld NGO", "operation feed 2,000 kids", 100 ether, 30 days
         );
@@ -119,11 +119,10 @@ contract RaiseBoxProjectCreationTest is Test {
 
         advanceBlockTime(104 weeks); // 2 years
         vm.startPrank(joe);
-        bytes32 projectID4 = raiseBoxProjectCreationContract.createProject(
-            "NGO", "missionary journey to Rome", 50 ether, 30 days
-        );
+        bytes32 projectID4 =
+            raiseBoxProjectCreationContract.createProject("NGO", "missionary journey to Rome", 50 ether, 30 days);
         vm.stopPrank();
-        
+
         raiseBoxStorage.getProjectCount();
         assertEq(raiseBoxStorage.getProjectCount(), 4);
     }

@@ -22,7 +22,7 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
     // drips %: in multiples of 5 up to 100
     // only 10% of overall funds contributed at time of hosting proposal is released per time
     address raiseBoxCoreaddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3;
-    IRaiseBoxProjectCreation public immutable i_raiseBoxCore;
+    IRaiseBoxProjectCreation public immutable i_raiseBoxProjectCreator;
 
     uint256 public lastProposalTime;
 
@@ -63,21 +63,18 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
 
     constructor(address raiseBoxCoreaddress_) RaiseBoxStorage() {
         raiseBoxCoreaddress = raiseBoxCoreaddress_;
-        i_raiseBoxCore = IRaiseBoxProjectCreation(raiseBoxCoreaddress_);
+        i_raiseBoxProjectCreator = IRaiseBoxProjectCreation(raiseBoxCoreaddress_);
     }
 
-    // modifier onlyProjectOwner(address projectOwner, bytes32 projectId) {
-    //     // get project using projectId above
-    //     // bytes32 projectId = i_raiseBoxCore.getProject(projectId).projectID;
-    //     if (
-    //         projectOwner == address(0) ||
-    //         projectOwner != i_raiseBoxCore.getProject(projectId).projectOwner
-    //     ) {
-    //         revert raiseBoxProposal_InvalidProjectOwner();
-    //     }
+    modifier onlyProjectOwner(address projectOwner, bytes32 projectId) {
+        // get project using projectId above
+        bytes32 projectId = i_raiseBoxProjectCreator.getProject(projectId).projectID;
+        if (projectOwner == address(0) || projectOwner != i_raiseBoxProjectCreator.getProject(projectId).projectOwner) {
+            revert raiseBoxProposal_InvalidProjectOwner();
+        }
 
-    //     _;
-    // }
+        _;
+    }
 
     // function to host a proposal by project:
 
@@ -93,12 +90,12 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
     //     bytes32 projectId
     // ) public onlyProjectOwner(msg.sender, projectId) {
     //     // get project by the id provided by the caller:
-    //     bool projectExist = i_raiseBoxCore.getProject(projectId).projectExists;
-    //     uint256 amountRaisedByProject = i_raiseBoxCore.getAmountRaisedByProject(
+    //     bool projectExist = i_raiseBoxProjectCreator.getProject(projectId).projectExists;
+    //     uint256 amountRaisedByProject = i_raiseBoxProjectCreator.getAmountRaisedByProject(
     //         projectId
     //     );
 
-    //     uint256 amountToRaise = i_raiseBoxCore
+    //     uint256 amountToRaise = i_raiseBoxProjectCreator
     //         .getProject(projectId)
     //         .amountToRaise;
 
@@ -174,7 +171,7 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
     //     bytes32 projectId
     // ) public returns (MileStoneProposalDetails memory mileStoneDetails) {
     //     require(
-    //         i_raiseBoxCore.getProject(projectId).projectExists,
+    //         i_raiseBoxProjectCreator.getProject(projectId).projectExists,
     //         "project does not exist"
     //     );
     //     mileStoneDetails = proposalByProjectId[projectId];

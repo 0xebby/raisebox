@@ -14,7 +14,6 @@ import {RaiseBox} from "../src/RaiseBoxProjectCreation.sol";
  * @notice it holds the major storage that all other contracts read and update (authorized updates***)
  * @dev use it's associated interface to get exposed external functions and structs
  */
-
 contract RaiseBoxStorage is ICore, ERC20, Ownable {
     using SafeERC20 for IERC20;
 
@@ -122,21 +121,19 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
     }
 
     /**
-     * @title incrementProjectCount
+     * @notice incrementProjectCount
      * @notice tracks and increases total number of projects on protocol by 1
      * @dev only a project creation event can increment the projectCreationCount
-     * @dev only calls from `RaiseBoxProjectCreation.sol` can pass 
+     * @dev only calls from `RaiseBoxProjectCreation.sol` can pass
      */
-    function incrementProjectCount() external returns (uint256) { 
-        if (msg.sender != raiseBoxCreationContractAddress ) {
+    function incrementProjectCount() external returns (uint256) {
+        if (msg.sender != raiseBoxCreationContractAddress) {
             revert RaiseBoxStorage_getRaiseBoxProjectCount_CallNotFromProjectCreation();
-            
         } else {
             return raiseBoxProjectCounter++;
         }
-     }
+    }
 
-     
     function updateAmountRaisedByProject(bytes32 projectID, uint256 amount) internal returns (uint256 amountRaised) {
         ProjectInfo storage projectInfo;
 
@@ -185,7 +182,7 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
         }
     }
 
-     function updateProjectCreationInStorage(
+    function updateProjectCreationInStorage(
         bytes32 projectId,
         string memory projectName,
         address projectOwner,
@@ -257,9 +254,9 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
         return protocolFeeAddress;
     }
 
-     function getProjectCount() external returns (uint256) { return raiseBoxProjectCounter; }
-
-
+    function getProjectCount() external returns (uint256) {
+        return raiseBoxProjectCounter;
+    }
 
     // function getProjectMapping(
     //     bytes32 projectID
