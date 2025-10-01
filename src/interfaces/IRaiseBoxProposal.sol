@@ -19,3 +19,23 @@ interface IRaiseBoxProposal {
 
     // function updateProposalDetails(bytes32 projectId, uint256 proposalId) external;
 }
+
+/*
+
+event NewProposalHosted(
+        address indexed projectOwner,
+        uint256 proposalId,
+        string proposalDescription,
+        string proposalAchievement,
+        uint256 timestamp,
+        uint256 numberOfProposalsHosted
+    );
+    event ProposalPassed();
+
+    error raiseBoxProposal_InvalidProjectOwner();
+    error RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
+    error RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
+    error RaiseBox_hostProposal_RaiseNotEnded();
+
+    */
+   

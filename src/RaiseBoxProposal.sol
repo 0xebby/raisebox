@@ -23,6 +23,7 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
     // only 10% of overall funds contributed at time of hosting proposal is released per time
     address raiseBoxCoreaddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3;
     IRaiseBoxProjectCreation public immutable i_raiseBoxProjectCreator;
+    ICore public raiseBoxCore; // the central contract that holds main storage of raisebox
 
     uint256 public lastProposalTime;
 
@@ -38,6 +39,10 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
 
     mapping(uint256 => MileStoneProposalDetails) proposalIdToProposal;
 
+    mapping (bytes32 => bool) public hasHostedProposal;
+
+    mapping(bytes32 => uint256) public proposalCountByProjectId;
+
     uint256 public blockTimeOfLastProposal; // track all proposals made and update +30 days for each call to host proposal
     //milestone struct to track proposals based on milestone reached
 
@@ -47,7 +52,7 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
 
     // proposal related events:
     event NewProposalHosted(
-        address indexed projectOwner,
+        address indexed projectCreator,
         uint256 proposalId,
         string proposalDescription,
         string proposalAchievement,
@@ -57,23 +62,74 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
     event ProposalPassed();
 
     error raiseBoxProposal_InvalidProjectOwner();
-    error raiseBoxProposal_ProjectDoesNotExist();
+    error RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
     error RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
-    error RaiseBox_hostProposal_RaiseNotEnded();
+    error RaiseBoxProposal_hostProposal_RaiseNotEnded();
+    error RaiseBoxProposal_hostProposal_InvalidProposalTextDetails();
 
     constructor(address raiseBoxCoreaddress_) RaiseBoxStorage() {
         raiseBoxCoreaddress = raiseBoxCoreaddress_;
         i_raiseBoxProjectCreator = IRaiseBoxProjectCreation(raiseBoxCoreaddress_);
     }
 
-    modifier onlyProjectOwner(address projectOwner, bytes32 projectId) {
-        // get project using projectId above
-        bytes32 projectId = i_raiseBoxProjectCreator.getProject(projectId).projectID;
-        if (projectOwner == address(0) || projectOwner != i_raiseBoxProjectCreator.getProject(projectId).projectOwner) {
+    modifier onlyProjectOwner(address projectCreator, bytes32 projectId) {
+        
+        if (projectCreator == address(0) || projectCreator != i_raiseBoxProjectCreator.getProjectCreator(projectId)) {
             revert raiseBoxProposal_InvalidProjectOwner();
         }
 
         _;
+    }
+
+    function hostProposal(
+        string memory proposalTitle,
+        string memory proposal,
+        bytes32 projectId
+    ) public onlyProjectOwner(msg.sender, projectId) {
+
+        ProjectInfo memory project = raiseBoxCore.getProject(projectId);
+
+        // does project exist
+        bool projectExist = project.projectExists;
+
+        if (!projectExist) {
+            revert RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
+        }
+
+        if ((block.timestamp < project.duration)) {
+            revert RaiseBoxProposal_hostProposal_RaiseNotEnded();
+        }
+
+        if (bytes(proposalTitle).length == 0 || bytes(proposal).length == 0 ) {
+            revert RaiseBoxProposal_hostProposal_InvalidProposalTextDetails();
+        }
+
+        if (hasHostedProposal[projectId]) {
+            if (block.timestamp < INTERVAL_BETWEEN_PROPOSALS) {
+                revert RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
+            }
+            
+        }
+
+        uint256 count = proposalCountByProjectId[projectId]++;
+
+        // update milestone struct
+
+        MileStoneProposalDetails storage mileStoneProposalDetails;
+
+      
+        proposalByProjectId[projectId] = MileStoneProposalDetails({
+            lastProposalTime: block.timestamp,
+            description: proposalTitle,
+            achievement: proposal,
+            proposalId: count,
+            proposalCount: count
+        });
+
+
+
+        hasHostedProposal[projectId] = true;
+
     }
 
     // function to host a proposal by project:
@@ -100,7 +156,7 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
     //         .amountToRaise;
 
     //     if (!projectExist) {
-    //         revert raiseBoxProposal_ProjectDoesNotExist();
+    //         revert RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
     //     }
 
     //     if (
@@ -111,7 +167,7 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
     //     }
 
     //     if (amountRaisedByProject != amountToRaise) {
-    //         revert RaiseBox_hostProposal_RaiseNotEnded();
+    //         revert RaiseBoxProposal_hostProposal_RaiseNotEnded();
     //     }
 
     //     require(
