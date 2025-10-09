@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+/*
+    Note: this is the interface for the RaiseBox Contribution contract
+*/
+
 interface IRaiseBoxContribution {
     function contribute(uint256 amount, bytes32 projectId) external payable;
 
