@@ -9,12 +9,12 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {RaiseBoxContribution} from "../src/RaiseBoxContribution.sol";
 import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
 import {RaiseBoxProposal} from "../src/RaiseBoxProposal.sol";
-import {RaiseBoxStorage} from "../src/RaiseBoxStorage.sol";
+import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 
 contract RaiseBoxProjectCreationTest is Test {
     // main contract that holds general storage
-    RaiseBoxStorage raiseBoxStorage;
+    RaiseBoxCore raiseBoxStorage;
 
     // core interface
     IRaiseBoxCore raiseBoxCore;
@@ -45,7 +45,7 @@ contract RaiseBoxProjectCreationTest is Test {
 
     function setUp() public {
         // deploy the main contract that holds general storage
-        raiseBoxStorage = new RaiseBoxStorage();
+        raiseBoxStorage = new RaiseBoxCore();
 
         // deploy project creation contract with CA of main contract above
         raiseBoxProjectCreationContract = new RaiseBox(address(raiseBoxStorage));

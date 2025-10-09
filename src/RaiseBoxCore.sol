@@ -9,12 +9,12 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {RaiseBox} from "../src/RaiseBoxProjectCreation.sol";
 
 /**
- * @title RaiseBoxStorage is the central contract of this protocol
+ * @title RaiseBoxCore is the central contract of this protocol
  * @author 0xebby
  * @notice it holds the major storage that all other contracts read and update (authorized updates***)
  * @dev use it's associated interface to get exposed external functions and structs
  */
-contract RaiseBoxStorage is IRaiseBoxCore, ERC20, Ownable {
+contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     using SafeERC20 for IERC20;
 
 
@@ -47,8 +47,8 @@ contract RaiseBoxStorage is IRaiseBoxCore, ERC20, Ownable {
     error RaiseBox_getProject_InvalidProjectId();
     error RaiseBox_RaiseEnded(bytes32);
 
-    error RaiseBoxStorage_updateStorage_wrongCaller();
-    error RaiseBoxStorage_getRaiseBoxProjectCount_CallNotFromProjectCreation();
+    error RaiseBoxCore_updateStorage_wrongCaller();
+    error RaiseBoxCore_getRaiseBoxProjectCount_CallNotFromProjectCreation();
 
     // events:
 
@@ -56,17 +56,17 @@ contract RaiseBoxStorage is IRaiseBoxCore, ERC20, Ownable {
 
     event StorageUpdatedWithProjectCreationDetails(bytes32);
 
-    event RaiseBoxStorage_IDsStorageSuccessfullyUpdated(bool IDexists, bytes32 projectId);
+    event RaiseBoxCore_IDsStorageSuccessfullyUpdated(bool IDexists, bytes32 projectId);
 
-    event RaiseBoxStorage_ProjectCreationContractSet(address contractAddress);
+    event RaiseBoxCore_ProjectCreationContractSet(address contractAddress);
 
     // test errors:
     error RaiseBox_updateStorage_CallNotFromRaiseBoxProjectCreationContract();
     error InvalidContract();
     error RaiseBox_updateStorage_NotAValidProjectID();
-    error RaiseBoxStorage_getProtocol_RaiseBoxProtocolUnset();
-    error RaiseBoxStorage_setProjectCreation_InvalidContract();
-    error RaiseBoxStorage_setProjectCreation_ContractAlreadySet();
+    error RaiseBoxCore_getProtocol_RaiseBoxProtocolUnset();
+    error RaiseBoxCore_setProjectCreation_InvalidContract();
+    error RaiseBoxCore_setProjectCreation_ContractAlreadySet();
 
     // projectID (Keccak hash) to projectInfo
     mapping(bytes32 => ProjectInfo) public projectIDToProject;
@@ -98,15 +98,15 @@ contract RaiseBoxStorage is IRaiseBoxCore, ERC20, Ownable {
 
     function setProjectCreationContractAddress(address contractAddressToSet) external onlyOwner {
         if (contractAddressToSet == address(0)) {
-            revert RaiseBoxStorage_setProjectCreation_InvalidContract();
+            revert RaiseBoxCore_setProjectCreation_InvalidContract();
         }
         if (raiseBoxCreationContractAddress != address(0)) {
-            revert RaiseBoxStorage_setProjectCreation_ContractAlreadySet();
+            revert RaiseBoxCore_setProjectCreation_ContractAlreadySet();
         }
 
         raiseBoxCreationContractAddress = contractAddressToSet;
 
-        emit RaiseBoxStorage_ProjectCreationContractSet(raiseBoxCreationContractAddress);
+        emit RaiseBoxCore_ProjectCreationContractSet(raiseBoxCreationContractAddress);
     }
 
     function setContributionContractAddress(address contractAddressToSet) external onlyOwner {
@@ -118,7 +118,7 @@ contract RaiseBoxStorage is IRaiseBoxCore, ERC20, Ownable {
     function updateIDsStorage(bytes32 projectId) internal {
         IDexists[projectId] = true;
 
-        emit RaiseBoxStorage_IDsStorageSuccessfullyUpdated(IDexists[projectId], projectId);
+        emit RaiseBoxCore_IDsStorageSuccessfullyUpdated(IDexists[projectId], projectId);
     }
 
     /**
@@ -129,7 +129,7 @@ contract RaiseBoxStorage is IRaiseBoxCore, ERC20, Ownable {
      */
     function incrementProjectCount() external returns (uint256) {
         if (msg.sender != raiseBoxCreationContractAddress) {
-            revert RaiseBoxStorage_getRaiseBoxProjectCount_CallNotFromProjectCreation();
+            revert RaiseBoxCore_getRaiseBoxProjectCount_CallNotFromProjectCreation();
         } else {
             return raiseBoxProjectCounter++;
         }
@@ -221,7 +221,7 @@ contract RaiseBoxStorage is IRaiseBoxCore, ERC20, Ownable {
 
     function getProtocol() public view returns (address payable) {
         if (protocol == address(0)) {
-            revert RaiseBoxStorage_getProtocol_RaiseBoxProtocolUnset();
+            revert RaiseBoxCore_getProtocol_RaiseBoxProtocolUnset();
         }
         return (protocol);
     }

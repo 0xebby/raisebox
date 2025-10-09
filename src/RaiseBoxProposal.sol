@@ -6,9 +6,9 @@ import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreati
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {console} from "../lib/forge-std/src/Test.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
-import {RaiseBoxStorage} from "../src/RaiseBoxStorage.sol";
+import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 
-contract RaiseBoxProposal is IRaiseBoxCore, IRaiseBoxProposal, RaiseBoxStorage {
+contract RaiseBoxProposal is IRaiseBoxCore, IRaiseBoxProposal, RaiseBoxCore {
     using Strings for uint256;
     // to get funding drips from contributions, projects have to host proposals after every milestone achieved
 
@@ -67,7 +67,7 @@ contract RaiseBoxProposal is IRaiseBoxCore, IRaiseBoxProposal, RaiseBoxStorage {
     error RaiseBoxProposal_hostProposal_RaiseNotEnded();
     error RaiseBoxProposal_hostProposal_InvalidProposalTextDetails();
 
-    constructor(address raiseBoxCoreaddress_) RaiseBoxStorage() {
+    constructor(address raiseBoxCoreaddress_) RaiseBoxCore() {
         raiseBoxCoreaddress = raiseBoxCoreaddress_;
         i_raiseBoxProjectCreator = IRaiseBoxProjectCreation(raiseBoxCoreaddress_);
     }

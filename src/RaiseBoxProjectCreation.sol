@@ -6,18 +6,18 @@ import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreati
 import {RaiseBoxFaucet} from "/home/ebby/contracts-2025/crowdfund-faucet-contract/src/RaiseBoxFaucet.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {console} from "../lib/forge-std/src/Test.sol";
-import {RaiseBoxStorage} from "../src/RaiseBoxStorage.sol";
+import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 
 /// @title RaiseBoxProjectCreation Contract - This contract allows users to create crowdfunding projects on RaiseBox
 /// @author 0xcoda
-/// @notice This contract is part of the RaiseBox crowdfunding platform, enabling project creation and management, updates core storage (RaiseBoxStorage)
-/// @dev This contract interacts with RaiseBoxStorage for data persistence.
+/// @notice This contract is part of the RaiseBox crowdfunding platform, enabling project creation and management, updates core storage (RaiseBoxCore)
+/// @dev This contract interacts with RaiseBoxCore for data persistence.
 
 contract RaiseBox is IRaiseBoxProjectCreation {
     // central contract that holds main storage of raisebox and it's interface
     IRaiseBoxCore public raiseBoxCore;
-    RaiseBoxStorage public raiseBoxStorage;
+    RaiseBoxCore public raiseBoxStorage;
 
     using Strings for uint256;
     using Strings for bytes32;
@@ -105,7 +105,7 @@ contract RaiseBox is IRaiseBoxProjectCreation {
 
     constructor(address raiseBoxCoreAddress) {
         // raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
-        raiseBoxStorage = RaiseBoxStorage(raiseBoxCoreAddress);
+        raiseBoxStorage = RaiseBoxCore(raiseBoxCoreAddress);
     }
 
     // ----------------------------------------------------------------------- modifiers -------------------------------------------------------------------------  //

@@ -3,15 +3,15 @@ pragma solidity ^0.8.19;
 
 import {RaiseBox} from "../src/RaiseBoxProjectCreation.sol";
 import {Script} from "forge-std/Script.sol";
-import {RaiseBoxStorage} from "../src/RaiseBoxStorage.sol";
+import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 
 contract DeployRaiseBoxCore is Script {
     RaiseBox raiseBoxProjectCreationDeployer;
-    RaiseBoxStorage raiseBoxStorageDeployer;
+    RaiseBoxCore raiseBoxStorageDeployer;
 
     function run() public {
         vm.startBroadcast();
-        raiseBoxStorageDeployer = new RaiseBoxStorage();
+        raiseBoxStorageDeployer = new RaiseBoxCore();
         raiseBoxProjectCreationDeployer = new RaiseBox(address(raiseBoxStorageDeployer));
 
         raiseBoxStorageDeployer.setProjectCreationContractAddress(address(raiseBoxProjectCreationDeployer));
