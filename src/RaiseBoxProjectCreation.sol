@@ -20,7 +20,7 @@ contract RaiseBox is IRaiseBoxProjectCreation {
     RaiseBoxCore public raiseBoxStorage;
 
     using Strings for uint256;
-    using Strings for bytes32;
+    using Strings for bytes32;  
 
     // ----------------------------------------------------------------------- state variables -------------------------------------------------------------------------  //
 
