@@ -9,12 +9,12 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {RaiseBoxStorage} from "../src/RaiseBoxStorage.sol";
-import {ICore} from "../src/interfaces/ICore.sol";
+import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 
 contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage, IRaiseBoxContribution {
     // address raiseBoxCoreaddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3;
 
-    ICore public raiseBoxCore; // the central contract that holds main storage of raisebox
+    IRaiseBoxCore public raiseBoxCore; // the central contract that holds main storage of raisebox
 
     using Strings for uint256;
     using Address for address;
@@ -60,7 +60,7 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxStorage, IRaiseBoxCont
     event Contributed(address indexed user, uint256 indexed amount, bytes32 indexed projectId, uint256 amountRaised);
 
     constructor(address raiseBoxCoreAddress) RaiseBoxStorage() {
-        raiseBoxCore = ICore(raiseBoxCoreAddress);
+        raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
     }
 
     function contribute(uint256 amount, bytes32 projectId) external payable nonReentrant {

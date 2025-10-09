@@ -7,7 +7,7 @@ import {RaiseBoxFaucet} from "/home/ebby/contracts-2025/crowdfund-faucet-contrac
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {console} from "../lib/forge-std/src/Test.sol";
 import {RaiseBoxStorage} from "../src/RaiseBoxStorage.sol";
-import {ICore} from "../src/interfaces/ICore.sol";
+import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 
 /// @title RaiseBoxProjectCreation Contract - This contract allows users to create crowdfunding projects on RaiseBox
 /// @author 0xcoda
@@ -16,7 +16,7 @@ import {ICore} from "../src/interfaces/ICore.sol";
 
 contract RaiseBox is IRaiseBoxProjectCreation {
     // central contract that holds main storage of raisebox and it's interface
-    ICore public raiseBoxCore;
+    IRaiseBoxCore public raiseBoxCore;
     RaiseBoxStorage public raiseBoxStorage;
 
     using Strings for uint256;
@@ -104,7 +104,7 @@ contract RaiseBox is IRaiseBoxProjectCreation {
     // ----------------------------------------------------------------------- constructor -------------------------------------------------------------------------  //
 
     constructor(address raiseBoxCoreAddress) {
-        // raiseBoxCore = ICore(raiseBoxCoreAddress);
+        // raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
         raiseBoxStorage = RaiseBoxStorage(raiseBoxCoreAddress);
     }
 

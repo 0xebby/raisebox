@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {ICore} from "../src/interfaces/ICore.sol";
+import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "../@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -14,8 +14,9 @@ import {RaiseBox} from "../src/RaiseBoxProjectCreation.sol";
  * @notice it holds the major storage that all other contracts read and update (authorized updates***)
  * @dev use it's associated interface to get exposed external functions and structs
  */
-contract RaiseBoxStorage is ICore, ERC20, Ownable {
+contract RaiseBoxStorage is IRaiseBoxCore, ERC20, Ownable {
     using SafeERC20 for IERC20;
+
 
     // total projects on raisebox
     uint256 private raiseBoxProjectCounter;

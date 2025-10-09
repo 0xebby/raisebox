@@ -5,10 +5,10 @@ import {IRaiseBoxProposal} from "../src/interfaces/IRaiseBoxProposal.sol";
 import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {console} from "../lib/forge-std/src/Test.sol";
-import {ICore} from "../src/interfaces/ICore.sol";
+import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 import {RaiseBoxStorage} from "../src/RaiseBoxStorage.sol";
 
-contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
+contract RaiseBoxProposal is IRaiseBoxCore, IRaiseBoxProposal, RaiseBoxStorage {
     using Strings for uint256;
     // to get funding drips from contributions, projects have to host proposals after every milestone achieved
 
@@ -23,7 +23,7 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
     // only 10% of overall funds contributed at time of hosting proposal is released per time
     address raiseBoxCoreaddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3;
     IRaiseBoxProjectCreation public immutable i_raiseBoxProjectCreator;
-    ICore public raiseBoxCore; // the central contract that holds main storage of raisebox
+    IRaiseBoxCore public raiseBoxCore; // the central contract that holds main storage of raisebox
 
     uint256 public lastProposalTime;
 

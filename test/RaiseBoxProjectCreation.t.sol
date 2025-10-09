@@ -10,14 +10,14 @@ import {RaiseBoxContribution} from "../src/RaiseBoxContribution.sol";
 import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
 import {RaiseBoxProposal} from "../src/RaiseBoxProposal.sol";
 import {RaiseBoxStorage} from "../src/RaiseBoxStorage.sol";
-import {ICore} from "../src/interfaces/ICore.sol";
+import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 
 contract RaiseBoxProjectCreationTest is Test {
     // main contract that holds general storage
     RaiseBoxStorage raiseBoxStorage;
 
     // core interface
-    ICore raiseBoxCore;
+    IRaiseBoxCore raiseBoxCore;
 
     // project creation contract
     RaiseBox raiseBoxProjectCreationContract;
