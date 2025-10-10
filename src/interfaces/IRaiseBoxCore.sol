@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-interface ICore {
+/*
+    Note: this is the interface for the RaiseBox Core contract
+*/
+
+interface IRaiseBoxCore {
     struct ProjectInfo {
         string projectName;
         address projectOwner;

@@ -6,21 +6,21 @@ import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreati
 import {RaiseBoxFaucet} from "/home/ebby/contracts-2025/crowdfund-faucet-contract/src/RaiseBoxFaucet.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {console} from "../lib/forge-std/src/Test.sol";
-import {RaiseBoxStorage} from "../src/RaiseBoxStorage.sol";
-import {ICore} from "../src/interfaces/ICore.sol";
+import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
+import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 
 /// @title RaiseBoxProjectCreation Contract - This contract allows users to create crowdfunding projects on RaiseBox
 /// @author 0xcoda
-/// @notice This contract is part of the RaiseBox crowdfunding platform, enabling project creation and management, updates core storage (RaiseBoxStorage)
-/// @dev This contract interacts with RaiseBoxStorage for data persistence.
+/// @notice This contract is part of the RaiseBox crowdfunding platform, enabling project creation and management, updates core storage (RaiseBoxCore)
+/// @dev This contract interacts with RaiseBoxCore for data persistence.
 
 contract RaiseBox is IRaiseBoxProjectCreation {
     // central contract that holds main storage of raisebox and it's interface
-    ICore public raiseBoxCore;
-    RaiseBoxStorage public raiseBoxStorage;
+    IRaiseBoxCore public raiseBoxCore;
+    RaiseBoxCore public raiseBoxStorage;
 
     using Strings for uint256;
-    using Strings for bytes32;
+    using Strings for bytes32;  
 
     // ----------------------------------------------------------------------- state variables -------------------------------------------------------------------------  //
 
@@ -41,6 +41,7 @@ contract RaiseBox is IRaiseBoxProjectCreation {
     // mapping(uint256 => ProjectInfo) public projectIndexToProject;
 
     uint256 public projectIndex;
+
     mapping(address => uint16) public projectCountPerProjectOwner;
     mapping(address projectOwner => uint256 lastProjectCreationTime) public i_lastProjectCreation;
 
@@ -103,15 +104,13 @@ contract RaiseBox is IRaiseBoxProjectCreation {
     // ----------------------------------------------------------------------- constructor -------------------------------------------------------------------------  //
 
     constructor(address raiseBoxCoreAddress) {
-        // raiseBoxCore = ICore(raiseBoxCoreAddress);
-        raiseBoxStorage = RaiseBoxStorage(raiseBoxCoreAddress);
+        // raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
+        raiseBoxStorage = RaiseBoxCore(raiseBoxCoreAddress);
     }
 
     // ----------------------------------------------------------------------- modifiers -------------------------------------------------------------------------  //
 
     // modifiers:
-
-    // this modifier ensures that only users that have contributed to a raise return true and can vote on proposals
 
     // protocol related modifiers:
     // only protocol functions
@@ -134,8 +133,8 @@ contract RaiseBox is IRaiseBoxProjectCreation {
      * @param valueProposition_ what problem the project is going to solve
      * @param amountToRaise_ amount project wants to raise --in ethers now, usd later
      * @param duration_ duration of the raise -- how long the raise period will last
-     * // 300154 initial gas estimate for createProject function
-     * // 299980 gas after optimizations
+     * @dev 300154 initial gas estimate for createProject function
+     * @dev 299980 gas after optimizations
      */
     function createProject(
         string memory projectName_,
@@ -214,6 +213,7 @@ contract RaiseBox is IRaiseBoxProjectCreation {
 
         projectIndex++;
         i_lastProjectCreation[msg.sender] = timeCreated;
+        raiseBoxStorage.incrementProjectCount();
 
         // projectIndexToProject[projectIndex] = projectIDToProject[projectID];
 

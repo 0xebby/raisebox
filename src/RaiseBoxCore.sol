@@ -1,15 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {ICore} from "../src/interfaces/ICore.sol";
+import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "../@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {RaiseBox} from "../src/RaiseBoxProjectCreation.sol";
 
-contract RaiseBoxStorage is ICore, ERC20, Ownable {
+/**
+ * @title RaiseBoxCore is the central contract of this protocol
+ * @author 0xebby
+ * @notice it holds the major storage that all other contracts read and update (authorized updates***)
+ * @dev use it's associated interface to get exposed external functions and structs
+ */
+contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     using SafeERC20 for IERC20;
+
+
+    // total projects on raisebox
+    uint256 private raiseBoxProjectCounter;
 
     // MINIMUM_CONTRIBUTION = 0.01 ether; // 1e16
     uint256 public constant MINIMUM_CONTRIBUTION = 0.01 ether;
@@ -37,7 +47,8 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
     error RaiseBox_getProject_InvalidProjectId();
     error RaiseBox_RaiseEnded(bytes32);
 
-    error RaiseBoxStorage_updateStorage_wrongCaller();
+    error RaiseBoxCore_updateStorage_wrongCaller();
+    error RaiseBoxCore_getRaiseBoxProjectCount_CallNotFromProjectCreation();
 
     // events:
 
@@ -45,13 +56,17 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
 
     event StorageUpdatedWithProjectCreationDetails(bytes32);
 
-    event RaiseBoxStorage_IDsStorageSuccessfullyUpdated(bool IDexists, bytes32 projectId);
+    event RaiseBoxCore_IDsStorageSuccessfullyUpdated(bool IDexists, bytes32 projectId);
+
+    event RaiseBoxCore_ProjectCreationContractSet(address contractAddress);
 
     // test errors:
     error RaiseBox_updateStorage_CallNotFromRaiseBoxProjectCreationContract();
     error InvalidContract();
     error RaiseBox_updateStorage_NotAValidProjectID();
-    error RaiseBoxStorage_getProtocol_RaiseBoxProtocolUnset();
+    error RaiseBoxCore_getProtocol_RaiseBoxProtocolUnset();
+    error RaiseBoxCore_setProjectCreation_InvalidContract();
+    error RaiseBoxCore_setProjectCreation_ContractAlreadySet();
 
     // projectID (Keccak hash) to projectInfo
     mapping(bytes32 => ProjectInfo) public projectIDToProject;
@@ -81,18 +96,17 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
         // raiseBoxCreationContractAddress = projectCreationContract;
     }
 
-    // function getIDs() external {
-    //     s_raiseBoxProjectIDs;
-    // }
-
     function setProjectCreationContractAddress(address contractAddressToSet) external onlyOwner {
-        require(contractAddressToSet != address(0), "zero address not allowed");
-
-        require(raiseBoxCreationContractAddress == address(0), "project creation contract already set");
+        if (contractAddressToSet == address(0)) {
+            revert RaiseBoxCore_setProjectCreation_InvalidContract();
+        }
+        if (raiseBoxCreationContractAddress != address(0)) {
+            revert RaiseBoxCore_setProjectCreation_ContractAlreadySet();
+        }
 
         raiseBoxCreationContractAddress = contractAddressToSet;
 
-        // event ProjectCreationContractSet(address contractAddress);
+        emit RaiseBoxCore_ProjectCreationContractSet(raiseBoxCreationContractAddress);
     }
 
     function setContributionContractAddress(address contractAddressToSet) external onlyOwner {
@@ -104,87 +118,20 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
     function updateIDsStorage(bytes32 projectId) internal {
         IDexists[projectId] = true;
 
-        emit RaiseBoxStorage_IDsStorageSuccessfullyUpdated(IDexists[projectId], projectId);
+        emit RaiseBoxCore_IDsStorageSuccessfullyUpdated(IDexists[projectId], projectId);
     }
 
-    function getIDsFromStorage() external returns (bytes32 id) {
-        for (uint256 i = 0; i < s_raiseBoxProjectIDs.length; i++) {
-            return s_raiseBoxProjectIDs[i];
-        }
-    }
-
-    function getProtocol() public view returns (address payable) {
-        if (protocol == address(0)) {
-            revert RaiseBoxStorage_getProtocol_RaiseBoxProtocolUnset();
-        }
-        return (protocol);
-    }
-
-    function getMinimumContribution() public view returns (uint256) {
-        return MINIMUM_CONTRIBUTION;
-    }
-
-    function getProject(bytes32 projectId) public returns (ProjectInfo memory projectInfo) {
-        if (!this.getProjectExist(projectId)) {
-            revert RaiseBox_getProject_InvalidProjectId();
-        }
-        projectInfo = projectIDToProject[projectId];
-    }
-
-    function getAmountToRaise(bytes32 projectId) external view returns (uint256) {
-        if (!this.getProjectExist(projectId)) {
-            revert RaiseBox_getProject_InvalidProjectId();
-        }
-        return projectIDToProject[projectId].amountToRaise;
-    }
-
-    function getAmountRaisedByProject(bytes32 projectId) external returns (uint256) {
-        if (!this.getProjectExist(projectId)) {
-            revert RaiseBox_getProject_InvalidProjectId();
-        }
-        return projectIDToProject[projectId].amountRaisedByProject;
-    }
-
-    function getProtocolFeeAddress() external view returns (address) {
-        return protocolFeeAddress;
-    }
-
-    // function getProjectMapping(
-    //     bytes32 projectID
-    // ) external returns (ProjectInfo memory) {
-    //     return projectIDToProject[projectID];
-    // }
-
-    function getProjectInfo(bytes32 projectID)
-        external
-        returns (string memory, address, string memory, uint256, uint256, bytes32, bool, uint256, uint256, uint256)
-    {
-        // get from storage
-        ProjectInfo storage projectInfo;
-        projectInfo = projectIDToProject[projectID];
-        return (
-            projectInfo.projectName,
-            projectInfo.projectOwner,
-            projectInfo.valueProposition,
-            projectInfo.amountToRaise,
-            projectInfo.duration,
-            projectInfo.projectID,
-            projectInfo.projectExists,
-            projectInfo.timeCreated,
-            projectInfo.amountRaisedByProject,
-            projectInfo.proposalsHosted
-        );
-    }
-
-    function getProjectExist(bytes32 projectID) external view returns (bool) {
-        ProjectInfo storage projectInfo;
-
-        projectInfo = projectIDToProject[projectID];
-
-        if (projectInfo.projectExists == true) {
-            return true;
+    /**
+     * @notice incrementProjectCount
+     * @notice tracks and increases total number of projects on protocol by 1
+     * @dev only a project creation event can increment the projectCreationCount
+     * @dev only calls from `RaiseBoxProjectCreation.sol` can pass
+     */
+    function incrementProjectCount() external returns (uint256) {
+        if (msg.sender != raiseBoxCreationContractAddress) {
+            revert RaiseBoxCore_getRaiseBoxProjectCount_CallNotFromProjectCreation();
         } else {
-            return false;
+            return raiseBoxProjectCounter++;
         }
     }
 
@@ -236,14 +183,6 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
         }
     }
 
-    function getProjectCreator(bytes32 projectId) external view returns (address) {
-        ProjectInfo storage projectInfo;
-
-        projectInfo = projectIDToProject[projectId];
-
-        return projectInfo.projectOwner;
-    }
-
     function updateProjectCreationInStorage(
         bytes32 projectId,
         string memory projectName,
@@ -270,6 +209,101 @@ contract RaiseBoxStorage is ICore, ERC20, Ownable {
         projectInfo.numberOfProjectsCreatedByProjectOwner = numberOfProjectsCreatedByProjectOwner;
 
         emit StorageUpdatedWithProjectCreationDetails(projectId);
+    }
+
+    // getters:
+
+    function getIDsFromStorage() external returns (bytes32 id) {
+        for (uint256 i = 0; i < s_raiseBoxProjectIDs.length; i++) {
+            return s_raiseBoxProjectIDs[i];
+        }
+    }
+
+    function getProtocol() public view returns (address payable) {
+        if (protocol == address(0)) {
+            revert RaiseBoxCore_getProtocol_RaiseBoxProtocolUnset();
+        }
+        return (protocol);
+    }
+
+    function getMinimumContribution() public view returns (uint256) {
+        return MINIMUM_CONTRIBUTION;
+    }
+
+    function getProject(bytes32 projectId) public returns (ProjectInfo memory projectInfo) {
+        if (!this.getProjectExist(projectId)) {
+            revert RaiseBox_getProject_InvalidProjectId();
+        }
+        projectInfo = projectIDToProject[projectId];
+    }
+
+    function getAmountToRaise(bytes32 projectId) external view returns (uint256) {
+        if (!this.getProjectExist(projectId)) {
+            revert RaiseBox_getProject_InvalidProjectId();
+        }
+        return projectIDToProject[projectId].amountToRaise;
+    }
+
+    function getAmountRaisedByProject(bytes32 projectId) external returns (uint256) {
+        if (!this.getProjectExist(projectId)) {
+            revert RaiseBox_getProject_InvalidProjectId();
+        }
+        return projectIDToProject[projectId].amountRaisedByProject;
+    }
+
+    function getProtocolFeeAddress() external view returns (address) {
+        return protocolFeeAddress;
+    }
+
+    function getProjectCount() external returns (uint256) {
+        return raiseBoxProjectCounter;
+    }
+
+    // function getProjectMapping(
+    //     bytes32 projectID
+    // ) external returns (ProjectInfo memory) {
+    //     return projectIDToProject[projectID];
+    // }
+
+    function getProjectInfo(bytes32 projectID)
+        external
+        returns (string memory, address, string memory, uint256, uint256, bytes32, bool, uint256, uint256, uint256)
+    {
+        // get from storage
+        ProjectInfo storage projectInfo;
+        projectInfo = projectIDToProject[projectID];
+        return (
+            projectInfo.projectName,
+            projectInfo.projectOwner,
+            projectInfo.valueProposition,
+            projectInfo.amountToRaise,
+            projectInfo.duration,
+            projectInfo.projectID,
+            projectInfo.projectExists,
+            projectInfo.timeCreated,
+            projectInfo.amountRaisedByProject,
+            projectInfo.proposalsHosted
+        );
+    }
+
+    function getProjectExist(bytes32 projectID) external view returns (bool) {
+        ProjectInfo storage projectInfo;
+
+        projectInfo = projectIDToProject[projectID];
+
+        if (projectInfo.projectExists == true) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function getProjectCreator(bytes32 projectId) external view returns (address) {
+        ProjectInfo storage projectInfo;
+
+        projectInfo = projectIDToProject[projectId];
+
+        return projectInfo.projectOwner;
     }
 
     function getOwner() external view returns (address) {

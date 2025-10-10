@@ -5,10 +5,10 @@ import {IRaiseBoxProposal} from "../src/interfaces/IRaiseBoxProposal.sol";
 import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {console} from "../lib/forge-std/src/Test.sol";
-import {ICore} from "../src/interfaces/ICore.sol";
-import {RaiseBoxStorage} from "../src/RaiseBoxStorage.sol";
+import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
+import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 
-contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
+contract RaiseBoxProposal is IRaiseBoxCore, IRaiseBoxProposal, RaiseBoxCore {
     using Strings for uint256;
     // to get funding drips from contributions, projects have to host proposals after every milestone achieved
 
@@ -22,7 +22,8 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
     // drips %: in multiples of 5 up to 100
     // only 10% of overall funds contributed at time of hosting proposal is released per time
     address raiseBoxCoreaddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3;
-    IRaiseBoxProjectCreation public immutable i_raiseBoxCore;
+    IRaiseBoxProjectCreation public immutable i_raiseBoxProjectCreator;
+    IRaiseBoxCore public raiseBoxCore; // the central contract that holds main storage of raisebox
 
     uint256 public lastProposalTime;
 
@@ -38,6 +39,10 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
 
     mapping(uint256 => MileStoneProposalDetails) proposalIdToProposal;
 
+    mapping (bytes32 => bool) public hasHostedProposal;
+
+    mapping(bytes32 => uint256) public proposalCountByProjectId;
+
     uint256 public blockTimeOfLastProposal; // track all proposals made and update +30 days for each call to host proposal
     //milestone struct to track proposals based on milestone reached
 
@@ -47,7 +52,7 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
 
     // proposal related events:
     event NewProposalHosted(
-        address indexed projectOwner,
+        address indexed projectCreator,
         uint256 proposalId,
         string proposalDescription,
         string proposalAchievement,
@@ -57,27 +62,75 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
     event ProposalPassed();
 
     error raiseBoxProposal_InvalidProjectOwner();
-    error raiseBoxProposal_ProjectDoesNotExist();
+    error RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
     error RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
-    error RaiseBox_hostProposal_RaiseNotEnded();
+    error RaiseBoxProposal_hostProposal_RaiseNotEnded();
+    error RaiseBoxProposal_hostProposal_InvalidProposalTextDetails();
 
-    constructor(address raiseBoxCoreaddress_) RaiseBoxStorage() {
+    constructor(address raiseBoxCoreaddress_) RaiseBoxCore() {
         raiseBoxCoreaddress = raiseBoxCoreaddress_;
-        i_raiseBoxCore = IRaiseBoxProjectCreation(raiseBoxCoreaddress_);
+        i_raiseBoxProjectCreator = IRaiseBoxProjectCreation(raiseBoxCoreaddress_);
     }
 
-    // modifier onlyProjectOwner(address projectOwner, bytes32 projectId) {
-    //     // get project using projectId above
-    //     // bytes32 projectId = i_raiseBoxCore.getProject(projectId).projectID;
-    //     if (
-    //         projectOwner == address(0) ||
-    //         projectOwner != i_raiseBoxCore.getProject(projectId).projectOwner
-    //     ) {
-    //         revert raiseBoxProposal_InvalidProjectOwner();
-    //     }
+    modifier onlyProjectOwner(address projectCreator, bytes32 projectId) {
+        
+        if (projectCreator == address(0) || projectCreator != i_raiseBoxProjectCreator.getProjectCreator(projectId)) {
+            revert raiseBoxProposal_InvalidProjectOwner();
+        }
 
-    //     _;
-    // }
+        _;
+    }
+
+    function hostProposal(
+        string memory proposalTitle,
+        string memory proposal,
+        bytes32 projectId
+    ) public onlyProjectOwner(msg.sender, projectId) {
+
+        ProjectInfo memory project = raiseBoxCore.getProject(projectId);
+
+        // does project exist
+        bool projectExist = project.projectExists;
+
+        if (!projectExist) {
+            revert RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
+        }
+
+        if ((block.timestamp < project.duration)) {
+            revert RaiseBoxProposal_hostProposal_RaiseNotEnded();
+        }
+
+        if (bytes(proposalTitle).length == 0 || bytes(proposal).length == 0 ) {
+            revert RaiseBoxProposal_hostProposal_InvalidProposalTextDetails();
+        }
+
+        if (hasHostedProposal[projectId]) {
+            if (block.timestamp < INTERVAL_BETWEEN_PROPOSALS) {
+                revert RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
+            }
+            
+        }
+
+        uint256 count = proposalCountByProjectId[projectId]++;
+
+        // update milestone struct
+
+        MileStoneProposalDetails storage mileStoneProposalDetails;
+
+      
+        proposalByProjectId[projectId] = MileStoneProposalDetails({
+            lastProposalTime: block.timestamp,
+            description: proposalTitle,
+            achievement: proposal,
+            proposalId: count,
+            proposalCount: count
+        });
+
+
+
+        hasHostedProposal[projectId] = true;
+
+    }
 
     // function to host a proposal by project:
 
@@ -93,17 +146,17 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
     //     bytes32 projectId
     // ) public onlyProjectOwner(msg.sender, projectId) {
     //     // get project by the id provided by the caller:
-    //     bool projectExist = i_raiseBoxCore.getProject(projectId).projectExists;
-    //     uint256 amountRaisedByProject = i_raiseBoxCore.getAmountRaisedByProject(
+    //     bool projectExist = i_raiseBoxProjectCreator.getProject(projectId).projectExists;
+    //     uint256 amountRaisedByProject = i_raiseBoxProjectCreator.getAmountRaisedByProject(
     //         projectId
     //     );
 
-    //     uint256 amountToRaise = i_raiseBoxCore
+    //     uint256 amountToRaise = i_raiseBoxProjectCreator
     //         .getProject(projectId)
     //         .amountToRaise;
 
     //     if (!projectExist) {
-    //         revert raiseBoxProposal_ProjectDoesNotExist();
+    //         revert RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
     //     }
 
     //     if (
@@ -114,7 +167,7 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
     //     }
 
     //     if (amountRaisedByProject != amountToRaise) {
-    //         revert RaiseBox_hostProposal_RaiseNotEnded();
+    //         revert RaiseBoxProposal_hostProposal_RaiseNotEnded();
     //     }
 
     //     require(
@@ -174,7 +227,7 @@ contract RaiseBoxProposal is ICore, IRaiseBoxProposal, RaiseBoxStorage {
     //     bytes32 projectId
     // ) public returns (MileStoneProposalDetails memory mileStoneDetails) {
     //     require(
-    //         i_raiseBoxCore.getProject(projectId).projectExists,
+    //         i_raiseBoxProjectCreator.getProject(projectId).projectExists,
     //         "project does not exist"
     //     );
     //     mileStoneDetails = proposalByProjectId[projectId];
