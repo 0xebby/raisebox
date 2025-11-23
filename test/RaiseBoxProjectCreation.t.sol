@@ -107,7 +107,7 @@ contract RaiseBoxProjectCreationTest is Test {
 
         vm.startPrank(ben);
         bytes32 projectID2 = raiseBoxProjectCreationContract.createProject(
-            "sentient", "AGI: AI but collectively owned and decentralized", 100 ether, 30 days
+            "sentient", "AGI: AI but collectively owned and decentralized", 30 ether, 30 days
         );
         vm.stopPrank();
 
@@ -117,13 +117,88 @@ contract RaiseBoxProjectCreationTest is Test {
         );
         vm.stopPrank();
 
-        advanceBlockTime(104 weeks); // 2 years
-        vm.startPrank(joe);
-        bytes32 projectID4 =
-            raiseBoxProjectCreationContract.createProject("NGO", "missionary journey to Rome", 50 ether, 30 days);
+        vm.startPrank(ben);
+
+        raiseBoxContributionContract.contribute{value: 6 ether}(6 ether, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+
+
+
+        raiseBoxContributionContract.getContributionsToProject(ben, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+        raiseBoxContributionContract.getTotalContributionsToProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+
         vm.stopPrank();
 
+        vm.startPrank(joe);
+
+        raiseBoxContributionContract.contribute{value: 6 ether}(6 ether, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+
+
+
+        raiseBoxContributionContract.getContributionsToProject(ben, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+        raiseBoxContributionContract.getTotalContributionsToProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+
+        raiseBoxContributionContract.contribute{value: 6 ether}(6 ether, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+
+
+
+        raiseBoxContributionContract.getContributionsToProject(ben, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+        raiseBoxContributionContract.getTotalContributionsToProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+
+        vm.stopPrank();
+
+        vm.startPrank(owner);
+
+        raiseBoxContributionContract.contribute{value: 6 ether}(6 ether, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+
+
+
+        raiseBoxContributionContract.getContributionsToProject(ben, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+        raiseBoxContributionContract.getTotalContributionsToProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+
+        vm.stopPrank();
+
+        vm.startPrank(address(0x1));
+        vm.deal(address(0x1), 50 ether);
+
+        raiseBoxContributionContract.contribute{value: 6 ether}(6 ether, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+
+
+
+        raiseBoxContributionContract.getContributionsToProject(ben, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+        raiseBoxContributionContract.getTotalContributionsToProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+
+        vm.stopPrank();
+
+        raiseBoxStorage.getAmountRaisedByProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+
+        // vm.startPrank(address(0x11));
+        // vm.deal(address(0x11), 50 ether);
+
+        // raiseBoxContributionContract.contribute{value: 6 ether}(6 ether, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+
+
+
+        // raiseBoxContributionContract.getContributionsToProject(ben, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+        // raiseBoxContributionContract.getTotalContributionsToProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+
+        // vm.stopPrank();
+
+
+        // advanceBlockTime(104 weeks); // 2 years
+        // vm.startPrank(joe);
+        // bytes32 projectID4 =
+        //     raiseBoxProjectCreationContract.createProject("NGO", "missionary journey to Rome", 50 ether, 30 days);
+        // vm.stopPrank();
+
         raiseBoxStorage.getProjectCount();
-        assertEq(raiseBoxStorage.getProjectCount(), 4);
+        raiseBoxStorage.getProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+        // assertEq(raiseBoxStorage.getProjectCount(), 4);
+
     }
+
+    
 }

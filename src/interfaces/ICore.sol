@@ -35,7 +35,7 @@ interface ICore {
         external
         returns (string memory, address, string memory, uint256, uint256, bytes32, bool, uint256, uint256, uint256);
 
-    function getProjectExist(bytes32 projectID) external returns (bool);
+    function doesProjectExist(bytes32 projectID) external returns (bool);
 
     function getAmountToRaise(bytes32 projectId) external returns (uint256);
 

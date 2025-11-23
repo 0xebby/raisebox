@@ -84,7 +84,7 @@ contract TestRaiseBox is Test {
             "memeland", "building the largest decentralized meme platform", 5000 ether, 50 days
         );
 
-        assertEq(raiseBoxStorage.getProjectExist(ownerProjectId), true);
+        assertEq(raiseBoxStorage.doesProjectExist(ownerProjectId), true);
 
         // advanceBlockTime(block.timestamp + 78 weeks);
 
@@ -177,7 +177,7 @@ contract TestRaiseBox is Test {
         );
         vm.stopPrank();
 
-        raiseBoxStorage.getProjectExist(projectID1);
+        raiseBoxStorage.doesProjectExist(projectID1);
 
         raiseBoxContributionContract.getMaxContributionAllowedForProject(projectID1);
 
@@ -569,7 +569,7 @@ contract TestRaiseBox is Test {
     //     //     30 days
     //     // );
 
-    //     bool projectExist = raiseBoxStorage.getProjectExist(id1);
+    //     bool projectExist = raiseBoxStorage.doesProjectExist(id1);
 
     //     // vm.prank(joe);
     //     // raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, id1);

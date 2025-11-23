@@ -3,7 +3,6 @@ pragma solidity ^0.8.19;
 
 // import {RaiseBoxVoting} from "../src/RaiseBoxVoting.sol";
 import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
-import {RaiseBoxFaucet} from "/home/ebby/contracts-2025/crowdfund-faucet-contract/src/RaiseBoxFaucet.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {console} from "../lib/forge-std/src/Test.sol";
 import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
@@ -187,7 +186,7 @@ contract RaiseBox is IRaiseBoxProjectCreation {
         bytes32 projectID =
             keccak256(abi.encode(projectName_, amountToRaise_, timeCreated, valueProposition_, msg.sender));
 
-        bool doesProjectExists = raiseBoxStorage.getProjectExist(projectID);
+        bool doesProjectExists = raiseBoxStorage.doesProjectExist(projectID);
 
         if (doesProjectExists) {
             revert RaiseBoxProjectCreation_createProject_ProjectAlreadyExist();

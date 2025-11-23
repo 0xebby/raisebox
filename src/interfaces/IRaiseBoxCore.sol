@@ -39,7 +39,7 @@ interface IRaiseBoxCore {
         external
         returns (string memory, address, string memory, uint256, uint256, bytes32, bool, uint256, uint256, uint256);
 
-    function getProjectExist(bytes32 projectID) external returns (bool);
+    function doesProjectExist(bytes32 projectID) external returns (bool);
 
     function getAmountToRaise(bytes32 projectId) external returns (uint256);
 
@@ -56,6 +56,8 @@ interface IRaiseBoxCore {
         uint256 _noOfProposalsHosted,
         uint256 _numberOfProjectsCreatedByProjectOwner
     ) external;
+
+    function updateAmountRaisedInStorage(bytes32 projectId, uint256 amountRaised) external ;
 
     function getOwner() external view returns (address);
 }
