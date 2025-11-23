@@ -57,5 +57,7 @@ interface IRaiseBoxCore {
         uint256 _numberOfProjectsCreatedByProjectOwner
     ) external;
 
+    function updateAmountRaisedInStorage(bytes32 projectId, uint256 amountRaised) external ;
+
     function getOwner() external view returns (address);
 }

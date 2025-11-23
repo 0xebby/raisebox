@@ -53,7 +53,7 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
     error RaiseBoxContribution_RaiseBoxProtocolUnset();
     error RaiseBoxContribution_ContributeAmountRemaining(uint256);
     error RaiseContribution_ContributionEnded(uint256);
-    error RaiseBoxContribution_contribute_ContributionAboveMax(uint256, string);
+    error RaiseBoxContribution_contribute_AboveMaxAllowed(uint256, string);
     error RaiseBoxContribution_getMaxContributionAllowedForProject_CannotBeZero();
 
     // contribution related events:
@@ -103,12 +103,12 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
         uint256 amountToTarget = (amtToRaise - totalContributionsToProject[projectId]);
 
         if (amountContributedToProject[msg.sender][projectId] + amount > maxContribution) {
-            revert RaiseBoxContribution_contribute_ContributionAboveMax(
+            revert RaiseBoxContribution_contribute_AboveMaxAllowed(
                 amtToRaise,
                 string(
                     abi.encodePacked(
-                        "Cannot over contribute: you can contribute only:",
-                        (amountToTarget / 1e18).toString(),
+                        "Cannot over contribute: you can contribute only: ",
+                        ((maxContribution - amountContributedToProject[msg.sender][projectId]) / 1e18).toString(),
                         " ether more to this project"
                     )
                 )
@@ -146,18 +146,9 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
         // i.e. the amount to raise by project has been raised successfully
         // instead of updating storage everytime a contribution is made, wasteful
         if (totalContributionsToProject[projectId] == amtToRaise) {
-            raiseBoxCore.updateStorage(
+            raiseBoxCore.updateAmountRaisedInStorage(
                 projectId,
-                "name",
-                msg.sender,
-                "cook",
-                100 ether,
-                3 days,
-                true,
-                block.timestamp,
-                totalContributionsToProject[projectId], // only field updated
-                0,
-                0
+                totalContributionsToProject[projectId]
             );
         }
 
@@ -177,7 +168,7 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
         }
 
         if (totalContributionsToProject[projectId] == amtToRaise) {
-            emit RaiseBox_RaisePassed(amtToRaise);
+            emit RaiseBox_RaisePassed(amtToRaise, amtToRaise);
         }
     }
 
@@ -185,8 +176,16 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
 
     // INTERNAL FUNCTIONS
 
-    function calMaxContribution(bytes32 projectId, uint256 amountToRaise) internal returns (uint256) {
-        return ((MAX_CONTRIBUTION_PERCENTAGE * amountToRaise) / 100);
+    /**
+     * @dev calculates the maximum contribution allowed per user per project
+     * @param projectId the unique identifier of the project
+     * @param amountToRaise the total amount the project aims to raise
+     * @return maxContributionPerUser the maximum contribution allowed
+     */
+
+    function calMaxContribution(bytes32 projectId, uint256 amountToRaise) internal returns (uint256 maxContributionPerUser) {
+        maxContributionPerUser = ((MAX_CONTRIBUTION_PERCENTAGE * amountToRaise) / 100);
+        return maxContributionPerUser;
     }
 
     // EXTERNAL/GETTER FUNCTIONS

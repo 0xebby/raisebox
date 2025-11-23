@@ -52,7 +52,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
     // events:
 
-    event RaiseBox_RaisePassed(uint256 amountToRaise);
+    event RaiseBox_RaisePassed(uint256 amountToRaise, uint256 amountRaised);
 
     event StorageUpdatedWithProjectCreationDetails(bytes32);
 
@@ -209,6 +209,14 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         projectInfo.numberOfProjectsCreatedByProjectOwner = numberOfProjectsCreatedByProjectOwner;
 
         emit StorageUpdatedWithProjectCreationDetails(projectId);
+    }
+
+    function updateAmountRaisedInStorage(bytes32 projectId, uint256 amountRaised) external {
+        if (msg.sender == raiseBoxContributionContractAddress) {
+            updateAmountRaisedByProject(projectId, amountRaised);
+        } else {
+            revert RaiseBox_updateStorage_CallNotFromRaiseBoxProjectCreationContract();
+        }
     }
 
     // getters:
