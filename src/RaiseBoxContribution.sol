@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
-// import {RaiseBox} from "../src/RaiseBox.sol";
 
-// import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
 import {IRaiseBoxContribution} from "../src/interfaces/IRaiseBoxContribution.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
@@ -12,7 +10,6 @@ import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 
 contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContribution {
-    // address raiseBoxCoreaddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3;
 
     IRaiseBoxCore public raiseBoxCore; // the central contract that holds main storage of raisebox
 
@@ -41,7 +38,6 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
     enum ContributionState {
         CONTRIBUTION_LIVE,
         CONTRIBUTION_ENDED,
-        WITHDRAWING_PROTOCOL_FEES
     }
 
     // contribution related errors:
@@ -51,7 +47,6 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
     error RaiseBoxContribution_ContributionFailed();
     error RaiseBoxContribution_InvalidProject();
     error RaiseBoxContribution_RaiseBoxProtocolUnset();
-    error RaiseBoxContribution_ContributeAmountRemaining(uint256);
     error RaiseContribution_ContributionEnded(uint256);
     error RaiseBoxContribution_contribute_AboveMaxAllowed(uint256, string);
     error RaiseBoxContribution_getMaxContributionAllowedForProject_CannotBeZero();
