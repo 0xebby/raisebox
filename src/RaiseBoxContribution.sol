@@ -62,18 +62,30 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
     constructor(address raiseBoxCoreAddress) RaiseBoxCore() {
         raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
     }
+    
 
     function contribute(uint256 amount, bytes32 projectId) external payable nonReentrant {
         // projectId should be filled automatically via UI for project clicked by user
+
+        // get protocol address so funds can be sent there:
+        address payable raiseBoxProtocol = raiseBoxCore.getProtocol();
+
+        // get valid project from storage
+        ProjectInfo memory project = raiseBoxCore.getProject(projectId);
+
+        uint256 amtToRaise = project.amountToRaise;
+        uint256 totalContributions = totalContributionsToProject[projectId];
+
+        uint256 maxContribution = calMaxContribution(projectId, amtToRaise);
+        uint256 amountToTarget = (amtToRaise - totalContributions);
+
+        uint256 userPrevContribution = amountContributedToProject[msg.sender][projectId];
 
         // Checks
 
         if (projectId == 0) {
             revert RaiseBoxContribution_InvalidProject();
         }
-
-        // get valid project from storage
-        ProjectInfo memory project = raiseBoxCore.getProject(projectId);
 
         address projectOwner = project.projectOwner;
         if (projectOwner == address(0)) {
@@ -97,29 +109,24 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
         //     revert RaiseBoxContribution_RaiseBoxProtocolUnset();
         // }
 
-        uint256 amtToRaise = project.amountToRaise;
-
-        uint256 maxContribution = calMaxContribution(projectId, amtToRaise);
-        uint256 amountToTarget = (amtToRaise - totalContributionsToProject[projectId]);
-
-        if (amountContributedToProject[msg.sender][projectId] + amount > maxContribution) {
+        if ((userPrevContribution + amount) > maxContribution) {
             revert RaiseBoxContribution_contribute_AboveMaxAllowed(
                 amtToRaise,
                 string(
                     abi.encodePacked(
                         "Cannot over contribute: you can contribute only: ",
-                        ((maxContribution - amountContributedToProject[msg.sender][projectId]) / 1e18).toString(),
+                        ((maxContribution - userPrevContribution) / 1e18).toString(),
                         " ether more to this project"
                     )
                 )
             );
         }
 
-        if (totalContributionsToProject[projectId] == amtToRaise) {
+        if (totalContributions == amtToRaise) {
             revert RaiseBox_RaiseEnded(projectId);
         }
 
-        uint256 totalToRaise = (amount + totalContributionsToProject[projectId]);
+        uint256 totalToRaise = (amount + totalContributions);
 
         require(
             (totalToRaise <= amtToRaise),
@@ -131,11 +138,14 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
         );
 
         // Effects
-        amountContributedToProject[msg.sender][projectId] += amount;
+        userPrevContribution += amount;
 
         contributionsToProjectArray[msg.sender][projectId].push(amount);
 
-        totalContributionsToProject[projectId] += amount;
+        totalContributions += amount;
+
+        amountContributedToProject[msg.sender][projectId] = userPrevContribution;
+        totalContributionsToProject[projectId] = totalContributions;
 
         if (!hasContributed[projectId][msg.sender]) {
             contributors[projectId].push(msg.sender);
@@ -145,10 +155,10 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
         // only update storage when raise has passed,
         // i.e. the amount to raise by project has been raised successfully
         // instead of updating storage everytime a contribution is made, wasteful
-        if (totalContributionsToProject[projectId] == amtToRaise) {
+        if (totalContributions == amtToRaise) {
             raiseBoxCore.updateAmountRaisedInStorage(
                 projectId,
-                totalContributionsToProject[projectId]
+               totalContributions
             );
         }
 
@@ -156,18 +166,17 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
             msg.sender,
             amount,
             projectId,
-            raiseBoxCore.getAmountRaisedByProject(projectId) // this should show that the main storage has been updated with totalContributionsToProject[projectid]
+            totalContributions // this should show that the main storage has been updated with totalContributionsToProject[projectid]
         );
 
         // Interactions
-        // get protocol address so funds can be sent there:
-        address payable raiseBoxProtocol = raiseBoxCore.getProtocol();
+        
         (bool successfullyContributed,) = raiseBoxProtocol.call{value: amount}(""); // funds sent to protocol for safekeeping pending release to project
         if (!successfullyContributed) {
             revert RaiseBoxContribution_ContributionFailed();
         }
 
-        if (totalContributionsToProject[projectId] == amtToRaise) {
+        if (totalContributions == amtToRaise) {
             emit RaiseBox_RaisePassed(amtToRaise, amtToRaise);
         }
     }
