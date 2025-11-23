@@ -8,7 +8,12 @@ import {console} from "../lib/forge-std/src/Test.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 
-contract RaiseBoxProposal is IRaiseBoxCore, IRaiseBoxProposal, RaiseBoxCore {
+contract RaiseBoxProposal is IRaiseBoxProposal {
+     IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
+
+     constructor(address raiseBoxCoreAddress) {
+         raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
+     }
     using Strings for uint256;
     // to get funding drips from contributions, projects have to host proposals after every milestone achieved
 
@@ -21,32 +26,22 @@ contract RaiseBoxProposal is IRaiseBoxCore, IRaiseBoxProposal, RaiseBoxCore {
     // after first 25% fund drip, drips are capped at 15% untill a drip after the last 25% drip
     // drips %: in multiples of 5 up to 100
     // only 10% of overall funds contributed at time of hosting proposal is released per time
-    address raiseBoxCoreaddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3;
-    IRaiseBoxProjectCreation public immutable i_raiseBoxProjectCreator;
-    IRaiseBoxCore public raiseBoxCore; // the central contract that holds main storage of raisebox
 
     uint256 public lastProposalTime;
 
     MileStoneProposalDetails[] public proposals;
 
-    mapping(address => uint256) public lastProposalTimeByProject;
-
     mapping(bytes32 => MileStoneProposalDetails) public proposalByProjectId;
-
-    // projectid => proposalid => proposalInfo for that id
-
-    mapping(uint256 => string) public proposalByType;
-
-    mapping(uint256 => MileStoneProposalDetails) proposalIdToProposal;
 
     mapping (bytes32 => bool) public hasHostedProposal;
 
-    mapping(bytes32 => uint256) public proposalCountByProjectId;
-
     uint256 public blockTimeOfLastProposal; // track all proposals made and update +30 days for each call to host proposal
     //milestone struct to track proposals based on milestone reached
+    uint256 public proposalCount; // protocol wide proposal count
+    mapping (bytes32 => uint256) public proposalCountByProject; // track proposal count by project
 
-    uint256 public constant INTERVAL_BETWEEN_PROPOSALS = 30 days; // DAYS == 36 proposals/year
+    uint256 public constant INTERVAL_BETWEEN_PROPOSALS = 30 days; // DAYS == 12 proposals/year
+    uint256 public MAX_YEARLY_PROPOSAL_PER_PROJECT = 12; // 1 per month(30 days)
 
     // events
 
@@ -56,7 +51,7 @@ contract RaiseBoxProposal is IRaiseBoxCore, IRaiseBoxProposal, RaiseBoxCore {
         uint256 proposalId,
         string proposalDescription,
         string proposalAchievement,
-        uint256 timestamp,
+        uint256 lastProposalTime,
         uint256 numberOfProposalsHosted
     );
     event ProposalPassed();
@@ -66,192 +61,128 @@ contract RaiseBoxProposal is IRaiseBoxCore, IRaiseBoxProposal, RaiseBoxCore {
     error RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
     error RaiseBoxProposal_hostProposal_RaiseNotEnded();
     error RaiseBoxProposal_hostProposal_InvalidProposalTextDetails();
+    error RaiseBoxProposal_hostProposal_MaxYearlyProposalsReached();
 
-    constructor(address raiseBoxCoreaddress_) RaiseBoxCore() {
-        raiseBoxCoreaddress = raiseBoxCoreaddress_;
-        i_raiseBoxProjectCreator = IRaiseBoxProjectCreation(raiseBoxCoreaddress_);
-    }
 
-    modifier onlyProjectOwner(address projectCreator, bytes32 projectId) {
-        
-        if (projectCreator == address(0) || projectCreator != i_raiseBoxProjectCreator.getProjectCreator(projectId)) {
+
+    modifier canHostProposal(address projectCreator, bytes32 projectId) {
+
+        // does all checks before hosting proposal
+
+        // get project by projectId
+        // ProjectInfo memory projectInfo = raiseBoxCore.getProject(projectId);
+
+        // get valid project from storage
+
+         (
+            , 
+            address projectOwner
+            , 
+            , 
+            uint256 amtToRaise
+            , 
+            , 
+            bytes32 projectId
+            , 
+            , 
+            uint256 timeCreated
+            , 
+            uint256 amountRaisedByProject
+            ,
+
+        ) = raiseBoxCore.getProjectInfo(projectId);
+
+        // ascertain owner is host of project and is trying to host proposal
+        if (projectOwner == address(0) || projectOwner != projectCreator) {
             revert raiseBoxProposal_InvalidProjectOwner();
         }
-
-        _;
-    }
-
-    function hostProposal(
-        string memory proposalTitle,
-        string memory proposal,
-        bytes32 projectId
-    ) public onlyProjectOwner(msg.sender, projectId) {
-
-        ProjectInfo memory project = raiseBoxCore.getProject(projectId);
-
-        // does project exist
-        bool projectExist = project.projectExists;
-
-        if (!projectExist) {
-            revert RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
-        }
-
-        if ((block.timestamp < project.duration)) {
+        
+        // ascertain that raise has infact ended
+        if (amtToRaise != amountRaisedByProject) {
             revert RaiseBoxProposal_hostProposal_RaiseNotEnded();
         }
 
-        if (bytes(proposalTitle).length == 0 || bytes(proposal).length == 0 ) {
-            revert RaiseBoxProposal_hostProposal_InvalidProposalTextDetails();
-        }
-
+        // ascertain that project has not hosted proposal in the last 30 days
         if (hasHostedProposal[projectId]) {
-            if (block.timestamp < INTERVAL_BETWEEN_PROPOSALS) {
+            if (lastProposalTime < INTERVAL_BETWEEN_PROPOSALS) {
                 revert RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
             }
-            
+
         }
 
-        uint256 count = proposalCountByProjectId[projectId]++;
+        if (proposalCountByProject[projectId] >= MAX_YEARLY_PROPOSAL_PER_PROJECT) {
+            revert RaiseBoxProposal_hostProposal_MaxYearlyProposalsReached();
+        }
 
-        // update milestone struct
-
-        MileStoneProposalDetails storage mileStoneProposalDetails;
-
-      
-        proposalByProjectId[projectId] = MileStoneProposalDetails({
-            lastProposalTime: block.timestamp,
-            description: proposalTitle,
-            achievement: proposal,
-            proposalId: count,
-            proposalCount: count
-        });
-
-
-
-        hasHostedProposal[projectId] = true;
+        _;
 
     }
 
-    // function to host a proposal by project:
+     function hostProposal(
+        string memory proposalTitle,
+        string memory proposal,
+        bytes32 projectId
+    ) external canHostProposal(msg.sender, projectId) {
 
-    // function updateStorage(bytes32 projectId) external override {
-    //         proposalByProjectId[projectId].proposalCount += 1;
-    //         projectIDToProject[projectId].proposalsHosted +=1;
+        // checks already done in canHostProposal modifier above.
 
-    //     }
+        // effects:
+       
 
-    // function hostProposal(
-    //     string memory _description,
-    //     string memory _achievement,
-    //     bytes32 projectId
-    // ) public onlyProjectOwner(msg.sender, projectId) {
-    //     // get project by the id provided by the caller:
-    //     bool projectExist = i_raiseBoxProjectCreator.getProject(projectId).projectExists;
-    //     uint256 amountRaisedByProject = i_raiseBoxProjectCreator.getAmountRaisedByProject(
-    //         projectId
-    //     );
+        hasHostedProposal[projectId] = true;
+        proposalCount += 1;
+        proposalCountByProject[projectId] += 1;
 
-    //     uint256 amountToRaise = i_raiseBoxProjectCreator
-    //         .getProject(projectId)
-    //         .amountToRaise;
+        proposalByProjectId[projectId] = MileStoneProposalDetails({
+            lastProposalTime: block.timestamp,
+            description: proposalTitle,
+            milestone: proposal,
+            proposalId: proposalCountByProject[projectId]
+        });
+        lastProposalTime = block.timestamp;
 
-    //     if (!projectExist) {
-    //         revert RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
-    //     }
+        // update storage in RaiseBoxCore contract
+        raiseBoxCore.updateProposalsHostedInStorage(projectId);
+        // interactions:
 
-    //     if (
-    //         block.timestamp <
-    //         lastProposalTimeByProject[msg.sender] + INTERVAL_BETWEEN_PROPOSALS
-    //     ) {
-    //         revert RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
-    //     }
+        if (block.timestamp >= 366 days ) {
+            hasHostedProposal[projectId] = false;
+            proposalCountByProject[projectId] = 0;
+        }
 
-    //     if (amountRaisedByProject != amountToRaise) {
-    //         revert RaiseBoxProposal_hostProposal_RaiseNotEnded();
-    //     }
+        emit NewProposalHosted(
+            msg.sender,
+            proposalCountByProject[projectId],
+            proposalTitle,
+            proposal,
+            block.timestamp,
+            proposalCountByProject[projectId]
+        );
 
-    //     require(
-    //         bytes(_description).length > 0,
-    //         "description cannot be empty string"
-    //     );
-    //     require(
-    //         bytes(_achievement).length > 0,
-    //         "achievement cannot be empty string"
-    //     );
-    //     // effects:
-    //     // MileStoneProposalDetails memory milestoneProposal;
-    //     proposalByProjectId[projectId] = MileStoneProposalDetails({
-    //         lastProposalTime: block.timestamp,
-    //         description: _description,
-    //         achievement: _achievement,
-    //         proposalId: proposalByProjectId[projectId].proposalId,
-    //         proposalCount: proposalByProjectId[projectId].proposalCount
-    //     });
+    }
 
-    //     proposals.push(proposalByProjectId[projectId]);
+    // 5, 10, 15, 20, 25 % fund drips only allowed
+    // fund drip logic to be implemented in RaiseBoxCore contract
+    // if proposalCount <= 1 => 10% fund drip
+    // if proposalCount == 2 => 25% fund drip
+    // if proposalCount > 2 && last fund drip != 25% => 25% fund drip
+    // if proposalCount > 2 && last fund drip == 25% => 15% fund drip
+    // else => 10% fund drip
 
-    //     // proposals.push(milestoneProposal);
-    //     lastProposalTimeByProject[msg.sender] = block.timestamp;
+    function getProposalCount(bytes32 projectId) external view returns (uint256) {
+        return proposalCountByProject[projectId];
+    }
 
-    //     // proposalByProjectId[projectId].proposalCount += 1;
+    function getLastProposalTime(bytes32 projectId) external view returns (uint256) {
+        MileStoneProposalDetails memory proposalDetails = proposalByProjectId[projectId];
+        return proposalDetails.lastProposalTime;
+    }
 
-    //     proposalByProjectId[projectId].proposalId += 1;
+    // function updateProposalDetails(bytes32 projectId, uint256 proposalId) external {}
 
-    //     // this.updateStorage(projectId);
+    
 
-    //     // blockTimeOfLastProposal =
-    //     //     lastProposalTimeByProject[msg.sender] +
-    //     //     30 days;
-    //     // numberOfProposalsHosted += 1;
 
-    //     emit NewProposalHosted(
-    //         msg.sender,
-    //         proposalByProjectId[projectId].proposalId,
-    //         _description,
-    //         _achievement,
-    //         block.timestamp,
-    //         proposalByProjectId[projectId].proposalCount
-    //     );
-    // }
 
-    // getters
-
-    // function getAProposal(uint256 proposalId, bytes32 projectId) public view {
-    //     for (uint256 i = 0; i <= proposals.length; i++) {
-    //         console.log(proposals[i].);
-    //     }
-
-    // }
-
-    // function getProposals(
-    //     bytes32 projectId
-    // ) public returns (MileStoneProposalDetails memory mileStoneDetails) {
-    //     require(
-    //         i_raiseBoxProjectCreator.getProject(projectId).projectExists,
-    //         "project does not exist"
-    //     );
-    //     mileStoneDetails = proposalByProjectId[projectId];
-    // }
-
-    // function viewProposalInfo(bytes32 projectId, uint256 proposalId) external {
-    //     MileStoneProposalDetails memory miles;
-    //     miles = proposalByProjectId(projectId)(proposalId);
-
-    //     // console.log(
-    //     //     string(
-    //     //         abi.encodePacked(
-    //     //             "Last Proposal Time: ",
-    //     //             proposalInfo(proposalId).lastProposalTime().toString(),
-    //     //             " | Description: ",
-    //     //             proposalInfo(proposalId).description,
-    //     //             " | achievement: ",
-    //     //             proposalInfo(proposalId).achievement,
-    //     //             " | proposal id ",
-    //     //             proposalInfo(proposalId).proposalId.toString()
-    //     //         )
-    //     //     )
-    //     // );
-    // }
-
-    function updateProposalDetails(bytes32 projectId, uint256 proposalId) external {}
 }
+
