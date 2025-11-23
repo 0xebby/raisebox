@@ -126,17 +126,6 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
             revert RaiseBox_RaiseEnded(projectId);
         }
 
-        uint256 totalToRaise = (amount + totalContributions);
-
-        require(
-            (totalToRaise <= amtToRaise),
-            string(
-                abi.encodePacked(
-                    "Cannot over contribute: you can contribute only:", amountToTarget.toString(), " ether more"
-                )
-            )
-        );
-
         // Effects
         userPrevContribution += amount;
 
