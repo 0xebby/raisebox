@@ -231,21 +231,21 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     }
 
     function getProject(bytes32 projectId) public returns (ProjectInfo memory projectInfo) {
-        if (!this.getProjectExist(projectId)) {
+        if (!this.doesProjectExist(projectId)) {
             revert RaiseBox_getProject_InvalidProjectId();
         }
         projectInfo = projectIDToProject[projectId];
     }
 
     function getAmountToRaise(bytes32 projectId) external view returns (uint256) {
-        if (!this.getProjectExist(projectId)) {
+        if (!this.doesProjectExist(projectId)) {
             revert RaiseBox_getProject_InvalidProjectId();
         }
         return projectIDToProject[projectId].amountToRaise;
     }
 
     function getAmountRaisedByProject(bytes32 projectId) external returns (uint256) {
-        if (!this.getProjectExist(projectId)) {
+        if (!this.doesProjectExist(projectId)) {
             revert RaiseBox_getProject_InvalidProjectId();
         }
         return projectIDToProject[projectId].amountRaisedByProject;
@@ -286,7 +286,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         );
     }
 
-    function getProjectExist(bytes32 projectID) external view returns (bool) {
+    function doesProjectExist(bytes32 projectID) external view returns (bool) {
         ProjectInfo storage projectInfo;
 
         projectInfo = projectIDToProject[projectID];

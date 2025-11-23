@@ -208,7 +208,7 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
     }
 
     function getTotalContributionsToProject(bytes32 projectId) external returns (uint256 contributionsReceived) {
-        if (!raiseBoxCore.getProjectExist(projectId)) {
+        if (!raiseBoxCore.doesProjectExist(projectId)) {
             revert RaiseBox_getProject_InvalidProjectId();
         }
         return totalContributionsToProject[projectId];
