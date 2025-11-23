@@ -200,8 +200,18 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
         return contributors[projectId];
     }
 
-    function getContributionsToProject(address user, bytes32 projectId) external view returns (uint256[] memory) {
+    function getContributionsToProject(address user, bytes32 projectId) external returns (uint256[] memory) {
+        if (!raiseBoxCore.doesProjectExist(projectId)) {
+            revert RaiseBox_getProject_InvalidProjectId();
+        }
         return contributionsToProjectArray[user][projectId];
+    }
+
+    function getContributorsCount(bytes32 projectId) external returns (uint256 contributorCount) {
+        if (!raiseBoxCore.doesProjectExist(projectId)) {
+            revert RaiseBox_getProject_InvalidProjectId();
+        }
+        return contributors[projectId].length;
     }
 
     function getTotalContributionsToProject(bytes32 projectId) external returns (uint256 contributionsReceived) {
