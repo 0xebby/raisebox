@@ -37,7 +37,7 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
     // contribution state enum
     enum ContributionState {
         CONTRIBUTION_LIVE,
-        CONTRIBUTION_ENDED,
+        CONTRIBUTION_ENDED
     }
 
     // contribution related errors:
