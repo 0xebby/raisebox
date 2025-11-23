@@ -2,78 +2,10 @@
 pragma solidity ^0.8.19;
 
 import "../lib/forge-std/src/Test.sol";
-import {RaiseBox} from "../src/RaiseBoxProjectCreation.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {RaiseBoxContribution} from "../src/RaiseBoxContribution.sol";
-import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
-import {RaiseBoxProposal} from "../src/RaiseBoxProposal.sol";
-import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
-import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
+import {TestsHelpers} from "./TestsHelpers.sol";
 
-contract RaiseBoxProjectCreationTest is Test {
-    // main contract that holds general storage
-    RaiseBoxCore raiseBoxStorage;
-
-    // core interface
-    IRaiseBoxCore raiseBoxCore;
-
-    // project creation contract
-    RaiseBox raiseBoxProjectCreationContract;
-
-    // contribution contract
-    RaiseBoxContribution raiseBoxContributionContract;
-
-    // proposal contract
-    RaiseBoxProposal raiseBoxProposalContract;
-
-    // faucet contract address
-    address faucetToken = 0xB15D5A9DCcCCcb3Caf55360D89610834A72Cf6b3;
-
-    // raisebox owner == deployer
-    address owner;
-
-    // mkae dummy addresses for test
-    address alice = makeAddr("alice");
-    address joe = makeAddr("joe");
-    address ben = makeAddr("ben");
-
-    // get  would be ca of raisebox - project creation contract
-
-    using Strings for uint256;
-
-    function setUp() public {
-        // deploy the main contract that holds general storage
-        raiseBoxStorage = new RaiseBoxCore();
-
-        // deploy project creation contract with CA of main contract above
-        raiseBoxProjectCreationContract = new RaiseBox(address(raiseBoxStorage));
-
-        // set the address of the project creation contract so it can be referenced
-        raiseBoxStorage.setProjectCreationContractAddress(address(raiseBoxProjectCreationContract));
-
-        raiseBoxContributionContract = new RaiseBoxContribution(address(raiseBoxStorage));
-
-        raiseBoxStorage.setContributionContractAddress(address(raiseBoxContributionContract));
-        // raiseBoxProposalContract = new RaiseBoxProposal(
-        //     address(raiseBoxStorage),
-        //     address(raiseBoxProjectCreationContract)
-        // );
-        owner = address(this);
-        vm.deal(owner, 50 ether);
-        vm.deal(alice, 100 ether);
-        vm.deal(joe, 100 ether);
-        vm.deal(ben, 100 ether);
-    }
-
-    /**
-     * @dev Helper function to simulate time passing since testing environment doesn't work as expected
-     * @param duration_ amount of time to advanced, could be in days, hours, minutes or seconds. default is seconds*
-     */
-    function advanceBlockTime(uint256 duration_) internal {
-        vm.warp(block.timestamp + duration_);
-    }
+contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
+    
 
     function testCreateProject() public {
         vm.startPrank(alice);
@@ -197,12 +129,68 @@ contract RaiseBoxProjectCreationTest is Test {
         raiseBoxStorage.getProjectCount();
         raiseBoxStorage.getProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
 
-        raiseBoxContributionContract.getContributors(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
-        raiseBoxContributionContract.getContributorsCount(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
-        raiseBoxContributionContract.getContributorsCount(0x17e319276da7a011fd833f23f0a7e1e61f6b68d4e50953d6b818b13ac05524e4);
-        raiseBoxContributionContract.getContributorsCount(0x1fb69664d8a26cd9173477051b28805064fd6be187121907b1894822c61b27ea);
-        // raiseBoxContributionContract.getContributorsCount(0x1fb69664d8a26cd9173477051b28805064fd6be187121907b1894822c61b27ae);
+        // raiseBoxContributionContract.getContributors(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+        // raiseBoxContributionContract.getContributorsCount(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+        // raiseBoxContributionContract.getContributorsCount(0x17e319276da7a011fd833f23f0a7e1e61f6b68d4e50953d6b818b13ac05524e4);
+        // raiseBoxContributionContract.getContributorsCount(0x1fb69664d8a26cd9173477051b28805064fd6be187121907b1894822c61b27ea);
+        // // raiseBoxContributionContract.getContributorsCount(0x1fb69664d8a26cd9173477051b28805064fd6be187121907b1894822c61b27ae);
     }
+
+    function testMultipleProjectCreation() public {
+        createTestProjects();
+
+        
+    }
+
+    function testContributeToProjects() public {
+        createTestProjects();
+        contributeToTestProject(0xea5e8de8d9a6511bbc46b319034911d0e0fab1e886dff5aac86bf6c028e63a85, max, 2 ether);
+
+        contributeToTestProject(0xea5e8de8d9a6511bbc46b319034911d0e0fab1e886dff5aac86bf6c028e63a85, ben, 2 ether);
+
+        contributeToTestProject(0xea5e8de8d9a6511bbc46b319034911d0e0fab1e886dff5aac86bf6c028e63a85, alice, 2 ether);
+
+        contributeToTestProject(0xea5e8de8d9a6511bbc46b319034911d0e0fab1e886dff5aac86bf6c028e63a85, uche, 2 ether);
+
+        contributeToTestProject(0xea5e8de8d9a6511bbc46b319034911d0e0fab1e886dff5aac86bf6c028e63a85, sam, 2 ether);
+
+        vm.startPrank(joe);
+        raiseBoxProposalContract.hostProposal("built mvp", "receive 2 ether to complete next milestone: tetsnet website", 0xea5e8de8d9a6511bbc46b319034911d0e0fab1e886dff5aac86bf6c028e63a85);
+        vm.stopPrank();
+
+        raiseBoxProposalContract.getLastProposalTime(0xea5e8de8d9a6511bbc46b319034911d0e0fab1e886dff5aac86bf6c028e63a85);
+
+        // advanceBlockTime(35 days);
+        // console.log(block.timestamp);
+
+        // vm.startPrank(joe);
+        // raiseBoxProposalContract.hostProposal("testnet website built and live", "receive 1 eth for KOL onboarding", 0xea5e8de8d9a6511bbc46b319034911d0e0fab1e886dff5aac86bf6c028e63a85);
+        // vm.stopPrank();
+
+        // vm.startPrank(joe);
+        // raiseBoxProposalContract.hostProposal("testnet website built and live", "receive 1 eth for KOL onboarding", 0xea5e8de8d9a6511bbc46b319034911d0e0fab1e886dff5aac86bf6c028e63a85);
+        // vm.stopPrank();
+
+        //  vm.startPrank(joe);
+        // raiseBoxProposalContract.hostProposal("testnet website built and live", "receive 1 eth for KOL onboarding", 0xea5e8de8d9a6511bbc46b319034911d0e0fab1e886dff5aac86bf6c028e63a85);
+        // vm.stopPrank();
+
+        // contributeToTestProject(0xea5e8de8d9a6511bbc46b319034911d0e0fab1e886dff5aac86bf6c028e63a85, owner, 2 ether);
+
+
+
+        // address protocol = raiseBoxStorage.getProtocol();
+
+        // console.log(address(protocol).balance);
+
+        // raiseBoxStorage.getProject(0xea5e8de8d9a6511bbc46b319034911d0e0fab1e886dff5aac86bf6c028e63a85);
+    }
+
+    
+
+    
+
+    
 
     
 }

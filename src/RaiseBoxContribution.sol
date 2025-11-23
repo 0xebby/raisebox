@@ -9,9 +9,9 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 
-contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContribution {
+contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
-    IRaiseBoxCore public raiseBoxCore; // the central contract that holds main storage of raisebox
+    IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
 
     using Strings for uint256;
     using Address for address;
@@ -40,21 +40,7 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
         CONTRIBUTION_ENDED
     }
 
-    // contribution related errors:
-    error RaiseBoxContribution_ValueSentMismatch();
-    error RaiseBoxContribution_ContributeMoreEth(uint256);
-    error RaiseBoxContribution_ZeroAmount();
-    error RaiseBoxContribution_ContributionFailed();
-    error RaiseBoxContribution_InvalidProject();
-    error RaiseBoxContribution_RaiseBoxProtocolUnset();
-    error RaiseContribution_ContributionEnded(uint256);
-    error RaiseBoxContribution_contribute_AboveMaxAllowed(uint256, string);
-    error RaiseBoxContribution_getMaxContributionAllowedForProject_CannotBeZero();
-
-    // contribution related events:
-    event Contributed(address indexed user, uint256 indexed amount, bytes32 indexed projectId, uint256 amountRaised);
-
-    constructor(address raiseBoxCoreAddress) RaiseBoxCore() {
+    constructor(address raiseBoxCoreAddress) {
         raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
     }
     
@@ -66,13 +52,26 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
         address payable raiseBoxProtocol = raiseBoxCore.getProtocol();
 
         // get valid project from storage
-        ProjectInfo memory project = raiseBoxCore.getProject(projectId);
 
-        uint256 amtToRaise = project.amountToRaise;
+        (
+            , 
+            address projectOwner
+            , 
+            , 
+            uint256 amtToRaise
+            , 
+            , 
+            bytes32 projectId
+            , 
+            , 
+            , 
+            ,
+
+        ) = raiseBoxCore.getProjectInfo(projectId);
+
         uint256 totalContributions = totalContributionsToProject[projectId];
 
         uint256 maxContribution = calMaxContribution(projectId, amtToRaise);
-        uint256 amountToTarget = (amtToRaise - totalContributions);
 
         uint256 userPrevContribution = amountContributedToProject[msg.sender][projectId];
 
@@ -82,7 +81,7 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
             revert RaiseBoxContribution_InvalidProject();
         }
 
-        address projectOwner = project.projectOwner;
+        // address projectOwner = project.projectOwner;
         if (projectOwner == address(0)) {
             revert RaiseBoxContribution_InvalidProject();
         }
@@ -100,10 +99,6 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
             revert RaiseBoxContribution_ValueSentMismatch();
         }
 
-        // if (raiseBoxProtocol == address(0)) {
-        //     revert RaiseBoxContribution_RaiseBoxProtocolUnset();
-        // }
-
         if ((userPrevContribution + amount) > maxContribution) {
             revert RaiseBoxContribution_contribute_AboveMaxAllowed(
                 amtToRaise,
@@ -118,7 +113,7 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
         }
 
         if (totalContributions == amtToRaise) {
-            revert RaiseBox_RaiseEnded(projectId);
+            revert IRaiseBoxCore.RaiseBox_RaiseEnded(projectId);
         }
 
         // Effects
@@ -144,14 +139,9 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
                 projectId,
                totalContributions
             );
-        }
 
-        emit Contributed(
-            msg.sender,
-            amount,
-            projectId,
-            totalContributions // this should show that the main storage has been updated with totalContributionsToProject[projectid]
-        );
+            emit IRaiseBoxCore.RaiseBox_RaisePassed(amtToRaise, amtToRaise);
+        }
 
         // Interactions
         
@@ -160,9 +150,12 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
             revert RaiseBoxContribution_ContributionFailed();
         }
 
-        if (totalContributions == amtToRaise) {
-            emit RaiseBox_RaisePassed(amtToRaise, amtToRaise);
-        }
+        emit Contributed(
+            msg.sender,
+            amount,
+            projectId,
+            totalContributions // this should show that the main storage has been updated with totalContributionsToProject[projectid]
+        );
     }
 
     receive() external payable {}
@@ -197,21 +190,21 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
 
     function getContributionsToProject(address user, bytes32 projectId) external returns (uint256[] memory) {
         if (!raiseBoxCore.doesProjectExist(projectId)) {
-            revert RaiseBox_getProject_InvalidProjectId();
+            revert IRaiseBoxCore.RaiseBox_getProject_InvalidProjectId();
         }
         return contributionsToProjectArray[user][projectId];
     }
 
     function getContributorsCount(bytes32 projectId) external returns (uint256 contributorCount) {
         if (!raiseBoxCore.doesProjectExist(projectId)) {
-            revert RaiseBox_getProject_InvalidProjectId();
+            revert IRaiseBoxCore.RaiseBox_getProject_InvalidProjectId();
         }
         return contributors[projectId].length;
     }
 
     function getTotalContributionsToProject(bytes32 projectId) external returns (uint256 contributionsReceived) {
         if (!raiseBoxCore.doesProjectExist(projectId)) {
-            revert RaiseBox_getProject_InvalidProjectId();
+            revert IRaiseBoxCore.RaiseBox_getProject_InvalidProjectId();
         }
         return totalContributionsToProject[projectId];
     }

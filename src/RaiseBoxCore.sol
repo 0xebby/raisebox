@@ -42,32 +42,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     address private immutable iRBT; // raise box token
     IERC20 iRBTInstance;
 
-    // errors:
-
-    error RaiseBox_getProject_InvalidProjectId();
-    error RaiseBox_RaiseEnded(bytes32);
-
-    error RaiseBoxCore_updateStorage_wrongCaller();
-    error RaiseBoxCore_getRaiseBoxProjectCount_CallNotFromProjectCreation();
-
-    // events:
-
-    event RaiseBox_RaisePassed(uint256 amountToRaise, uint256 amountRaised);
-
-    event StorageUpdatedWithProjectCreationDetails(bytes32);
-
-    event RaiseBoxCore_IDsStorageSuccessfullyUpdated(bool IDexists, bytes32 projectId);
-
-    event RaiseBoxCore_ProjectCreationContractSet(address contractAddress);
-
-    // test errors:
-    error RaiseBox_updateStorage_CallNotFromRaiseBoxProjectCreationContract();
-    error InvalidContract();
-    error RaiseBox_updateStorage_NotAValidProjectID();
-    error RaiseBoxCore_getProtocol_RaiseBoxProtocolUnset();
-    error RaiseBoxCore_setProjectCreation_InvalidContract();
-    error RaiseBoxCore_setProjectCreation_ContractAlreadySet();
-
     // projectID (Keccak hash) to projectInfo
     mapping(bytes32 => ProjectInfo) public projectIDToProject;
 
@@ -79,6 +53,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     // would be CA of raisebox - project creation contract
     address public raiseBoxCreationContractAddress;
     address public raiseBoxContributionContractAddress;
+    address public raiseBoxProposalContractAddress;
 
     // constructor
     // address iRBT_
@@ -110,10 +85,23 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     }
 
     function setContributionContractAddress(address contractAddressToSet) external onlyOwner {
+
+        if (contractAddressToSet == address(0)) {
+            revert RaiseBoxCore_setRaiseContribution_InvalidContract();
+        }
+
         require(raiseBoxContributionContractAddress == address(0), "contribution contract already set");
 
         raiseBoxContributionContractAddress = contractAddressToSet;
     }
+
+    function setProposalContractAddress(address contractAddressToSet) external onlyOwner {
+        require(raiseBoxProposalContractAddress == address(0), "proposal contract already set");
+
+        raiseBoxProposalContractAddress = contractAddressToSet;
+    }
+
+
 
     function updateIDsStorage(bytes32 projectId) internal {
         IDexists[projectId] = true;
@@ -143,6 +131,15 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         projectInfo.amountRaisedByProject += amount;
 
         projectInfo.amountRaisedByProject;
+    }
+
+    function updateProposalsHostedByProject(bytes32 projectId) internal {
+
+        ProjectInfo storage projectInfo;
+
+        projectInfo = projectIDToProject[projectId];
+
+        projectInfo.proposalsHosted += 1;
     }
 
     function updateStorage(
@@ -216,6 +213,14 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
             updateAmountRaisedByProject(projectId, amountRaised);
         } else {
             revert RaiseBox_updateStorage_CallNotFromRaiseBoxProjectCreationContract();
+        }
+    }
+
+    function updateProposalsHostedInStorage(bytes32 projectId) external {
+        if (msg.sender == raiseBoxProposalContractAddress) {
+            updateProposalsHostedByProject(projectId);
+        } else {
+            revert NotProposalContract();
         }
     }
 

@@ -10,36 +10,12 @@ interface IRaiseBoxProposal {
         // different milestones: mvp ready, testnet ready, distribution site ready,
         uint256 lastProposalTime;
         string description;
-        string achievement;
+        string milestone;
         uint256 proposalId;
-        uint256 proposalCount;
     }
 
-    // function viewProposalInfo(bytes32 projectId, uint256 proposalId) external;
-
-    // function getProposals(
-    //     bytes32 projectId
-    // ) external returns (MileStoneProposalDetails memory mileStoneDetails);
-
-    // function updateProposalDetails(bytes32 projectId, uint256 proposalId) external;
+    function getProposalCount(bytes32 projectId) external view returns (uint256);
 }
 
-/*
 
-event NewProposalHosted(
-        address indexed projectOwner,
-        uint256 proposalId,
-        string proposalDescription,
-        string proposalAchievement,
-        uint256 timestamp,
-        uint256 numberOfProposalsHosted
-    );
-    event ProposalPassed();
-
-    error raiseBoxProposal_InvalidProjectOwner();
-    error RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
-    error RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
-    error RaiseBox_hostProposal_RaiseNotEnded();
-
-    */
    
