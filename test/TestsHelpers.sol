@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
+
 import "../lib/forge-std/src/Test.sol";
 import {RaiseBox} from "../src/RaiseBoxProjectCreation.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -82,30 +83,29 @@ contract TestsHelpers is Test {
     }
 
     function createTestProjects() public {
-
         vm.startPrank(ben);
-        bytes32 projectID0 = raiseBoxProjectCreationContract.createProject("Sentient", "Building AGI - Collectively owned AI", 200 ether, 30 days);
+        bytes32 projectID0 = raiseBoxProjectCreationContract.createProject(
+            "Sentient", "Building AGI - Collectively owned AI", 20 ether, 52 weeks
+        );
         vm.stopPrank();
 
         vm.startPrank(alice);
         bytes32 projectID1 = raiseBoxProjectCreationContract.createProject(
-            "Hello Elsa", "Chat, trade and swap using AI", 10 ether, 40 days
+            "Hello Elsa", "Chat, trade and swap using AI", 20 ether, 60 weeks
         );
         vm.stopPrank();
 
-        vm.startPrank(joe);
-        bytes32 projectID2 = raiseBoxProjectCreationContract.createProject(
-            "FeedTheWorld NGO", "operation feed 2,000 kids", 10 ether, 30 days
-        );
-        vm.stopPrank();
+        // vm.startPrank(joe);
+        // bytes32 projectID2 = raiseBoxProjectCreationContract.createProject(
+        //     "FeedTheWorld NGO", "operation feed 2,000 kids", 10 ether, 30 days
+        // );
+        // vm.stopPrank();
 
-        vm.startPrank(max);
-        bytes32 projectID3 = raiseBoxProjectCreationContract.createProject(
-            "Base App", "onboarding the next 1b users onchain", 100 ether, 30 days
-        );
-        vm.stopPrank();
-
-
+        // vm.startPrank(max);
+        // bytes32 projectID3 = raiseBoxProjectCreationContract.createProject(
+        //     "Base App", "onboarding the next 1b users onchain", 100 ether, 30 days
+        // );
+        // vm.stopPrank();
     }
 
     function contributeToTestProject(bytes32 projectId, address contributor, uint256 amount) public {
