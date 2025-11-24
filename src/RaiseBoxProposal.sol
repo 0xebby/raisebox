@@ -28,11 +28,8 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
     // drips %: in multiples of 5 up to 100
     // only 10% of overall funds contributed at time of hosting proposal is released per time
 
-    uint256 public lastProposalTime;
 
     MileStoneProposalDetails[] public proposals;
-
-    mapping(bytes32 => MileStoneProposalDetails) public proposalByProjectId;
 
     mapping(bytes32 => bool) public hasHostedProposal;
 
@@ -43,27 +40,13 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
     uint256 public proposalCount; // protocol wide proposal count
     mapping(bytes32 => uint256) public proposalCountByProject; // track proposal count by project
 
+    mapping(bytes32 => mapping(uint256 => MileStoneProposalDetails)) public proposalIdByProject;
+
     uint256 public constant INTERVAL_BETWEEN_PROPOSALS = 4 weeks;
 
     // events
 
-    // proposal related events:
-    event NewProposalHosted(
-        address indexed projectCreator,
-        uint256 proposalId,
-        string proposalDescription,
-        string proposalAchievement,
-        uint256 lastProposalTime,
-        uint256 numberOfProposalsHosted
-    );
-    event ProposalPassed();
 
-    error raiseBoxProposal_InvalidProjectOwner();
-    error RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
-    error RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
-    error RaiseBoxProposal_hostProposal_RaiseNotEnded();
-    error RaiseBoxProposal_hostProposal_InvalidProposalTextDetails();
-    error RaiseBoxProposal_hostProposal_MaxYearlyProposalsReached();
 
     modifier canHostProposal(address projectCreator, bytes32 projectId) {
         // does all checks before hosting proposal
@@ -113,7 +96,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
         proposalCountByProject[projectId] += 1;
         lastProposalTimeByProject[projectId] = block.timestamp;
 
-        proposalByProjectId[projectId] = MileStoneProposalDetails({
+        proposalIdByProject[projectId][proposalCountByProject[projectId]] = MileStoneProposalDetails({
             lastProposalTime: lastProposalTimeByProject[projectId],
             description: proposalTitle,
             milestone: proposal,
@@ -146,11 +129,10 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
         return proposalCountByProject[projectId];
     }
 
-    function getProtocolProposals() external view returns (uint256) { return proposalCount;}
+    function getTotalProposals() external view returns (uint256) { return proposalCount;}
 
     function getLastProposalTime(bytes32 projectId) external view returns (uint256) {
-        MileStoneProposalDetails memory proposalDetails = proposalByProjectId[projectId];
-        return proposalDetails.lastProposalTime;
+        return lastProposalTimeByProject[projectId];
     }
 
     function getHasHostedProposal(bytes32 projectId) external returns (bool) {
@@ -158,14 +140,16 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
 
     }
 
-    function getProposalDetails(bytes32 projectId)
+    function getProposalDetails(bytes32 projectId, uint256 proposalId)
         external
         view
         returns (MileStoneProposalDetails memory proposalDetails_)
     {
-        proposalDetails_ = proposalByProjectId[projectId];
+        if (proposalId == 0 || proposalId > proposalCountByProject[projectId]) {
+            revert RaiseBoxProposal_getProposalDetails_InvalidProposalId();
+        }
+        proposalDetails_ = proposalIdByProject[projectId][proposalId];
         return proposalDetails_;
     }
 
-    // function updateProposalDetails(bytes32 projectId, uint256 proposalId) external {}
 }

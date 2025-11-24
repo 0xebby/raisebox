@@ -251,15 +251,18 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
 
         vm.stopPrank();
 
-        raiseBoxProposalContract.getProtocolProposals();
+        raiseBoxProposalContract.getTotalProposals();
 
         // raise passed for project 2, can host proposals too
+
 
         vm.startPrank(alice);
 
         raiseBoxProposalContract.hostProposal("new website", "pay for new website", 0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad);
 
         vm.stopPrank();
+
+       
 
         raiseBoxProposalContract.getHasHostedProposal(0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad);
 
@@ -267,11 +270,13 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
 
         vm.startPrank(alice);
 
-        raiseBoxProposalContract.hostProposal("new website", "pay for new website", 0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad);
+        raiseBoxProposalContract.hostProposal("testnet mvp", "launch testnet minimum viable product forbeta testers", 0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad);
 
         vm.stopPrank();
 
-        raiseBoxProposalContract.getProtocolProposals();
+        raiseBoxProposalContract.getTotalProposals();
+        
+        raiseBoxProposalContract.getProposalDetails(0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad, 1);
 
 
 
