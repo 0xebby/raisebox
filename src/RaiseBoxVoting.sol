@@ -65,21 +65,12 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         if (votingEnded[projectId][proposalId]) { 
             revert RaiseBoxVoting_VotingEnded(projectId, proposalId);
         }
-
-
- 
-
         _;
     }
 
     modifier isValidProposal(bytes32 projectId, uint256 proposalId) {
         IRaiseBoxProposal.MileStoneProposalDetails memory proposalDetails =
             raiseBoxProposal.getProposalDetails(projectId, proposalId);
-
-        
-
-
-
         _;
     }
 

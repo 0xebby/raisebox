@@ -6,7 +6,6 @@ import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreati
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {console} from "../lib/forge-std/src/Test.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
-import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 
 contract RaiseBoxProposal is IRaiseBoxProposal {
     IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
@@ -16,17 +15,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
     }
 
     using Strings for uint256;
-    // to get funding drips from contributions, projects have to host proposals after every milestone achieved
-
-    // max funds drip at anytime should be 25%
-    // funds drip on very first proposal after raise is capped at 10%
-    // 25% funds drip can only be dripped twice throughout project lifecycle
-    // 25% fund drip cannot happen consecutively:
-    // i.e after receiving a 25% fund drip, project cannot receive another 25%
-    // in the very next drip
-    // after first 25% fund drip, drips are capped at 15% untill a drip after the last 25% drip
-    // drips %: in multiples of 5 up to 100
-    // only 10% of overall funds contributed at time of hosting proposal is released per time
+  
 
 
     MileStoneProposalDetails[] public proposals;
@@ -117,13 +106,11 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
         );
     }
 
-    // 5, 10, 15, 20, 25 % fund drips only allowed
-    // fund drip logic to be implemented in RaiseBoxCore contract
-    // if proposalCount <= 1 => 10% fund drip
-    // if proposalCount == 2 => 25% fund drip
-    // if proposalCount > 2 && last fund drip != 25% => 25% fund drip
-    // if proposalCount > 2 && last fund drip == 25% => 15% fund drip
-    // else => 10% fund drip
+  
+
+    ////                                            ////
+    //          EXTERNAL/GETTER FUNCTIONS             //
+    ////                                           ////
 
     function getProposalCount(bytes32 projectId) external view returns (uint256) {
         return proposalCountByProject[projectId];
