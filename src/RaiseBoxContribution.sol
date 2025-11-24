@@ -191,5 +191,9 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         }
         return totalContributionsToProject[projectId];
     }
+
+    function getHasContributed(bytes32 projectId, address user) external view returns(bool) {
+        return hasContributed[projectId][user];
+    }
     // testing
 }

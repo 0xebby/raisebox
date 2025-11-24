@@ -31,4 +31,6 @@ interface IRaiseBoxContribution {
     function getContributionsToProject(address user, bytes32 projectId) external returns (uint256[] memory);
 
     function getContributorsCount(bytes32 projectId) external returns (uint256 contributorCount);
+
+    function getHasContributed(bytes32 projectId, address user) external view returns (bool);
 }
