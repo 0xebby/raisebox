@@ -158,5 +158,14 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
 
     }
 
+    function getProposalDetails(bytes32 projectId)
+        external
+        view
+        returns (MileStoneProposalDetails memory proposalDetails_)
+    {
+        proposalDetails_ = proposalByProjectId[projectId];
+        return proposalDetails_;
+    }
+
     // function updateProposalDetails(bytes32 projectId, uint256 proposalId) external {}
 }
