@@ -9,11 +9,12 @@ import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 
 contract RaiseBoxProposal is IRaiseBoxProposal {
-     IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
+    IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
 
-     constructor(address raiseBoxCoreAddress) {
-         raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
-     }
+    constructor(address raiseBoxCoreAddress) {
+        raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
+    }
+
     using Strings for uint256;
     // to get funding drips from contributions, projects have to host proposals after every milestone achieved
 
@@ -33,15 +34,16 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
 
     mapping(bytes32 => MileStoneProposalDetails) public proposalByProjectId;
 
-    mapping (bytes32 => bool) public hasHostedProposal;
+    mapping(bytes32 => bool) public hasHostedProposal;
+
+    mapping(bytes32 => uint256) public lastProposalTimeByProject;
 
     uint256 public blockTimeOfLastProposal; // track all proposals made and update +30 days for each call to host proposal
     //milestone struct to track proposals based on milestone reached
     uint256 public proposalCount; // protocol wide proposal count
-    mapping (bytes32 => uint256) public proposalCountByProject; // track proposal count by project
+    mapping(bytes32 => uint256) public proposalCountByProject; // track proposal count by project
 
-    uint256 public constant INTERVAL_BETWEEN_PROPOSALS = 30 days; // DAYS == 12 proposals/year
-    uint256 public MAX_YEARLY_PROPOSAL_PER_PROJECT = 12; // 1 per month(30 days)
+    uint256 public constant INTERVAL_BETWEEN_PROPOSALS = 4 weeks;
 
     // events
 
@@ -63,92 +65,64 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
     error RaiseBoxProposal_hostProposal_InvalidProposalTextDetails();
     error RaiseBoxProposal_hostProposal_MaxYearlyProposalsReached();
 
-
-
     modifier canHostProposal(address projectCreator, bytes32 projectId) {
-
         // does all checks before hosting proposal
-
-        // get project by projectId
-        // ProjectInfo memory projectInfo = raiseBoxCore.getProject(projectId);
 
         // get valid project from storage
 
-         (
-            , 
-            address projectOwner
-            , 
-            , 
-            uint256 amtToRaise
-            , 
-            , 
-            bytes32 projectId
-            , 
-            , 
-            uint256 timeCreated
-            , 
-            uint256 amountRaisedByProject
-            ,
+        (, address projectOwner,, uint256 amtToRaise,uint256 duration,,, uint256 timeCreated, uint256 amountRaisedByProject,,) =
+            raiseBoxCore.getProjectInfo(projectId);
 
-        ) = raiseBoxCore.getProjectInfo(projectId);
+        if (block.timestamp > duration) {
+            revert IRaiseBoxCore.RaiseBox_RaiseEnded(projectId);
 
-        // ascertain owner is host of project and is trying to host proposal
-        if (projectOwner == address(0) || projectOwner != projectCreator) {
-            revert raiseBoxProposal_InvalidProjectOwner();
-        }
-        
-        // ascertain that raise has infact ended
-        if (amtToRaise != amountRaisedByProject) {
-            revert RaiseBoxProposal_hostProposal_RaiseNotEnded();
-        }
-
-        // ascertain that project has not hosted proposal in the last 30 days
-        if (hasHostedProposal[projectId]) {
-            if (lastProposalTime < INTERVAL_BETWEEN_PROPOSALS) {
-                revert RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
+        } else {
+            
+            // ascertain owner is host of project and is trying to host proposal
+            if (projectOwner == address(0) || projectOwner != projectCreator) {
+                revert raiseBoxProposal_InvalidProjectOwner();
             }
 
-        }
+            // ascertain that raise has infact ended
+            if (amtToRaise != amountRaisedByProject) {
+                revert RaiseBoxProposal_hostProposal_RaiseNotEnded();
+            }
 
-        if (proposalCountByProject[projectId] >= MAX_YEARLY_PROPOSAL_PER_PROJECT) {
-            revert RaiseBoxProposal_hostProposal_MaxYearlyProposalsReached();
+            // ascertain that project has not hosted proposal in the last 30 days
+            if (hasHostedProposal[projectId]) {
+                if ((block.timestamp - lastProposalTimeByProject[projectId]) < INTERVAL_BETWEEN_PROPOSALS) {
+                    revert RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
+                }
+            }
+        
         }
 
         _;
-
     }
 
-     function hostProposal(
-        string memory proposalTitle,
-        string memory proposal,
-        bytes32 projectId
-    ) external canHostProposal(msg.sender, projectId) {
-
+    function hostProposal(string memory proposalTitle, string memory proposal, bytes32 projectId)
+        external
+        canHostProposal(msg.sender, projectId)
+    {
         // checks already done in canHostProposal modifier above.
 
         // effects:
-       
 
         hasHostedProposal[projectId] = true;
         proposalCount += 1;
         proposalCountByProject[projectId] += 1;
+        lastProposalTimeByProject[projectId] = block.timestamp;
 
         proposalByProjectId[projectId] = MileStoneProposalDetails({
-            lastProposalTime: block.timestamp,
+            lastProposalTime: lastProposalTimeByProject[projectId],
             description: proposalTitle,
             milestone: proposal,
             proposalId: proposalCountByProject[projectId]
         });
-        lastProposalTime = block.timestamp;
 
         // update storage in RaiseBoxCore contract
-        raiseBoxCore.updateProposalsHostedInStorage(projectId);
+        raiseBoxCore.updateNumOfProposals(projectId);
         // interactions:
-
-        if (block.timestamp >= 366 days ) {
-            hasHostedProposal[projectId] = false;
-            proposalCountByProject[projectId] = 0;
-        }
 
         emit NewProposalHosted(
             msg.sender,
@@ -158,7 +132,6 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
             block.timestamp,
             proposalCountByProject[projectId]
         );
-
     }
 
     // 5, 10, 15, 20, 25 % fund drips only allowed
@@ -173,16 +146,17 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
         return proposalCountByProject[projectId];
     }
 
+    function getProtocolProposals() external view returns (uint256) { return proposalCount;}
+
     function getLastProposalTime(bytes32 projectId) external view returns (uint256) {
         MileStoneProposalDetails memory proposalDetails = proposalByProjectId[projectId];
         return proposalDetails.lastProposalTime;
     }
 
+    function getHasHostedProposal(bytes32 projectId) external returns (bool) {
+       return hasHostedProposal[projectId];
+
+    }
+
     // function updateProposalDetails(bytes32 projectId, uint256 proposalId) external {}
-
-    
-
-
-
 }
-
