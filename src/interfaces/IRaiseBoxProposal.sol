@@ -16,6 +16,3 @@ interface IRaiseBoxProposal {
 
     function getProposalCount(bytes32 projectId) external view returns (uint256);
 }
-
-
-   

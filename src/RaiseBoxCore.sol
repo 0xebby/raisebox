@@ -17,14 +17,11 @@ import {RaiseBox} from "../src/RaiseBoxProjectCreation.sol";
 contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     using SafeERC20 for IERC20;
 
-
     // total projects on raisebox
     uint256 private raiseBoxProjectCounter;
 
     // MINIMUM_CONTRIBUTION = 0.01 ether; // 1e16
     uint256 public constant MINIMUM_CONTRIBUTION = 0.01 ether;
-
-    uint256 public constant MAX_PERCENTAGE = 100;
 
     // percent of the amount raised by the project that goes to protocol
     uint256 private constant PROTOCOL_FEE = 2; // 2%
@@ -85,7 +82,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     }
 
     function setContributionContractAddress(address contractAddressToSet) external onlyOwner {
-
         if (contractAddressToSet == address(0)) {
             revert RaiseBoxCore_setRaiseContribution_InvalidContract();
         }
@@ -100,8 +96,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
         raiseBoxProposalContractAddress = contractAddressToSet;
     }
-
-
 
     function updateIDsStorage(bytes32 projectId) internal {
         IDexists[projectId] = true;
@@ -134,7 +128,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     }
 
     function updateProposalsHostedByProject(bytes32 projectId) internal {
-
         ProjectInfo storage projectInfo;
 
         projectInfo = projectIDToProject[projectId];
@@ -216,7 +209,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         }
     }
 
-    function updateProposalsHostedInStorage(bytes32 projectId) external {
+    function updateNumOfProposals(bytes32 projectId) external {
         if (msg.sender == raiseBoxProposalContractAddress) {
             updateProposalsHostedByProject(projectId);
         } else {
@@ -280,7 +273,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
     function getProjectInfo(bytes32 projectID)
         external
-        returns (string memory, address, string memory, uint256, uint256, bytes32, bool, uint256, uint256, uint256)
+        returns (string memory , address, string memory, uint256, uint256, bytes32, bool, uint256, uint256, uint256, uint256)
     {
         // get from storage
         ProjectInfo storage projectInfo;
@@ -295,7 +288,8 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
             projectInfo.projectExists,
             projectInfo.timeCreated,
             projectInfo.amountRaisedByProject,
-            projectInfo.proposalsHosted
+            projectInfo.proposalsHosted,
+            projectInfo.numberOfProjectsCreatedByProjectOwner
         );
     }
 

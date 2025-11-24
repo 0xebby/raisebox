@@ -18,7 +18,7 @@ contract RaiseBox is IRaiseBoxProjectCreation {
     RaiseBoxCore public raiseBoxStorage;
 
     using Strings for uint256;
-    using Strings for bytes32;  
+    using Strings for bytes32;
 
     // ----------------------------------------------------------------------- state variables -------------------------------------------------------------------------  //
 
@@ -68,7 +68,7 @@ contract RaiseBox is IRaiseBoxProjectCreation {
     error RaiseBoxProjectCreation_createProject_ZeroAddress();
     error RaiseBoxProjectCreation_createProject_InvalidValueProp();
     error RaiseBoxProjectCreation_createProject_CannotRaiseZeroFunds();
-    error RaiseBoxProjectCreation_createProject_DurationAboveAllowed();
+    error RaiseBoxProjectCreation_createProject_InvalidDuration();
     error RaiseBoxProjectCreation_createProject_DurationCannotBeZero();
 
     // raise related errors:
@@ -176,9 +176,9 @@ contract RaiseBox is IRaiseBoxProjectCreation {
         }
 
         // require(duration_ <= 60 days, "Cannot host a raise on raisebox for more than 60 days");
-        // max duration is 60 days -- 2 months
-        if (duration_ > 60 days) {
-            revert RaiseBoxProjectCreation_createProject_DurationAboveAllowed();
+        // max duration is 60 days -- 2 months 78 weeks 1 year/6months
+        if (duration_ > PER_PROJECT_CREATION_COOLDOWN || duration_ < 52 weeks) {
+            revert RaiseBoxProjectCreation_createProject_InvalidDuration();
         }
 
         // generate projectID:
@@ -234,7 +234,7 @@ contract RaiseBox is IRaiseBoxProjectCreation {
     ////////////////////////////////////////////////////////// GETTERS //////////////////////////////////////////////////////////
 
     function getProjectCreator(bytes32 projectId) external returns (address) {
-        (, address projectCreator,,,,,,,,) = raiseBoxStorage.getProjectInfo(projectId);
+        (, address projectCreator,,,,,,,,,) = raiseBoxStorage.getProjectInfo(projectId);
         return projectCreator;
     }
 

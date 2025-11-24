@@ -10,7 +10,6 @@ import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 
 contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
-
     IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
 
     using Strings for uint256;
@@ -43,7 +42,6 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     constructor(address raiseBoxCoreAddress) {
         raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
     }
-    
 
     function contribute(uint256 amount, bytes32 projectId) external payable nonReentrant {
         // projectId should be filled automatically via UI for project clicked by user
@@ -53,21 +51,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
         // get valid project from storage
 
-        (
-            , 
-            address projectOwner
-            , 
-            , 
-            uint256 amtToRaise
-            , 
-            , 
-            bytes32 projectId
-            , 
-            , 
-            , 
-            ,
-
-        ) = raiseBoxCore.getProjectInfo(projectId);
+        (, address projectOwner,, uint256 amtToRaise,, bytes32 projectId,,,,,) = raiseBoxCore.getProjectInfo(projectId);
 
         uint256 totalContributions = totalContributionsToProject[projectId];
 
@@ -135,16 +119,13 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         // i.e. the amount to raise by project has been raised successfully
         // instead of updating storage everytime a contribution is made, wasteful
         if (totalContributions == amtToRaise) {
-            raiseBoxCore.updateAmountRaisedInStorage(
-                projectId,
-               totalContributions
-            );
+            raiseBoxCore.updateAmountRaisedInStorage(projectId, totalContributions);
 
             emit IRaiseBoxCore.RaiseBox_RaisePassed(amtToRaise, amtToRaise);
         }
 
         // Interactions
-        
+
         (bool successfullyContributed,) = raiseBoxProtocol.call{value: amount}(""); // funds sent to protocol for safekeeping pending release to project
         if (!successfullyContributed) {
             revert RaiseBoxContribution_ContributionFailed();
@@ -168,8 +149,10 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
      * @param amountToRaise the total amount the project aims to raise
      * @return maxContributionPerUser the maximum contribution allowed
      */
-
-    function calMaxContribution(bytes32 projectId, uint256 amountToRaise) internal returns (uint256 maxContributionPerUser) {
+    function calMaxContribution(bytes32 projectId, uint256 amountToRaise)
+        internal
+        returns (uint256 maxContributionPerUser)
+    {
         maxContributionPerUser = ((MAX_CONTRIBUTION_PERCENTAGE * amountToRaise) / 100);
         return maxContributionPerUser;
     }
