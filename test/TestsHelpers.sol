@@ -11,6 +11,7 @@ import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreati
 import {RaiseBoxProposal} from "../src/RaiseBoxProposal.sol";
 import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
+import {RaiseBoxVoting} from "../src/RaiseBoxVoting.sol";
 
 contract TestsHelpers is Test {
     // main contract that holds general storage
@@ -27,6 +28,9 @@ contract TestsHelpers is Test {
 
     // proposal contract
     RaiseBoxProposal raiseBoxProposalContract;
+
+    // voting contract
+    RaiseBoxVoting raiseBoxVotingContract;
 
     // faucet contract address
     address faucetToken = 0xB15D5A9DCcCCcb3Caf55360D89610834A72Cf6b3;
@@ -60,9 +64,16 @@ contract TestsHelpers is Test {
 
         raiseBoxStorage.setContributionContractAddress(address(raiseBoxContributionContract));
 
-        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxStorage));
+        raiseBoxVotingContract = new RaiseBoxVoting(address(raiseBoxStorage), address(raiseBoxContributionContract));
+
+        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxStorage), address(raiseBoxVotingContract));
+
+        // link proposal contract back to voting contract
+        raiseBoxVotingContract.setProposalContract(address(raiseBoxProposalContract));
 
         raiseBoxStorage.setProposalContractAddress(address(raiseBoxProposalContract));
+
+        raiseBoxStorage.setVotingContractAddress(address(raiseBoxVotingContract));
 
         owner = address(this);
         vm.deal(owner, 500 ether);
