@@ -239,7 +239,7 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
 
         vm.startPrank(ben);
 
-        raiseBoxProposalContract.hostProposal("new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5);
+        raiseBoxProposalContract.hostProposal("new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 10);
 
         vm.stopPrank();
 
@@ -252,7 +252,7 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
         advanceBlockTime(4 weeks);
         
 
-        raiseBoxProposalContract.hostProposal("new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5);
+        raiseBoxProposalContract.hostProposal("new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 25);
 
         vm.stopPrank();
 

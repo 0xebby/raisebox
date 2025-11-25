@@ -22,7 +22,7 @@ interface IRaiseBoxProposal {
     error RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
     error RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
     error RaiseBoxProposal_hostProposal_RaiseNotEnded();
-    error RaiseBoxProposal_hostProposal_InvalidProposalTextDetails();
+    error RaiseBoxProposal_InvalidDrip();
     error RaiseBoxProposal_hostProposal_MaxYearlyProposalsReached();
     error RaiseBoxProposal_getProposalDetails_InvalidProposalId();
 
@@ -32,6 +32,7 @@ interface IRaiseBoxProposal {
         string description;
         string milestone;
         uint256 proposalId;
+        uint8 dripPercent;
     }
 
     function getProposalCount(bytes32 projectId) external view returns (uint256);

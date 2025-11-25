@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-/*
-    Note: this is the interface for the RaiseBox Core contract
-*/
+ /**  
+  */
 
 interface IRaiseBoxCore {
     struct ProjectInfo {
@@ -27,6 +26,8 @@ interface IRaiseBoxCore {
 
     error RaiseBoxCore_updateStorage_wrongCaller();
     error RaiseBoxCore_getRaiseBoxProjectCount_CallNotFromProjectCreation();
+
+    error RaiseBoxCore_NotAuthorized();
 
     // events:
 
@@ -63,6 +64,8 @@ interface IRaiseBoxCore {
 
     function getProject(bytes32 id) external returns (ProjectInfo memory projectInfo);
 
+    function getProjectCreator(bytes32 projectId) external view returns (address);
+
     function getProjectInfo(bytes32 projectID)
         external
         returns (string memory, address, string memory, uint256, uint256, bytes32, bool, uint256, uint256, uint256, uint256);
@@ -90,4 +93,6 @@ interface IRaiseBoxCore {
     function updateNumOfProposals(bytes32 projectId) external;
 
     function getOwner() external view returns (address);
+
+    function getAcceptedToken() external view returns (address);
 }
