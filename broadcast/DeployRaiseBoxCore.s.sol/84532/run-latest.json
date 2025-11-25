@@ -43,7 +43,7 @@
       "transactionType": "CALL",
       "contractName": "RaiseBoxCore",
       "contractAddress": "0xbce369fd1ccdd5a714e5535d04bcb702f265bbbf",
-      "function": "setProjectCreationContractAddress(address)",
+      "function": "setRaiseCreationContract(address)",
       "arguments": [
         "0x8bb491B600F7FeeC2EA4C6C6a9e7721aEe549278"
       ],
@@ -84,7 +84,7 @@
       "transactionType": "CALL",
       "contractName": "RaiseBoxCore",
       "contractAddress": "0xbce369fd1ccdd5a714e5535d04bcb702f265bbbf",
-      "function": "setContributionContractAddress(address)",
+      "function": "setContributionContract(address)",
       "arguments": [
         "0x8495710E99661877bE9bb9fD06520daDE184aaA8"
       ],
@@ -125,7 +125,7 @@
       "transactionType": "CALL",
       "contractName": "RaiseBoxCore",
       "contractAddress": "0xbce369fd1ccdd5a714e5535d04bcb702f265bbbf",
-      "function": "setProposalContractAddress(address)",
+      "function": "setProposalContract(address)",
       "arguments": [
         "0x9D908ad5792d1596257Eb40f33fDDC53268554a2"
       ],
