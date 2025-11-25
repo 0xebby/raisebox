@@ -29,17 +29,13 @@ The contract can be deployed using the provided Foundry script:
 ```solidity
 contract DeployRaiseBoxCore is Script {
     function run() public {
-        // main contract that holds general storage
+        // contracts:
         RaiseBoxCore raiseBoxCore;
-
-        // project creation contract
         RaiseBox raiseBoxProjectCreationContract;
-
-        // contribution contract
         RaiseBoxContribution raiseBoxContributionContract;
-
-        // proposal contract
         RaiseBoxProposal raiseBoxProposalContract;
+
+
         vm.startBroadcast();
 
         raiseBoxCore = new RaiseBoxCore();
@@ -52,7 +48,8 @@ contract DeployRaiseBoxCore is Script {
 
         raiseBoxCore.setContributionContractAddress(address(raiseBoxContributionContract));
 
-        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore), address(0)); // set voting contract address later
+        // set voting contract address later - circular dependency
+        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore), address(0)); 
 
         raiseBoxCore.setProposalContractAddress(address(raiseBoxProposalContract));
 
@@ -61,8 +58,9 @@ contract DeployRaiseBoxCore is Script {
 
         raiseBoxCore.setVotingContractAddress(address(raiseBoxVotingContract));
 
-        // now set the voting contract address in proposal contract
         raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore), address(raiseBoxVotingContract));
+
+
         vm.stopBroadcast();
     }
 }
