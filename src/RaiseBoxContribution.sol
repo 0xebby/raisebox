@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
-// import {RaiseBox} from "../src/RaiseBox.sol";
 
-// import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
 import {IRaiseBoxContribution} from "../src/interfaces/IRaiseBoxContribution.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
@@ -11,10 +9,8 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 
-contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContribution {
-    // address raiseBoxCoreaddress = 0x5FbDB2315678afecb367f032d93F642f64180aa3;
-
-    IRaiseBoxCore public raiseBoxCore; // the central contract that holds main storage of raisebox
+contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
+    IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
 
     using Strings for uint256;
     using Address for address;
@@ -40,29 +36,12 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
     // contribution state enum
     enum ContributionState {
         CONTRIBUTION_LIVE,
-        CONTRIBUTION_ENDED,
-        WITHDRAWING_PROTOCOL_FEES
+        CONTRIBUTION_ENDED
     }
 
-    // contribution related errors:
-    error RaiseBoxContribution_ValueSentMismatch();
-    error RaiseBoxContribution_ContributeMoreEth(uint256);
-    error RaiseBoxContribution_ZeroAmount();
-    error RaiseBoxContribution_ContributionFailed();
-    error RaiseBoxContribution_InvalidProject();
-    error RaiseBoxContribution_RaiseBoxProtocolUnset();
-    error RaiseBoxContribution_ContributeAmountRemaining(uint256);
-    error RaiseContribution_ContributionEnded(uint256);
-    error RaiseBoxContribution_contribute_AboveMaxAllowed(uint256, string);
-    error RaiseBoxContribution_getMaxContributionAllowedForProject_CannotBeZero();
-
-    // contribution related events:
-    event Contributed(address indexed user, uint256 indexed amount, bytes32 indexed projectId, uint256 amountRaised);
-
-    constructor(address raiseBoxCoreAddress) RaiseBoxCore() {
+    constructor(address raiseBoxCoreAddress) {
         raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
     }
-    
 
     function contribute(uint256 amount, bytes32 projectId) external payable nonReentrant {
         // projectId should be filled automatically via UI for project clicked by user
@@ -71,13 +50,12 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
         address payable raiseBoxProtocol = raiseBoxCore.getProtocol();
 
         // get valid project from storage
-        ProjectInfo memory project = raiseBoxCore.getProject(projectId);
 
-        uint256 amtToRaise = project.amountToRaise;
+        (, address projectOwner,, uint256 amtToRaise,, bytes32 projectId,,,,,) = raiseBoxCore.getProjectInfo(projectId);
+
         uint256 totalContributions = totalContributionsToProject[projectId];
 
         uint256 maxContribution = calMaxContribution(projectId, amtToRaise);
-        uint256 amountToTarget = (amtToRaise - totalContributions);
 
         uint256 userPrevContribution = amountContributedToProject[msg.sender][projectId];
 
@@ -87,7 +65,7 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
             revert RaiseBoxContribution_InvalidProject();
         }
 
-        address projectOwner = project.projectOwner;
+        // address projectOwner = project.projectOwner;
         if (projectOwner == address(0)) {
             revert RaiseBoxContribution_InvalidProject();
         }
@@ -105,10 +83,6 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
             revert RaiseBoxContribution_ValueSentMismatch();
         }
 
-        // if (raiseBoxProtocol == address(0)) {
-        //     revert RaiseBoxContribution_RaiseBoxProtocolUnset();
-        // }
-
         if ((userPrevContribution + amount) > maxContribution) {
             revert RaiseBoxContribution_contribute_AboveMaxAllowed(
                 amtToRaise,
@@ -123,19 +97,8 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
         }
 
         if (totalContributions == amtToRaise) {
-            revert RaiseBox_RaiseEnded(projectId);
+            revert IRaiseBoxCore.RaiseBox_RaiseEnded(projectId);
         }
-
-        uint256 totalToRaise = (amount + totalContributions);
-
-        require(
-            (totalToRaise <= amtToRaise),
-            string(
-                abi.encodePacked(
-                    "Cannot over contribute: you can contribute only:", amountToTarget.toString(), " ether more"
-                )
-            )
-        );
 
         // Effects
         userPrevContribution += amount;
@@ -156,10 +119,16 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
         // i.e. the amount to raise by project has been raised successfully
         // instead of updating storage everytime a contribution is made, wasteful
         if (totalContributions == amtToRaise) {
-            raiseBoxCore.updateAmountRaisedInStorage(
-                projectId,
-               totalContributions
-            );
+            raiseBoxCore.updateAmountRaisedInStorage(projectId, totalContributions);
+
+            emit IRaiseBoxCore.RaiseBox_RaisePassed(amtToRaise, amtToRaise);
+        }
+
+        // Interactions
+
+        (bool successfullyContributed,) = raiseBoxProtocol.call{value: amount}(""); // funds sent to protocol for safekeeping pending release to project
+        if (!successfullyContributed) {
+            revert RaiseBoxContribution_ContributionFailed();
         }
 
         emit Contributed(
@@ -168,17 +137,6 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
             projectId,
             totalContributions // this should show that the main storage has been updated with totalContributionsToProject[projectid]
         );
-
-        // Interactions
-        
-        (bool successfullyContributed,) = raiseBoxProtocol.call{value: amount}(""); // funds sent to protocol for safekeeping pending release to project
-        if (!successfullyContributed) {
-            revert RaiseBoxContribution_ContributionFailed();
-        }
-
-        if (totalContributions == amtToRaise) {
-            emit RaiseBox_RaisePassed(amtToRaise, amtToRaise);
-        }
     }
 
     receive() external payable {}
@@ -191,8 +149,10 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
      * @param amountToRaise the total amount the project aims to raise
      * @return maxContributionPerUser the maximum contribution allowed
      */
-
-    function calMaxContribution(bytes32 projectId, uint256 amountToRaise) internal returns (uint256 maxContributionPerUser) {
+    function calMaxContribution(bytes32 projectId, uint256 amountToRaise)
+        internal
+        returns (uint256 maxContributionPerUser)
+    {
         maxContributionPerUser = ((MAX_CONTRIBUTION_PERCENTAGE * amountToRaise) / 100);
         return maxContributionPerUser;
     }
@@ -211,15 +171,29 @@ contract RaiseBoxContribution is ReentrancyGuard, RaiseBoxCore, IRaiseBoxContrib
         return contributors[projectId];
     }
 
-    function getContributionsToProject(address user, bytes32 projectId) external view returns (uint256[] memory) {
+    function getContributionsToProject(address user, bytes32 projectId) external returns (uint256[] memory) {
+        if (!raiseBoxCore.doesProjectExist(projectId)) {
+            revert IRaiseBoxCore.RaiseBox_getProject_InvalidProjectId();
+        }
         return contributionsToProjectArray[user][projectId];
+    }
+
+    function getContributorsCount(bytes32 projectId) external returns (uint256 contributorCount) {
+        if (!raiseBoxCore.doesProjectExist(projectId)) {
+            revert IRaiseBoxCore.RaiseBox_getProject_InvalidProjectId();
+        }
+        return contributors[projectId].length;
     }
 
     function getTotalContributionsToProject(bytes32 projectId) external returns (uint256 contributionsReceived) {
         if (!raiseBoxCore.doesProjectExist(projectId)) {
-            revert RaiseBox_getProject_InvalidProjectId();
+            revert IRaiseBoxCore.RaiseBox_getProject_InvalidProjectId();
         }
         return totalContributionsToProject[projectId];
+    }
+
+    function getHasContributed(bytes32 projectId, address user) external view returns(bool) {
+        return hasContributed[projectId][user];
     }
     // testing
 }

@@ -17,14 +17,11 @@ import {RaiseBox} from "../src/RaiseBoxProjectCreation.sol";
 contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     using SafeERC20 for IERC20;
 
-
     // total projects on raisebox
     uint256 private raiseBoxProjectCounter;
 
     // MINIMUM_CONTRIBUTION = 0.01 ether; // 1e16
     uint256 public constant MINIMUM_CONTRIBUTION = 0.01 ether;
-
-    uint256 public constant MAX_PERCENTAGE = 100;
 
     // percent of the amount raised by the project that goes to protocol
     uint256 private constant PROTOCOL_FEE = 2; // 2%
@@ -42,32 +39,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     address private immutable iRBT; // raise box token
     IERC20 iRBTInstance;
 
-    // errors:
-
-    error RaiseBox_getProject_InvalidProjectId();
-    error RaiseBox_RaiseEnded(bytes32);
-
-    error RaiseBoxCore_updateStorage_wrongCaller();
-    error RaiseBoxCore_getRaiseBoxProjectCount_CallNotFromProjectCreation();
-
-    // events:
-
-    event RaiseBox_RaisePassed(uint256 amountToRaise, uint256 amountRaised);
-
-    event StorageUpdatedWithProjectCreationDetails(bytes32);
-
-    event RaiseBoxCore_IDsStorageSuccessfullyUpdated(bool IDexists, bytes32 projectId);
-
-    event RaiseBoxCore_ProjectCreationContractSet(address contractAddress);
-
-    // test errors:
-    error RaiseBox_updateStorage_CallNotFromRaiseBoxProjectCreationContract();
-    error InvalidContract();
-    error RaiseBox_updateStorage_NotAValidProjectID();
-    error RaiseBoxCore_getProtocol_RaiseBoxProtocolUnset();
-    error RaiseBoxCore_setProjectCreation_InvalidContract();
-    error RaiseBoxCore_setProjectCreation_ContractAlreadySet();
-
     // projectID (Keccak hash) to projectInfo
     mapping(bytes32 => ProjectInfo) public projectIDToProject;
 
@@ -79,6 +50,8 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     // would be CA of raisebox - project creation contract
     address public raiseBoxCreationContractAddress;
     address public raiseBoxContributionContractAddress;
+    address public raiseBoxProposalContractAddress;
+    address public raiseBoxVotingContractAddress;
 
     // constructor
     // address iRBT_
@@ -110,9 +83,25 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     }
 
     function setContributionContractAddress(address contractAddressToSet) external onlyOwner {
+        if (contractAddressToSet == address(0)) {
+            revert RaiseBoxCore_setRaiseContribution_InvalidContract();
+        }
+
         require(raiseBoxContributionContractAddress == address(0), "contribution contract already set");
 
         raiseBoxContributionContractAddress = contractAddressToSet;
+    }
+
+    function setProposalContractAddress(address contractAddressToSet) external onlyOwner {
+        require(raiseBoxProposalContractAddress == address(0), "proposal contract already set");
+
+        raiseBoxProposalContractAddress = contractAddressToSet;
+    }
+
+    function setVotingContractAddress(address contractAddressToSet) external onlyOwner {
+        require(raiseBoxVotingContractAddress == address(0), "voting contract already set");
+
+        raiseBoxVotingContractAddress = contractAddressToSet;
     }
 
     function updateIDsStorage(bytes32 projectId) internal {
@@ -143,6 +132,14 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         projectInfo.amountRaisedByProject += amount;
 
         projectInfo.amountRaisedByProject;
+    }
+
+    function updateProposalsHostedByProject(bytes32 projectId) internal {
+        ProjectInfo storage projectInfo;
+
+        projectInfo = projectIDToProject[projectId];
+
+        projectInfo.proposalsHosted += 1;
     }
 
     function updateStorage(
@@ -219,6 +216,14 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         }
     }
 
+    function updateNumOfProposals(bytes32 projectId) external {
+        if (msg.sender == raiseBoxProposalContractAddress) {
+            updateProposalsHostedByProject(projectId);
+        } else {
+            revert NotProposalContract();
+        }
+    }
+
     // getters:
 
     function getIDsFromStorage() external returns (bytes32 id) {
@@ -275,7 +280,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
     function getProjectInfo(bytes32 projectID)
         external
-        returns (string memory, address, string memory, uint256, uint256, bytes32, bool, uint256, uint256, uint256)
+        returns (string memory , address, string memory, uint256, uint256, bytes32, bool, uint256, uint256, uint256, uint256)
     {
         // get from storage
         ProjectInfo storage projectInfo;
@@ -290,7 +295,8 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
             projectInfo.projectExists,
             projectInfo.timeCreated,
             projectInfo.amountRaisedByProject,
-            projectInfo.proposalsHosted
+            projectInfo.proposalsHosted,
+            projectInfo.numberOfProjectsCreatedByProjectOwner
         );
     }
 
