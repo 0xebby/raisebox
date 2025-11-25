@@ -1,20 +1,18 @@
-# smartCrowdFunder
+# raisebox
 
 ## Overview
-smartCrowdFunder is a decentralized crowdfunding smart contract built in Solidity. It allows contributors to fund a project, collects protocol fees, and enables the project owner and protocol to withdraw funds securely. The contract is designed for deployment on EVM-compatible blockchains (e.g., Sepolia, Ethereum mainnet, etc.).
+raisebox is a decentralized crowdfunding protocol built with Solidity and going to be future-proofed with zk proofs. It allows contributors to fund project(s) they care about, this funds are dripped based on milestones reached by the project creator(s). 
 
 ## Features
-- **Contribution:** Anyone can contribute ETH to a project, subject to a minimum contribution of 0.00001 ether == 1e15.
-- **Protocol Fee:** A fixed percentage (5%) of each contribution is collected as a protocol fee.
-- **Withdrawal:** Project owner receives contributed funds (minus protocol fee). Only Protocol can withdraw accumulated fees.
-- **Contributor Tracking:** Tracks contributors and their contributed amounts.
-- **Custom Errors:** Uses custom errors for efficient gas usage and clear revert reasons.
+- **Project Creation:** Anyone looking to raise funds for a project can create one with just a wallet address**
+- **Contribution:** Anyone can contribute ETH to a project, subject to a minimum contribution of 0.01e
+- **Host Proposals:** Proposals are milestones achieved since creating the project and requesting for raise, every proposal is voted on by contributors and if passes, % of funds are dripped and so on.
+- **Voting** Contributors vote on the outcome of proposals to determine if drips are released or not
 
 ## Contract Details
-- **Project Owner:** Receives contributed ETH.
+- **Project Owner:** Receives contributed ETH on each milestone proposal passage.
 - **Protocol:** Receives protocol fees and can withdraw them.
-- **Minimum Contribution:** 0.00001 ETH.
-- **Protocol Fee:** 5% of each contribution.
+- **Minimum Contribution:** 0.01 ETH.
 
 ## Deployment
 
@@ -26,13 +24,45 @@ smartCrowdFunder is a decentralized crowdfunding smart contract built in Solidit
 ### Deployment Script
 The contract can be deployed using the provided Foundry script:
 
-**File:** `script/DeployCrowdFund.s.sol`
+**File:** `script/DePloyRaiseBoxCore.s.sol`
 
 ```solidity
-contract DeployCrowdFund is Script {
+contract DeployRaiseBoxCore is Script {
     function run() public {
+        // main contract that holds general storage
+        RaiseBoxCore raiseBoxCore;
+
+        // project creation contract
+        RaiseBox raiseBoxProjectCreationContract;
+
+        // contribution contract
+        RaiseBoxContribution raiseBoxContributionContract;
+
+        // proposal contract
+        RaiseBoxProposal raiseBoxProposalContract;
         vm.startBroadcast();
-        crowdFund = new CrowdFund(<PROJECT_OWNER_ADDRESS>);
+
+        raiseBoxCore = new RaiseBoxCore();
+
+        raiseBoxProjectCreationContract = new RaiseBox(address(raiseBoxCore));
+
+        raiseBoxCore.setProjectCreationContractAddress(address(raiseBoxProjectCreationContract));
+
+        raiseBoxContributionContract = new RaiseBoxContribution(address(raiseBoxCore));
+
+        raiseBoxCore.setContributionContractAddress(address(raiseBoxContributionContract));
+
+        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore), address(0)); // set voting contract address later
+
+        raiseBoxCore.setProposalContractAddress(address(raiseBoxProposalContract));
+
+        RaiseBoxVoting raiseBoxVotingContract =
+            new RaiseBoxVoting(address(raiseBoxCore), address(raiseBoxContributionContract));
+
+        raiseBoxCore.setVotingContractAddress(address(raiseBoxVotingContract));
+
+        // now set the voting contract address in proposal contract
+        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore), address(raiseBoxVotingContract));
         vm.stopBroadcast();
     }
 }
@@ -48,9 +78,6 @@ forge script script/DeployCrowdFund.s.sol --rpc-url <SEPOLIA_RPC_URL> --broadcas
 
 ### Contribute
 Call the `contribute(uint256 amount)` function, sending ETH with the transaction. The `amount` parameter should match the ETH sent (`msg.value`).
-
-### Withdraw Protocol Fees
-Protocol can call `withdrawProtocolFees()` to withdraw accumulated fees.
 
 ## Natspec Documentation
 All public/external functions and contract-level details are documented with NatSpec comments for clarity and best practices.
