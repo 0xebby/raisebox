@@ -7,6 +7,7 @@ import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {RaiseBoxContribution} from "../src/RaiseBoxContribution.sol";
 import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
 import {RaiseBoxProposal} from "../src/RaiseBoxProposal.sol";
+import {RaiseBoxVoting} from "../src/RaiseBoxVoting.sol";
 
 contract DeployRaiseBoxCore is Script {
     function run() public {
@@ -33,9 +34,21 @@ contract DeployRaiseBoxCore is Script {
 
         raiseBoxCore.setContributionContractAddress(address(raiseBoxContributionContract));
 
-        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore));
+        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore), address(0)); // set voting contract address later
 
         raiseBoxCore.setProposalContractAddress(address(raiseBoxProposalContract));
+
+        RaiseBoxVoting raiseBoxVotingContract =
+            new RaiseBoxVoting(address(raiseBoxCore), address(raiseBoxContributionContract));
+
+        raiseBoxCore.setVotingContractAddress(address(raiseBoxVotingContract));
+
+        // now set the voting contract address in proposal contract
+        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore), address(raiseBoxVotingContract));
+
+        
+
+
 
         vm.stopBroadcast();
     }

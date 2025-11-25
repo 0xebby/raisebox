@@ -51,6 +51,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     address public raiseBoxCreationContractAddress;
     address public raiseBoxContributionContractAddress;
     address public raiseBoxProposalContractAddress;
+    address public raiseBoxVotingContractAddress;
 
     // constructor
     // address iRBT_
@@ -95,6 +96,12 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         require(raiseBoxProposalContractAddress == address(0), "proposal contract already set");
 
         raiseBoxProposalContractAddress = contractAddressToSet;
+    }
+
+    function setVotingContractAddress(address contractAddressToSet) external onlyOwner {
+        require(raiseBoxVotingContractAddress == address(0), "voting contract already set");
+
+        raiseBoxVotingContractAddress = contractAddressToSet;
     }
 
     function updateIDsStorage(bytes32 projectId) internal {

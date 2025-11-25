@@ -235,6 +235,8 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
 
         // raise passed for project 1, can now host proposal
 
+        // proposal 1
+
         vm.startPrank(ben);
 
         raiseBoxProposalContract.hostProposal("new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5);
@@ -243,9 +245,12 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
 
         raiseBoxProposalContract.getHasHostedProposal(0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5);
 
-        advanceBlockTime(4 weeks);
+
+        // proposal 2
 
         vm.startPrank(ben);
+        advanceBlockTime(4 weeks);
+        
 
         raiseBoxProposalContract.hostProposal("new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5);
 
@@ -253,30 +258,27 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
 
         raiseBoxProposalContract.getTotalProposals();
 
-        // raise passed for project 2, can host proposals too
-
-
-        vm.startPrank(alice);
-
-        raiseBoxProposalContract.hostProposal("new website", "pay for new website", 0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad);
-
-        vm.stopPrank();
-
-       
-
-        raiseBoxProposalContract.getHasHostedProposal(0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad);
-
-        advanceBlockTime(4 weeks);
+        // proposal hosted, voting can now commence:
+        bytes32 _project = 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5;
+        // jump to just after scheduled voting start for proposal 1
+        uint256 _start = raiseBoxVotingContract.votingStartTime(_project, 1);
+        vm.warp(_start + 1);
 
         vm.startPrank(alice);
-
-        raiseBoxProposalContract.hostProposal("testnet mvp", "launch testnet minimum viable product forbeta testers", 0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad);
-
+        raiseBoxVotingContract.vote(_project, 1, true, alice);
         vm.stopPrank();
 
-        raiseBoxProposalContract.getTotalProposals();
         
-        raiseBoxProposalContract.getProposalDetails(0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad, 1);
+        // vm.startPrank(ben);
+
+        // raiseBoxVotingContract.vote(0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 3, true, ben);
+
+        // vm.stopPrank();
+
+
+
+
+
 
 
 

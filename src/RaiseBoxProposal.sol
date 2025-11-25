@@ -6,12 +6,15 @@ import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreati
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {console} from "../lib/forge-std/src/Test.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
+import {IRaiseBoxVoting} from "../src/interfaces/IRaiseBoxVoting.sol";
 
 contract RaiseBoxProposal is IRaiseBoxProposal {
     IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
+    IRaiseBoxVoting public immutable raiseBoxVoting; // voting contract
 
-    constructor(address raiseBoxCoreAddress) {
+    constructor(address raiseBoxCoreAddress, address raiseBoxVotingAddress) {
         raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
+        raiseBoxVoting = IRaiseBoxVoting(raiseBoxVotingAddress);
     }
 
     using Strings for uint256;
@@ -72,10 +75,17 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
         _;
     }
 
-    function hostProposal(string memory proposalTitle, string memory proposal, bytes32 projectId)
-        external
-        canHostProposal(msg.sender, projectId)
+    function hostProposal(
+        string memory proposalTitle,
+        string memory proposal,
+        bytes32 projectId,
+        uint8 dripPercent
+    ) external canHostProposal(msg.sender, projectId)
     {
+        // validate dripPercent: must be multiple of 5 between 5 and 25
+        if (dripPercent < 5 || dripPercent > 25 || (dripPercent % 5 != 0)) {
+            revert RaiseBoxProposal_InvalidDrip();
+        }
         // checks already done in canHostProposal modifier above.
 
         // effects:
@@ -89,8 +99,12 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
             lastProposalTime: lastProposalTimeByProject[projectId],
             description: proposalTitle,
             milestone: proposal,
-            proposalId: proposalCountByProject[projectId]
+            proposalId: proposalCountByProject[projectId],
+            dripPercent: dripPercent
         });
+
+        // set voting start time in RaiseBoxVoting (10 minutes after proposal hosting)
+        raiseBoxVoting.setVotingStartTime(projectId, proposalCountByProject[projectId], block.timestamp + 10 minutes);
 
         // update storage in RaiseBoxCore contract
         raiseBoxCore.updateNumOfProposals(projectId);
@@ -101,10 +115,12 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
             proposalCountByProject[projectId],
             proposalTitle,
             proposal,
-            block.timestamp,
+            lastProposalTimeByProject[projectId],
             proposalCountByProject[projectId]
         );
     }
+
+    
 
   
 
