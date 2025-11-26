@@ -18,15 +18,28 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     mapping(bytes32 => mapping(uint256 => mapping(address => bool))) public hasVotedOnProposal; // projectId => proposalId => voter => hasVoted
 
-    mapping (address => mapping(bytes32 => mapping(uint256 => address))) public hasDelegatedVote; // from => projectId => proposalId => to
+    mapping (address => mapping(bytes32 => mapping(uint256 => address))) public delegatedVoteTo; // from => projectId => proposalId => to
 
     mapping (bytes32 => mapping(uint256 => uint256)) public votesForProposal; // projectId => proposalId => votesFor
+
+    mapping (bytes32 => mapping(uint256 => uint256)) public votesAgainstProposal; // projectId => proposalId => votesAgainst
 
     mapping (bytes32 => mapping(uint256 => bool)) public votingEnded; // projectId => proposalId => votingEnded
 
     mapping(bytes32 => mapping(uint256 => uint256)) public votingStartTime;
 
     uint256 public constant VOTING_DURATION = 7 days;
+
+    mapping (address => uint256) public delegatedVotes; // address => number of delegated votes received
+
+    mapping (address => bool) public delegated;
+
+    // delegated votes tracker scoped to proposal:
+    
+
+
+   
+
 
     // criterias for voting:
     // 1. has contributed to project
@@ -79,6 +92,10 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
             revert RaiseBoxVoting_VotingEnded(projectId, proposalId);
         }
 
+        if (delegated[user]) {
+            revert RaiseBoxVoting_AlreadyDelegatedVote(user);
+        }
+
         uint256 _start = votingStartTime[projectId][proposalId];
 
         // voting must have been scheduled (start set) before voting commences
@@ -109,20 +126,35 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         // effects:
         hasVotedOnProposal[projectId][proposalId][voter] = true;
 
+
+
         if (side) {
             votesForProposal[projectId][proposalId] += 1;
+
+        } else {
+            votesAgainstProposal[projectId][proposalId] += 1;
         }
 
         emit Voted(voter, projectId, proposalId, side);
 
     }
 
+    /** @notice Set voting start time for a proposal (calls restircted to proposal contract)
+        @dev sets the start time for voting on a specific proposal within a project.
+        @param projectId unique id of a project.
+        @param proposalId unique id of a proposal within the project.
+        @param startTime voting start time.
+        @dev emits VotingStartTimeSet to mark success.
+    
+    **/
     function setVotingStartTime(bytes32 projectId, uint256 proposalId, uint256 startTime) external {
         // only the proposal contract should be able to set voting start times
         if (msg.sender != address(raiseBoxProposal)) {
             revert("Only proposal contract");
         }
         votingStartTime[projectId][proposalId] = startTime;
+
+        emit VotingStartTimeSet(projectId, proposalId, startTime);
     }
 
     function delegateVote(bytes32 projectId, uint256 proposalId, address from, address to) external canVote(projectId, from, proposalId) canVote(projectId, to, proposalId) {
@@ -131,6 +163,18 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
             revert RaiseBoxVoting_CannotDelegateToSelf();
         }
 
+        // remove voting right from 'from' address
+        hasVotedOnProposal[projectId][proposalId][from] = true;
+        // record delegation
+        delegatedVoteTo[from][projectId][proposalId] = to;
+        // add voting right to 'to' address
+
+
+
+
+        delegatedVotes[to] += 1;
+        delegated[from] = true;
+
 
         emit VoteDelegated(from, to);
 
@@ -138,7 +182,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     }
 
     function tallyVotes(bytes32 projectId, uint256 proposalId) external returns (uint256 forVotes, uint256 againstVotes) {
-        uint256 totalProposalVotes = this.getTotalProposalVotes(projectId, proposalId); 
+        (uint256 forVotes, uint256 againstVotes, uint256 totalVotes ) = this.getProposalVotes(projectId, proposalId); 
 
 
         return (forVotes, againstVotes);
@@ -146,7 +190,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         
 
 
-        emit VotesTallied(projectId, proposalId, totalProposalVotes);
+        emit VotesTallied(projectId, proposalId, totalVotes);
 
         
 
@@ -165,19 +209,24 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     }
     
 
-    function getTotalProposalVotes(bytes32 projectId, uint256 proposalId) external  returns (uint256) {
+    /** @notice Get votes for, against, and total votes for a proposal
+        @param projectId unique id of a project.
+        @param proposalId unique id of a proposal within the project.
+        @return forVotes total in favor.
+        @return againstVotes total against.
+        @return totalVotes aggregate (for + against).
+    **/
+    function getProposalVotes(bytes32 projectId, uint256 proposalId) external  returns (uint256 forVotes, uint256 againstVotes, uint256 totalVotes) {
         // checks:
         bool validProposal = _isValidProposal(projectId, proposalId);
 
-        if (validProposal) {
-             return votesForProposal[projectId][proposalId];
-        }
+        forVotes = votesForProposal[projectId][proposalId];
+        againstVotes = votesAgainstProposal[projectId][proposalId];
+        totalVotes = forVotes + againstVotes;
 
+        if (validProposal) {return (forVotes, againstVotes, totalVotes);}
        
     }
-
-    
-
 
 
     // to get funding drips from contributions, projects have to host proposals after every milestone achieved

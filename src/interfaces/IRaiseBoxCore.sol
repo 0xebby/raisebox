@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
- /**  
-  */
-
 interface IRaiseBoxCore {
+
     struct ProjectInfo {
         string projectName;
         address projectOwner;
@@ -21,26 +19,16 @@ interface IRaiseBoxCore {
 
     // errors:
 
-    error RaiseBox_getProject_InvalidProjectId();
-    error RaiseBox_RaiseEnded(bytes32);
+    // getter errors:
+    error RaiseBoxCore_getProject_InvalidProjectId();
+    error RaiseBoxCore_getAmountToRaise_InvalidProjectId();
+    error RaiseBoxCore_getAmtRaisedByProject_InvalidProjectId();
 
+    error RaiseBox_RaiseEnded(bytes32);
     error RaiseBoxCore_updateStorage_wrongCaller();
     error RaiseBoxCore_getRaiseBoxProjectCount_CallNotFromProjectCreation();
-
     error RaiseBoxCore_NotAuthorized();
-
-    // events:
-
-    event RaiseBox_RaisePassed(uint256 amountToRaise, uint256 amountRaised);
-
-    event StorageUpdatedWithProjectCreationDetails(bytes32);
-
-    event RaiseBoxCore_IDsStorageSuccessfullyUpdated(bool IDexists, bytes32 projectId);
-
-    event RaiseBoxCore_ProjectCreationContractSet(address contractAddress);
-
-    // test errors:
-    error RaiseBox_updateStorage_CallNotFromRaiseBoxProjectCreationContract();
+    error RaiseBoxCore_UnAuthorizedCaller();
     error InvalidContract();
     error RaiseBox_updateStorage_NotAValidProjectID();
     error RaiseBoxCore_getProtocol_RaiseBoxProtocolUnset();
@@ -48,17 +36,33 @@ interface IRaiseBoxCore {
     error RaiseBoxCore_setProjectCreation_ContractAlreadySet();
     error RaiseBoxCore_setRaiseContribution_InvalidContract();
     error NotProposalContract();
+    error RaiseBoxCore_NotSupportedToken();
 
-    // this function updates the general raiseBox Storage
-    // function updateStorage(bytes32 projectId) external virtual;
+    // events:
 
-    function getProjectCount() external returns (uint256);
+    event RaiseBox_RaisePassed(uint256 amountToRaise, uint256 amountRaised);
+    event RaiseCreationDetailsUpdated(bytes32);
+    event RaiseBoxCore_ProjectCreationContractSet(address contractAddress);
+    event RoleGranted(bytes32 indexed role, address indexed account);
+    event RoleRevoked(bytes32 indexed role, address indexed account);
+    event ContributionContractSet(address indexed contractAddress);
+    event ProposalContractSet(address indexed contractAddress);
+    event VotingContractSet(address indexed contractAddress);
+    event RaiseHostedProposalsUpdated();
+    event AmountRaisedUpdateSuccessful();
+    event RaiseBoxCore_AcceptedTokenSet(address indexed acceptedToken);
+
+   
+
+    // raiseBoxCore methods:
+
+    function getRaiseCount() external returns (uint256);
 
     function getProtocol() external returns (address payable);
 
     function getMinimumContribution() external view returns (uint256);
 
-    function getAmountRaisedByProject(bytes32 projectId_) external returns (uint256);
+    function getAmtRaisedByProject(bytes32 projectId_) external returns (uint256);
 
     function getProtocolFeeAddress() external view returns (address);
 
@@ -69,8 +73,6 @@ interface IRaiseBoxCore {
     function getProjectInfo(bytes32 projectID)
         external
         returns (string memory, address, string memory, uint256, uint256, bytes32, bool, uint256, uint256, uint256, uint256);
-
-    function doesProjectExist(bytes32 projectID) external returns (bool);
 
     function getAmountToRaise(bytes32 projectId) external returns (uint256);
 
@@ -88,11 +90,23 @@ interface IRaiseBoxCore {
         uint256 _numberOfProjectsCreatedByProjectOwner
     ) external;
 
-    function updateAmountRaisedInStorage(bytes32 projectId, uint256 amountRaised) external;
+    function incrementRaiseCount() external;
+
+    function doesProjectExist(bytes32 projectID) external view returns (bool);
 
     function updateNumOfProposals(bytes32 projectId) external;
 
-    function getOwner() external view returns (address);
+    function getRaiseBoxOwner() external view returns (address);
 
     function getAcceptedToken() external view returns (address);
+
+
+    // contribution methods:
+
+    function updateAmountRaisedInStorage(bytes32 projectId, uint256 amountRaised) external;
+
+
+    // proposal methods;
+
+    // voting methods:
 }

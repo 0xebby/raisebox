@@ -136,7 +136,7 @@ contract RaiseBox is IRaiseBoxCreation {
 
         projectIndex++;
         i_lastRaiseCreated[msg.sender] = timeCreated;
-        raiseBoxCore.incrementProjectCount();
+        raiseBoxCore.incrementRaiseCount();
 
         // projectIndexToProject[projectIndex] = projectIDToProject[projectID];
 

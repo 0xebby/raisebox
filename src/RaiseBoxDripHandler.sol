@@ -115,7 +115,7 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard {
         uint8 dripPercent = _determineDripPercent(projectId, propCount);
 
         // compute amount to release based on amount raised at time of raise
-        uint256 amountRaised = raiseBoxCore.getAmountRaisedByProject(projectId);
+        uint256 amountRaised = raiseBoxCore.getAmtRaisedByProject(projectId);
         uint256 amountToDrip = (amountRaised * dripPercent) / 100;
 
         // ensure this contract has enough balance

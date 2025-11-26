@@ -2,7 +2,6 @@
 pragma solidity ^0.8.19;
 
 import {IRaiseBoxProposal} from "../src/interfaces/IRaiseBoxProposal.sol";
-import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {console} from "../lib/forge-std/src/Test.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
@@ -18,8 +17,6 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
     }
 
     using Strings for uint256;
-  
-
 
     MileStoneProposalDetails[] public proposals;
 
@@ -80,7 +77,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
         string memory proposal,
         bytes32 projectId,
         uint8 dripPercent
-    ) external canHostProposal(msg.sender, projectId)
+    ) external canHostProposal(msg.sender, projectId) returns (uint256 proposalId)
     {
         // validate dripPercent: must be multiple of 5 between 5 and 25
         if (dripPercent < 5 || dripPercent > 25 || (dripPercent % 5 != 0)) {
@@ -110,14 +107,18 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
         raiseBoxCore.updateNumOfProposals(projectId);
         // interactions:
 
+        proposalId = proposalCountByProject[projectId];
+
         emit NewProposalHosted(
             msg.sender,
-            proposalCountByProject[projectId],
-            proposalTitle,
+            proposalId,
+            dripPercent,
             proposal,
             lastProposalTimeByProject[projectId],
             proposalCountByProject[projectId]
         );
+
+        return proposalId;
     }
 
     
