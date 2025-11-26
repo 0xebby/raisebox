@@ -30,11 +30,16 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     uint256 public constant VOTING_DURATION = 7 days;
 
-    mapping (address => uint256) public delegatedVotes; // address => number of delegated votes received
+    mapping (address => mapping(bytes32 => mapping(uint256 => uint256))) public delegatedVotes; // address => number of delegated votes received
 
     mapping (address => bool) public delegated;
 
     // delegated votes tracker scoped to proposal:
+    mapping (address => mapping(bytes32 => mapping(uint256 => bool))) public hasDelegatedForProposal; // address => projectId => proposalId => hasDelegated
+
+    mapping (address => mapping(bytes32 => mapping(uint256 => bool))) public delegatee;
+
+    mapping (address => mapping(bytes32 => mapping(uint256 => bool))) public hasVoted;
     
 
 
@@ -92,7 +97,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
             revert RaiseBoxVoting_VotingEnded(projectId, proposalId);
         }
 
-        if (delegated[user]) {
+        if (hasDelegatedForProposal[user][projectId][proposalId]) {
             revert RaiseBoxVoting_AlreadyDelegatedVote(user);
         }
 
@@ -115,7 +120,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         }
 
         if (hasVotedOnProposal[projectId][proposalId][user]) {
-            revert RaiseBoxVoting_AlreadyVoted(proposalId);
+            revert RaiseBoxVoting_AlreadyVoted(proposalId, user);
         }
         _;
     }
@@ -126,14 +131,25 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         // effects:
         hasVotedOnProposal[projectId][proposalId][voter] = true;
 
+        if (delegatee[voter][projectId][proposalId]) {
 
+            if (side) {
+            votesForProposal[projectId][proposalId] += (delegatedVotes[voter][projectId][proposalId] + 1); // votes delegated to voter plus his vote
 
-        if (side) {
+        } else { votesAgainstProposal[projectId][proposalId] += (delegatedVotes[voter][projectId][proposalId] + 1);}
+
+        } else {
+
+            if (side) {
             votesForProposal[projectId][proposalId] += 1;
 
         } else {
             votesAgainstProposal[projectId][proposalId] += 1;
         }
+
+        }
+
+        hasVoted[voter][projectId][proposalId] = true;
 
         emit Voted(voter, projectId, proposalId, side);
 
@@ -157,23 +173,31 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         emit VotingStartTimeSet(projectId, proposalId, startTime);
     }
 
-    function delegateVote(bytes32 projectId, uint256 proposalId, address from, address to) external canVote(projectId, from, proposalId) canVote(projectId, to, proposalId) {
+    function delegateVote(bytes32 projectId, uint256 proposalId, address from, address to) external /**canVote(projectId, from, proposalId) canVote(projectId, to, proposalId)*/ {
 
         if (to == from) {
             revert RaiseBoxVoting_CannotDelegateToSelf();
         }
 
-        // remove voting right from 'from' address
-        hasVotedOnProposal[projectId][proposalId][from] = true;
+        if (to == address(0)) {
+            revert RaiseBoxVoting_DelegationToZeroAddress(address(0));
+        }
+
+        if (hasDelegatedForProposal[from][projectId][proposalId]) {
+            revert RaiseBoxVoting_CannotDelegateTwice();
+        }
+
+        if (hasVoted[from][projectId][proposalId] || hasVoted[to][projectId][proposalId]) {
+            revert RaiseBoxVoting_CannotDelegateAfterVoting(proposalId, from );
+        }
+
         // record delegation
         delegatedVoteTo[from][projectId][proposalId] = to;
         // add voting right to 'to' address
-
-
-
-
-        delegatedVotes[to] += 1;
-        delegated[from] = true;
+        
+        delegatedVotes[to][projectId][proposalId] += 1;
+        hasDelegatedForProposal[from][projectId][proposalId] = true;
+        delegatee[to][projectId][proposalId] = true;
 
 
         emit VoteDelegated(from, to);
@@ -227,6 +251,17 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         if (validProposal) {return (forVotes, againstVotes, totalVotes);}
        
     }
+
+
+    function hasVotedForProposal(address contributor, bytes32 projectId, uint256 proposalId) external view returns (bool) { return hasVoted[contributor][projectId][proposalId];}
+
+
+    // get number of votes casted by individual voter
+    // function getVotesCasted(address user, bytes32 projectId, uint256 proposalId) external returns (uint256 votesCasted) {
+
+
+    //     return votesCasted;
+    // }
 
 
     // to get funding drips from contributions, projects have to host proposals after every milestone achieved
