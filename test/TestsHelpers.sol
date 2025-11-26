@@ -2,23 +2,18 @@
 pragma solidity ^0.8.30;
 
 import "../lib/forge-std/src/Test.sol";
-import {RaiseBox} from "../src/RaiseBoxProjectCreation.sol";
+import {RaiseBox} from "../src/RaiseBoxRaiseCreation.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {RaiseBoxContribution} from "../src/RaiseBoxContribution.sol";
-import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
 import {RaiseBoxProposal} from "../src/RaiseBoxProposal.sol";
 import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
-import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 import {RaiseBoxVoting} from "../src/RaiseBoxVoting.sol";
 
 contract TestsHelpers is Test {
     // main contract that holds general storage
-    RaiseBoxCore raiseBoxStorage;
-
-    // core interface
-    IRaiseBoxCore raiseBoxCore;
+    RaiseBoxCore raiseBoxCore;
 
     // project creation contract
     RaiseBox raiseBoxProjectCreationContract;
@@ -30,13 +25,13 @@ contract TestsHelpers is Test {
     RaiseBoxProposal raiseBoxProposalContract;
 
     // voting contract
-    RaiseBoxVoting raiseBoxVotingContract;
+    RaiseBoxVoting raiseBoxVoting;
 
     // faucet contract address
     address faucetToken = 0xB15D5A9DCcCCcb3Caf55360D89610834A72Cf6b3;
 
-    // raisebox owner == deployer
-    address owner;
+    // raisebox testOwner == deployer
+    address testOwner;
 
     // make dummy addresses for test
     address alice = makeAddr("alice");
@@ -50,33 +45,48 @@ contract TestsHelpers is Test {
 
     using Strings for uint256;
 
+    address raiseBoxOwner;
+
     function setUp() public {
+
+        vm.startPrank(address(this));
+        
         // deploy the main contract that holds general storage
-        raiseBoxStorage = new RaiseBoxCore();
+        raiseBoxCore = new RaiseBoxCore();
+        raiseBoxOwner = raiseBoxCore.getRaiseBoxOwner();
+        
+
+       
+        
 
         // deploy project creation contract with CA of main contract above
-        raiseBoxProjectCreationContract = new RaiseBox(address(raiseBoxStorage));
+        raiseBoxProjectCreationContract = new RaiseBox(address(raiseBoxCore));
 
         // set the address of the project creation contract so it can be referenced
-        raiseBoxStorage.setProjectCreationContractAddress(address(raiseBoxProjectCreationContract));
+        raiseBoxCore.setRaiseCreationContract(address(raiseBoxProjectCreationContract));
 
-        raiseBoxContributionContract = new RaiseBoxContribution(address(raiseBoxStorage));
+        raiseBoxContributionContract = new RaiseBoxContribution(address(raiseBoxCore));
 
-        raiseBoxStorage.setContributionContractAddress(address(raiseBoxContributionContract));
+        raiseBoxCore.setContributionContract(address(raiseBoxContributionContract));
 
-        raiseBoxVotingContract = new RaiseBoxVoting(address(raiseBoxStorage), address(raiseBoxContributionContract));
+        raiseBoxVoting = new RaiseBoxVoting(address(raiseBoxCore), address(raiseBoxContributionContract));
 
-        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxStorage), address(raiseBoxVotingContract));
+        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore), address(raiseBoxVoting));
 
         // link proposal contract back to voting contract
-        raiseBoxVotingContract.setProposalContract(address(raiseBoxProposalContract));
+        raiseBoxVoting.setProposalContract(address(raiseBoxProposalContract));
 
-        raiseBoxStorage.setProposalContractAddress(address(raiseBoxProposalContract));
+        raiseBoxCore.setProposalContract(address(raiseBoxProposalContract));
 
-        raiseBoxStorage.setVotingContractAddress(address(raiseBoxVotingContract));
+        raiseBoxCore.setVotingContract(address(raiseBoxVoting));
 
-        owner = address(this);
-        vm.deal(owner, 500 ether);
+        vm.stopPrank();
+
+
+
+        
+        testOwner = address(this);
+        vm.deal(testOwner, 500 ether);
         vm.deal(alice, 100 ether);
         vm.deal(joe, 100 ether);
         vm.deal(ben, 100 ether);
@@ -87,33 +97,33 @@ contract TestsHelpers is Test {
 
     /**
      * @dev Helper function to simulate time passing since testing environment doesn't work as expected
-     * @param duration_ amount of time to advanced, could be in days, hours, minutes or seconds. default is seconds*
+     * @param raiseDuration_ amount of time to advanced, could be in days, hours, minutes or seconds. default is seconds*
      */
-    function advanceBlockTime(uint256 duration_) internal {
-        vm.warp(block.timestamp + duration_);
+    function advanceBlockTime(uint256 raiseDuration_) internal {
+        vm.warp(block.timestamp + raiseDuration_);
     }
 
     function createTestProjects() public {
         vm.startPrank(ben);
-        bytes32 projectID0 = raiseBoxProjectCreationContract.createProject(
+        bytes32 projectID0 = raiseBoxProjectCreationContract.createRaise(
             "Sentient", "Building AGI - Collectively owned AI", 20 ether, 52 weeks
         );
         vm.stopPrank();
 
         vm.startPrank(alice);
-        bytes32 projectID1 = raiseBoxProjectCreationContract.createProject(
+        bytes32 projectID1 = raiseBoxProjectCreationContract.createRaise(
             "Hello Elsa", "Chat, trade and swap using AI", 20 ether, 60 weeks
         );
         vm.stopPrank();
 
         // vm.startPrank(joe);
-        // bytes32 projectID2 = raiseBoxProjectCreationContract.createProject(
+        // bytes32 projectID2 = raiseBoxProjectCreationContract.createRaise(
         //     "FeedTheWorld NGO", "operation feed 2,000 kids", 10 ether, 30 days
         // );
         // vm.stopPrank();
 
         // vm.startPrank(max);
-        // bytes32 projectID3 = raiseBoxProjectCreationContract.createProject(
+        // bytes32 projectID3 = raiseBoxProjectCreationContract.createRaise(
         //     "Base App", "onboarding the next 1b users onchain", 100 ether, 30 days
         // );
         // vm.stopPrank();

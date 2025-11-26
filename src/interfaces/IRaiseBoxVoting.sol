@@ -12,10 +12,12 @@ interface IRaiseBoxVoting {
     error RaiseBoxVoting_AlreadyVoted(uint256 proposalId);
     error RaiseBoxVoting_InvalidProposal();
     error RaiseBoxVoting_VotingNotStarted(bytes32 projectId, uint256 proposalId);
+    error RaiseBoxVoting_AlreadyDelegatedVote(address user);
 
     event VoteDelegated(address indexed from, address indexed to);
     event Voted(address indexed voter, bytes32 indexed projectId, uint256 indexed proposalId, bool side);
     event VotesTallied(bytes32 indexed projectId, uint256 indexed proposalId, uint256 totalProposalVotes);
+    event VotingStartTimeSet(bytes32 indexed projectId, uint256 indexed proposalId, uint256 startTime);
     
 
     function vote(bytes32 projectId, uint256 proposalId, bool side, address voter) external;
@@ -24,7 +26,7 @@ interface IRaiseBoxVoting {
 
     function tallyVotes(bytes32 projectId, uint256 proposalId) external returns (uint256 forVotes, uint256 againstVotes);
 
-    function getTotalProposalVotes(bytes32 projectId, uint256 proposalId) external returns (uint256);
+    function getProposalVotes(bytes32 projectId, uint256 proposalId) external returns (uint256 forVotes, uint256 againstVotes, uint256 totalVotes);
 
     function setVotingStartTime(bytes32 projectId, uint256 proposalId, uint256 startTime) external;
 }

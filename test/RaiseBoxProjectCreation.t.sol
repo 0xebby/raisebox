@@ -7,7 +7,7 @@ import {TestsHelpers} from "./TestsHelpers.sol";
 contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
     function testCreateProject() public {
         vm.startPrank(alice);
-        bytes32 projectID1 = raiseBoxProjectCreationContract.createProject(
+        bytes32 projectID1 = raiseBoxProjectCreationContract.createRaise(
             "project 1", "solve testnet sybil with zkp", 10 ether, 30 days
         );
         vm.stopPrank();
@@ -24,7 +24,7 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
             uint256 amountRaised,
             uint256 proposalsHosted,
             uint256 NumOfProjectCreated
-        ) = raiseBoxStorage.getProjectInfo(projectID1);
+        ) = raiseBoxCore.getProjectInfo(projectID1);
 
         assertEq(projectName, "project 1");
         assertEq(projectValuePropDesciption, "solve testnet sybil with zkp");
@@ -37,13 +37,13 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
         assertEq(proposalsHosted, 0);
 
         vm.startPrank(ben);
-        bytes32 projectID2 = raiseBoxProjectCreationContract.createProject(
+        bytes32 projectID2 = raiseBoxProjectCreationContract.createRaise(
             "sentient", "AGI: AI but collectively owned and decentralized", 30 ether, 30 days
         );
         vm.stopPrank();
 
         vm.startPrank(joe);
-        bytes32 projectID3 = raiseBoxProjectCreationContract.createProject(
+        bytes32 projectID3 = raiseBoxProjectCreationContract.createRaise(
             "FeedTheWorld NGO", "operation feed 2,000 kids", 100 ether, 30 days
         );
         vm.stopPrank();
@@ -93,7 +93,7 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
 
         vm.stopPrank();
 
-        vm.startPrank(owner);
+        vm.startPrank(testOwner);
 
         raiseBoxContributionContract.contribute{value: 6 ether}(
             6 ether, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
@@ -124,7 +124,7 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
 
         vm.stopPrank();
 
-        raiseBoxStorage.getAmountRaisedByProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+        raiseBoxCore.getAmtRaisedByProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
 
         vm.startPrank(address(0x11));
         vm.deal(address(0x11), 50 ether);
@@ -145,11 +145,11 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
         // advanceBlockTime(104 weeks); // 2 years
         // vm.startPrank(joe);
         // bytes32 projectID4 =
-        //     raiseBoxProjectCreationContract.createProject("NGO", "missionary journey to Rome", 50 ether, 30 days);
+        //     raiseBoxProjectCreationContract.createRaise("NGO", "missionary journey to Rome", 50 ether, 30 days);
         // vm.stopPrank();
 
-        raiseBoxStorage.getProjectCount();
-        raiseBoxStorage.getProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
+        raiseBoxCore.getRaiseCount();
+        raiseBoxCore.getProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
 
         // raiseBoxContributionContract.getContributors(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
         // raiseBoxContributionContract.getContributorsCount(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
@@ -239,7 +239,7 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
 
         vm.startPrank(ben);
 
-        raiseBoxProposalContract.hostProposal("new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 10);
+        uint256 proposalId1 = raiseBoxProposalContract.hostProposal("new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 10);
 
         vm.stopPrank();
 
@@ -252,7 +252,7 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
         advanceBlockTime(4 weeks);
         
 
-        raiseBoxProposalContract.hostProposal("new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 25);
+        uint256 proposalId2 = raiseBoxProposalContract.hostProposal("new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 25);
 
         vm.stopPrank();
 
@@ -261,17 +261,39 @@ contract RaiseBoxProjectCreationTest is Test, TestsHelpers {
         // proposal hosted, voting can now commence:
         bytes32 _project = 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5;
         // jump to just after scheduled voting start for proposal 1
-        uint256 _start = raiseBoxVotingContract.votingStartTime(_project, 1);
+        uint256 _start = raiseBoxVoting.votingStartTime(_project, 1);
         vm.warp(_start + 1);
 
         vm.startPrank(alice);
-        raiseBoxVotingContract.vote(_project, 1, true, alice);
+        // raiseBoxVoting.delegateVote(_project, 1, alice, alice);
+        raiseBoxVoting.vote(_project, 1, true, alice);
         vm.stopPrank();
+
+        vm.startPrank(ben);
+        // raiseBoxVoting.delegateVote(_project, 1, alice, alice);
+        raiseBoxVoting.vote(_project, 1, false, ben);
+        vm.stopPrank();
+
+        vm.startPrank(max);
+        // raiseBoxVoting.delegateVote(_project, 1, alice, alice);
+        raiseBoxVoting.vote(_project, 1, true, max);
+        vm.stopPrank();
+
+       (uint256 forVotes, uint256 againstVotes, uint256 aggregate) = raiseBoxVoting.getProposalVotes(_project, 1);
+
+       console.log("yes votes:", forVotes, "no votes:", againstVotes);
+
+
+
+
+        raiseBoxCore.getAmountToRaise(0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5);
+
+        
 
         
         // vm.startPrank(ben);
 
-        // raiseBoxVotingContract.vote(0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 3, true, ben);
+        // raiseBoxVoting.vote(0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 3, true, ben);
 
         // vm.stopPrank();
 

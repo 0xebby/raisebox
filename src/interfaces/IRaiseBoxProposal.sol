@@ -11,7 +11,7 @@ interface IRaiseBoxProposal {
     event NewProposalHosted(
         address indexed projectCreator,
         uint256 proposalId,
-        string proposalDescription,
+        uint8 dripPercent,
         string proposalAchievement,
         uint256 lastProposalTime,
         uint256 numberOfProposalsHosted
