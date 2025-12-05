@@ -2,7 +2,6 @@
 pragma solidity ^0.8.19;
 
 interface IRaiseBoxCore {
-
     struct ProjectInfo {
         string projectName;
         address projectOwner;
@@ -32,17 +31,19 @@ interface IRaiseBoxCore {
     error InvalidContract();
     error RaiseBox_updateStorage_NotAValidProjectID();
     error RaiseBoxCore_getProtocol_RaiseBoxProtocolUnset();
-    error RaiseBoxCore_setProjectCreation_InvalidContract();
-    error RaiseBoxCore_setProjectCreation_ContractAlreadySet();
+    error RaiseBoxCore_setRaiseCreation_InvalidCA();
+    error RaiseBoxCore_setRaiseCreation_ContractAlreadySet();
+    error RaiseBoxCore_setRaiseContribution_ContractAlreadySet();
     error RaiseBoxCore_setRaiseContribution_InvalidContract();
     error NotProposalContract();
     error RaiseBoxCore_NotSupportedToken();
+    error RaiseBoxCore_setDripHandler_InvalidContract();
 
     // events:
 
     event RaiseBox_RaisePassed(uint256 amountToRaise, uint256 amountRaised);
     event RaiseCreationDetailsUpdated(bytes32);
-    event RaiseBoxCore_ProjectCreationContractSet(address contractAddress);
+    event RaiseBoxCore_RaiseCreationContractSet(address contractAddress);
     event RoleGranted(bytes32 indexed role, address indexed account);
     event RoleRevoked(bytes32 indexed role, address indexed account);
     event ContributionContractSet(address indexed contractAddress);
@@ -51,8 +52,7 @@ interface IRaiseBoxCore {
     event RaiseHostedProposalsUpdated();
     event AmountRaisedUpdateSuccessful();
     event RaiseBoxCore_AcceptedTokenSet(address indexed acceptedToken);
-
-   
+    event DripperContractSet(address contractAddress);
 
     // raiseBoxCore methods:
 
@@ -68,11 +68,23 @@ interface IRaiseBoxCore {
 
     function getProject(bytes32 id) external returns (ProjectInfo memory projectInfo);
 
-    function getProjectCreator(bytes32 projectId) external view returns (address);
+    function getRaiseCreator(bytes32 projectId) external view returns (address);
 
     function getProjectInfo(bytes32 projectID)
         external
-        returns (string memory, address, string memory, uint256, uint256, bytes32, bool, uint256, uint256, uint256, uint256);
+        returns (
+            string memory,
+            address,
+            string memory,
+            uint256,
+            uint256,
+            bytes32,
+            bool,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        );
 
     function getAmountToRaise(bytes32 projectId) external returns (uint256);
 
@@ -100,13 +112,25 @@ interface IRaiseBoxCore {
 
     function getAcceptedToken() external view returns (address);
 
-
     // contribution methods:
 
     function updateAmountRaisedInStorage(bytes32 projectId, uint256 amountRaised) external;
 
-
     // proposal methods;
 
     // voting methods:
+
+
+    // expose all the contract addresses using the getters;
+
+    function getRaiseCreationContract() external view returns (address);
+
+    function getContributionContract() external view returns (address);
+
+    function getProposalContract() external view returns (address);
+
+    function getDripHandlerContract() external view returns (address);
+
+    function getVotingContract() external view returns (address);
+
 }

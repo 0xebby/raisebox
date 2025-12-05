@@ -2,19 +2,13 @@
 pragma solidity ^0.8.19;
 
 /*
-    Note: this is the interface for the RaiseBox Proposal contract
+    Note: this is the interface for the RaiseBoxCreation Proposal contract
 */
 
 interface IRaiseBoxProposal {
-
     // proposal related events:
     event NewProposalHosted(
-        address indexed projectCreator,
-        uint256 proposalId,
-        uint8 dripPercent,
-        string proposalAchievement,
-        uint256 lastProposalTime,
-        uint256 numberOfProposalsHosted
+        address indexed projectCreator, uint256 indexed proposalId, uint8 dripPercent, uint256 lastProposalTime
     );
     event ProposalPassed();
 

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 /*
-    Note: this is the interface for the RaiseBox Contribution contract
+    Note: this is the interface for the RaiseBoxCreation Contribution contract
 */
 
 interface IRaiseBoxContribution {
@@ -16,6 +16,7 @@ interface IRaiseBoxContribution {
     error RaiseContribution_ContributionEnded(uint256);
     error RaiseBoxContribution_contribute_AboveMaxAllowed(uint256, string);
     error RaiseBoxContribution_getMaxContributionAllowedForProject_CannotBeZero();
+    error RaiseBoxContribution_SelfContribution();
 
     // contribution related events:
     event Contributed(address indexed user, uint256 indexed amount, bytes32 indexed projectId, uint256 amountRaised);

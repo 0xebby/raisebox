@@ -2,11 +2,10 @@
 pragma solidity ^0.8.19;
 
 /*
-    Note: this is the interface for the RaiseBox Raise Creation contract
+    Note: this is the interface for the RaiseBoxCreation Raise Creation contract
 */
 
 interface IRaiseBoxCreation {
-
     // protocol fees related errors:
     error RaiseBox_NoFeesToWithdraw();
     error CrowdFund_FeesWithdrawalFailed();
@@ -20,22 +19,22 @@ interface IRaiseBoxCreation {
     error CrowdFund_OnlyProjectOwnerCanCall();
 
     // project creation related errors:
-    error RaiseCreation_createProject_RaiseAlreadyExist();
+    error RaiseCreation_createRaise_RaiseAlreadyExist();
     error RaiseBox_getProjectByIndex_InvalidProjectIndex();
-    error RaiseBoxCreation_createProject_ActiveRaise();
-    error RaiseBoxProjectCreation_createProject_ZeroAddress();
-    error RaiseBoxProjectCreation_createProject_InvalidValueProp();
-    error RaiseBoxProjectCreation_createProject_CannotRaiseZeroFunds();
-    error RaiseBoxProjectCreation_createProject_InvalidDuration();
-    error RaiseBoxProjectCreation_createProject_DurationCannotBeZero();
-    error RaiseBoxCreation_createProject_InvalidProjectName();
+    error RaiseBoxCreation_createRaise_ActiveRaise();
+    error RaiseBoxCreation_createRaise_ZeroAddress();
+    error RaiseBoxCreation_createRaise_InvalidValueProp();
+    error RaiseBoxCreation_createRaise_CannotRaiseZeroFunds();
+    error RaiseBoxCreation_createRaise_InvalidDuration();
+    error RaiseBoxCreation_createRaise_DurationCannotBeZero();
+    error RaiseBoxCreation_createRaise_InvalidProjectName();
 
     // raise related errors:
     error RaiseBox_RaiseFailed();
 
     error RaiseBox_NoContributionsMade();
 
-        event RaiseBoxCreateProject_ProjectCreated(
+    event RaiseBoxCreateProject_ProjectCreated(
         string projectName,
         address projectOwner,
         string projectValueProposition,
@@ -54,6 +53,6 @@ interface IRaiseBoxCreation {
     // project related events:
     event FundsWithdrawn(address indexed projectOwner, uint256 funds);
 
-    function getProjectCreator(bytes32 projectId) external returns (address);
+    function getRaiseCreator(bytes32 projectId) external returns (address);
     function viewProjectInfo(bytes32 projectId) external;
 }
