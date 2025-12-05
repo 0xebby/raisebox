@@ -7,12 +7,12 @@ import {console} from "../lib/forge-std/src/Test.sol";
 import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 
-/// @title RaiseBoxCreation Contract - This contract allows users to create raises  on RaiseBox
+/// @title RaiseBoxCreation Contract - This contract allows users to create raises  on RaiseBoxCreation
 /// @author 0xebby
-/// @notice This contract is part of the RaiseBox crowdfunding platform, enabling raise creation and management, updates core storage (RaiseBoxCore)
+/// @notice This contract is part of the RaiseBoxCreation crowdfunding platform, enabling raise creation and management, updates core storage (RaiseBoxCore)
 /// @dev This contract interacts with RaiseBoxCore for data persistence.
 
-contract RaiseBox is IRaiseBoxCreation {
+contract RaiseBoxCreation is IRaiseBoxCreation {
     // raiseBoxCore interface that exposes methods, events and errors from raiseBoxCore contract
     IRaiseBoxCore public raiseBoxCore;
 
@@ -26,8 +26,6 @@ contract RaiseBox is IRaiseBoxCreation {
 
     mapping(address => uint16) public raisesCreated;
     mapping(address projectOwner => uint256 lastRaiseCreated) public i_lastRaiseCreated;
-
-
 
     // ----------------------------------------------------------------------- constructor -------------------------------------------------------------------------  //
 
@@ -50,7 +48,6 @@ contract RaiseBox is IRaiseBoxCreation {
         _;
     }
 
-
     /**
      *
      * @param projectName_ name of the project to be created
@@ -72,38 +69,38 @@ contract RaiseBox is IRaiseBoxCreation {
         // checks that a project cannot create more than one project within 78 weeks
         if (raisesCreated[msg.sender] > 0) {
             if (PER_PROJECT_CREATION_COOLDOWN > (block.timestamp - i_lastRaiseCreated[msg.sender])) {
-                revert RaiseBoxCreation_createProject_ActiveRaise();
+                revert RaiseBoxCreation_createRaise_ActiveRaise();
             }
         }
 
         // require(msg.sender != address(0), "zero address cannot host campaign");
         if (msg.sender == address(0)) {
-            revert RaiseBoxProjectCreation_createProject_ZeroAddress();
+            revert RaiseBoxCreation_createRaise_ZeroAddress();
         }
 
         // require(bytes(projectName_).length > 0, "Enter valid project name");
         if (bytes(projectName_).length == 0) {
-            revert RaiseBoxCreation_createProject_InvalidProjectName();
+            revert RaiseBoxCreation_createRaise_InvalidProjectName();
         }
 
         // require(bytes(valueProposition_).length > 0, "Enter valid problem statement");
         if (bytes(valueProposition_).length == 0) {
-            revert RaiseBoxProjectCreation_createProject_InvalidValueProp();
+            revert RaiseBoxCreation_createRaise_InvalidValueProp();
         }
 
         // require(raiseAmount_ != 0, "Cannot raise 0 funds");
         if (raiseAmount_ == 0) {
-            revert RaiseBoxProjectCreation_createProject_CannotRaiseZeroFunds();
+            revert RaiseBoxCreation_createRaise_CannotRaiseZeroFunds();
         }
 
         // require(raiseDuration_ != 0, "Enter valid duration");
         if (raiseDuration_ == 0) {
-            revert RaiseBoxProjectCreation_createProject_DurationCannotBeZero();
+            revert RaiseBoxCreation_createRaise_DurationCannotBeZero();
         }
 
         // max duration is 60 days -- 2 months 78 weeks 1 year/6months
         if (raiseDuration_ > PER_PROJECT_CREATION_COOLDOWN || raiseDuration_ < 52 weeks) {
-            revert RaiseBoxProjectCreation_createProject_InvalidDuration();
+            revert RaiseBoxCreation_createRaise_InvalidDuration();
         }
 
         // generate projectID:
@@ -113,7 +110,7 @@ contract RaiseBox is IRaiseBoxCreation {
         bool doesProjectExists = raiseBoxCore.doesProjectExist(projectID);
 
         if (doesProjectExists) {
-            revert RaiseCreation_createProject_RaiseAlreadyExist();
+            revert RaiseCreation_createRaise_RaiseAlreadyExist();
         }
 
         timeCreated = block.timestamp;
@@ -158,7 +155,7 @@ contract RaiseBox is IRaiseBoxCreation {
 
     ////////////////////////////////////////////////////////// GETTERS //////////////////////////////////////////////////////////
 
-    function getProjectCreator(bytes32 projectId) external returns (address) {
+    function getRaiseCreator(bytes32 projectId) external returns (address) {
         (, address projectCreator,,,,,,,,,) = raiseBoxCore.getProjectInfo(projectId);
         return projectCreator;
     }
@@ -201,5 +198,4 @@ contract RaiseBox is IRaiseBoxCreation {
 
     //     return fees;
     // }
-
 }

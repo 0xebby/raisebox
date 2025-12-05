@@ -9,12 +9,16 @@ import {IRaiseBoxVoting} from "../src/interfaces/IRaiseBoxVoting.sol";
 
 contract RaiseBoxProposal is IRaiseBoxProposal {
     IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
-    IRaiseBoxVoting public immutable raiseBoxVoting; // voting contract
+    IRaiseBoxVoting public  raiseBoxVoting; // voting contract
 
-    constructor(address raiseBoxCoreAddress, address raiseBoxVotingAddress) {
+     constructor(address raiseBoxCoreAddress) {
         raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
-        raiseBoxVoting = IRaiseBoxVoting(raiseBoxVotingAddress);
     }
+
+    function setVotingContract(address contractToSet) external {
+        raiseBoxVoting = IRaiseBoxVoting(contractToSet);
+    }
+
 
     using Strings for uint256;
 
@@ -35,21 +39,27 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
 
     // events
 
-
-
     modifier canHostProposal(address projectCreator, bytes32 projectId) {
         // does all checks before hosting proposal
 
         // get valid project from storage
 
-        (, address projectOwner,, uint256 amtToRaise,uint256 duration,,, uint256 timeCreated, uint256 amountRaisedByProject,,) =
-            raiseBoxCore.getProjectInfo(projectId);
+        (
+            ,
+            address projectOwner,
+            ,
+            uint256 amtToRaise,
+            uint256 duration,
+            ,
+            ,
+            uint256 timeCreated,
+            uint256 amountRaisedByProject,
+            ,
+        ) = raiseBoxCore.getProjectInfo(projectId);
 
         if (block.timestamp > duration) {
             revert IRaiseBoxCore.RaiseBox_RaiseEnded(projectId);
-
         } else {
-            
             // ascertain owner is host of project and is trying to host proposal
             if (projectOwner == address(0) || projectOwner != projectCreator) {
                 revert raiseBoxProposal_InvalidProjectOwner();
@@ -66,18 +76,21 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
                     revert RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
                 }
             }
-        
         }
 
         _;
     }
 
-    function hostProposal(
-        string memory proposalTitle,
-        string memory proposal,
-        bytes32 projectId,
-        uint8 dripPercent
-    ) external canHostProposal(msg.sender, projectId) returns (uint256 proposalId)
+    address public votingRaise;
+
+    // function setRaiseBoxVoting(address contractToSet) external {
+    //     raiseBoxVoting = contractToSet;
+    // }
+
+    function hostProposal(string memory proposalTitle, string memory proposal, bytes32 projectId, uint8 dripPercent)
+        external
+        canHostProposal(msg.sender, projectId)
+        returns (uint256 proposalId)
     {
         // validate dripPercent: must be multiple of 5 between 5 and 25
         if (dripPercent < 5 || dripPercent > 25 || (dripPercent % 5 != 0)) {
@@ -101,6 +114,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
         });
 
         // set voting start time in RaiseBoxVoting (10 minutes after proposal hosting)
+        
         raiseBoxVoting.setVotingStartTime(projectId, proposalCountByProject[projectId], block.timestamp + 10 minutes);
 
         // update storage in RaiseBoxCore contract
@@ -109,21 +123,10 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
 
         proposalId = proposalCountByProject[projectId];
 
-        emit NewProposalHosted(
-            msg.sender,
-            proposalId,
-            dripPercent,
-            proposal,
-            lastProposalTimeByProject[projectId],
-            proposalCountByProject[projectId]
-        );
+        emit NewProposalHosted(msg.sender, proposalId, dripPercent, lastProposalTimeByProject[projectId]);
 
         return proposalId;
     }
-
-    
-
-  
 
     ////                                            ////
     //          EXTERNAL/GETTER FUNCTIONS             //
@@ -133,15 +136,16 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
         return proposalCountByProject[projectId];
     }
 
-    function getTotalProposals() external view returns (uint256) { return proposalCount;}
+    function getTotalProposals() external view returns (uint256) {
+        return proposalCount;
+    }
 
     function getLastProposalTime(bytes32 projectId) external view returns (uint256) {
         return lastProposalTimeByProject[projectId];
     }
 
     function getHasHostedProposal(bytes32 projectId) external returns (bool) {
-       return hasHostedProposal[projectId];
-
+        return hasHostedProposal[projectId];
     }
 
     function getProposalDetails(bytes32 projectId, uint256 proposalId)
@@ -155,5 +159,4 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
         proposalDetails_ = proposalIdByProject[projectId][proposalId];
         return proposalDetails_;
     }
-
 }

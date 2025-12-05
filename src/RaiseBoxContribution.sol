@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {IRaiseBoxContribution} from "../src/interfaces/IRaiseBoxContribution.sol";
+
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
+import {IRaiseBoxContribution} from "../src/interfaces/IRaiseBoxContribution.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
+import {IRaiseBoxDripHandler} from "src/interfaces/IRaiseBoxDripHandler.sol";
+
 
 contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
+
+    IRaiseBoxDripHandler public immutable raiseBoxDripHandler; // drip contract
+
+    
 
     using Strings for uint256;
     using Address for address;
@@ -39,8 +46,9 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         CONTRIBUTION_ENDED
     }
 
-    constructor(address raiseBoxCoreAddress) {
+     constructor(address raiseBoxCoreAddress, address dripHandlerAddress) {
         raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
+        raiseBoxDripHandler = IRaiseBoxDripHandler(dripHandlerAddress);
     }
 
     function contribute(uint256 amount, bytes32 projectId) external payable nonReentrant {
@@ -60,6 +68,8 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         uint256 userPrevContribution = amountContributedToProject[msg.sender][projectId];
 
         // Checks
+
+        if (msg.sender == projectOwner) { revert RaiseBoxContribution_SelfContribution(); }
 
         if (projectId == 0) {
             revert RaiseBoxContribution_InvalidProject();
@@ -126,7 +136,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
         // Interactions
 
-        (bool successfullyContributed,) = raiseBoxProtocol.call{value: amount}(""); // funds sent to protocol for safekeeping pending release to project
+        (bool successfullyContributed,) = address(raiseBoxDripHandler).call{value: amount}(""); // funds sent to protocol for safekeeping pending release to project
         if (!successfullyContributed) {
             revert RaiseBoxContribution_ContributionFailed();
         }
@@ -192,7 +202,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         return totalContributionsToProject[projectId];
     }
 
-    function getHasContributed(bytes32 projectId, address user) external view returns(bool) {
+    function getHasContributed(bytes32 projectId, address user) external view returns (bool) {
         return hasContributed[projectId][user];
     }
     // testing
