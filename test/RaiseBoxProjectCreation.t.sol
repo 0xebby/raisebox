@@ -485,10 +485,8 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         vm.stopPrank();
 
 
-        console.log("drip handler balance:", address(raiseBoxDripHandler).balance);
-        console.log("project owner balance:", ben.balance);
-
-        raiseBoxProposalContract.getProposalCount(0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5);
+        // console.log("drip handler balance:", address(raiseBoxDripHandler).balance);
+        // console.log("project owner balance:", ben.balance);
 
     }
 }
