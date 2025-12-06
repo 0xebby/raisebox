@@ -1,12 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "../@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {RaiseBox} from "../src/RaiseBoxProjectCreation.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+
+import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
+import {IRaiseBoxContribution} from "../src/interfaces/IRaiseBoxContribution.sol";
+import {IRaiseBoxProposal} from "src/interfaces/IRaiseBoxProposal.sol";
+import {IRaiseBoxVoting} from "../src/interfaces/IRaiseBoxVoting.sol";
+import {IRaiseBoxDripHandler} from "src/interfaces/IRaiseBoxDripHandler.sol";
+import {IRaiseBoxCreation} from "src/interfaces/IRaiseBoxCreation.sol";
+
+
 
 /**
  * @title RaiseBoxCore is the central contract of this protocol
@@ -15,10 +23,28 @@ import {RaiseBox} from "../src/RaiseBoxProjectCreation.sol";
  * @dev use it's associated interface to get exposed external functions and structs
  */
 contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
+    address private immutable iRBT; // raise box token
+
+    IERC20 iRBTInstance;
+
     using SafeERC20 for IERC20;
 
+
+    // contracts references via interfaces:
+    address public raiseBoxContribution; // contribution contract
+
+    // IRaiseBoxContribution raiseBoxContribution;
+
+    address public raiseBoxProposal; // proposal contract
+
+    address public raiseBoxDripHandler; // drip contract
+
+    address public raiseBoxVoting; // voting contract
+
+    address public raiseBoxRaiseCreation; // raise creation contract
+
     // total projects on raisebox
-    uint256 private raiseBoxProjectCounter;
+    uint256 private raiseBoxRaiseCounter;
 
     // MINIMUM_CONTRIBUTION = 0.01 ether; // 1e16
     uint256 public constant MINIMUM_CONTRIBUTION = 0.01 ether;
@@ -36,95 +62,151 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
     uint256 public totalProtocolFees;
 
-    address private immutable iRBT; // raise box token
-    IERC20 iRBTInstance;
-
     // projectID (Keccak hash) to projectInfo
     mapping(bytes32 => ProjectInfo) public projectIDToProject;
 
-    // list of projects created on raisebox
-    bytes32[] public s_raiseBoxProjectIDs;
 
-    mapping(bytes32 => bool) private IDexists;
+    // role-based authorization (bytes32 role => (caller => allowed))
+    mapping(bytes32 => mapping(address => bool)) public authorizedCallers;
 
-    // would be CA of raisebox - project creation contract
-    address public raiseBoxCreationContractAddress;
-    address public raiseBoxContributionContractAddress;
-    address public raiseBoxProposalContractAddress;
-    address public raiseBoxVotingContractAddress;
+    bytes32 public constant RAISE_CREATOR = keccak256("RAISEBOX_RAISE_CREATION");
+    bytes32 public constant CONTRIBUTOR = keccak256("RAISEBOX_CONTRIBUTION");
+    bytes32 public constant PROPOSAL_HOST = keccak256("RAISEBOX_PROPOSAL");
+    bytes32 public constant VOTER = keccak256("RAISEBOX_VOTING");
+    bytes32 public constant DRIPPER = keccak256("RAISEBOX_DRIPPER");
 
-    // constructor
-    // address iRBT_
+    // constructor:
     constructor() Ownable(msg.sender) ERC20("token", "tokenname") {
-        raiseBoxOwner = owner(); // this sets proposal as owner/deployer of crowdfund contract
-
-        // RAISE_BOX_TOKEN =  add faucet contract address here so testers with RAISE_BOX_TOKENs can interact with crowdfund
+        raiseBoxOwner = msg.sender; // this sets proposal as owner/deployer of crowdfund contract
 
         // iRBT = iRBT_;
         iRBTInstance = IERC20(iRBT);
 
         // change before deployment
         protocol = payable(address(0x1));
-
-        // raiseBoxCreationContractAddress = projectCreationContract;
     }
 
-    function setProjectCreationContractAddress(address contractAddressToSet) external onlyOwner {
+    /**
+     * @dev Returns true if `account` is a contract.
+     * NOTE: It is unsafe to assume that an address for which this function returns
+     * false is an externally-owned account (EOA) and not a contract. Among other
+     * things, `_isContract` will return false for the following types of addresses:
+     *  - an externally-owned account
+     *  - a contract in construction
+     *  - an address where a contract will be created
+     *  - an address where a contract lived, but was destroyed
+     */
+    function _isContract(address account) internal view returns (bool) {
+        return account.code.length > 0;
+    }
+
+    // set and grant roles to the various raisebox related contracts:
+
+
+    function setRaiseCreationContract(address contractAddressToSet) external onlyOwner {
         if (contractAddressToSet == address(0)) {
-            revert RaiseBoxCore_setProjectCreation_InvalidContract();
+            revert RaiseBoxCore_setRaiseCreation_InvalidCA();
         }
-        if (raiseBoxCreationContractAddress != address(0)) {
-            revert RaiseBoxCore_setProjectCreation_ContractAlreadySet();
+        if (raiseBoxRaiseCreation != address(0)) {
+            revert RaiseBoxCore_setRaiseCreation_ContractAlreadySet();
         }
 
-        raiseBoxCreationContractAddress = contractAddressToSet;
+        if (!_isContract(contractAddressToSet)) {
+            revert RaiseBoxCore_setRaiseCreation_InvalidCA();
+        }
 
-        emit RaiseBoxCore_ProjectCreationContractSet(raiseBoxCreationContractAddress);
+        raiseBoxRaiseCreation = contractAddressToSet;
+
+        // grantRole(RAISE_CREATOR, contractAddressToSet);
+        authorizedCallers[RAISE_CREATOR][contractAddressToSet] = true;
+
+        emit RaiseBoxCore_RaiseCreationContractSet(contractAddressToSet);
     }
 
-    function setContributionContractAddress(address contractAddressToSet) external onlyOwner {
+    function setContributionContract(address contractAddressToSet) external onlyOwner {
         if (contractAddressToSet == address(0)) {
             revert RaiseBoxCore_setRaiseContribution_InvalidContract();
         }
 
-        require(raiseBoxContributionContractAddress == address(0), "contribution contract already set");
+        if (raiseBoxContribution != address(0)) {
+            revert RaiseBoxCore_setRaiseContribution_ContractAlreadySet();
+        }
 
-        raiseBoxContributionContractAddress = contractAddressToSet;
+        if (!_isContract(contractAddressToSet)) {
+            revert RaiseBoxCore_setRaiseContribution_InvalidContract();
+        }
+
+        raiseBoxContribution = contractAddressToSet;
+
+        // grantRole(CONTRIBUTOR, contractAddressToSet);
+        authorizedCallers[CONTRIBUTOR][contractAddressToSet] = true;
+
+        emit ContributionContractSet(contractAddressToSet);
     }
 
-    function setProposalContractAddress(address contractAddressToSet) external onlyOwner {
-        require(raiseBoxProposalContractAddress == address(0), "proposal contract already set");
 
-        raiseBoxProposalContractAddress = contractAddressToSet;
+
+    function setProposalContract(address contractAddressToSet) external onlyOwner {
+        require(address(raiseBoxProposal) == address(0), "proposal contract already set");
+
+        if (!_isContract(contractAddressToSet)) {
+            revert RaiseBoxCore_setRaiseCreation_InvalidCA();
+        }
+
+        raiseBoxProposal = contractAddressToSet;
+
+        // grantRole(PROPOSAL_HOST, contractAddressToSet);
+        authorizedCallers[PROPOSAL_HOST][contractAddressToSet] = true;
+
+        emit ProposalContractSet(contractAddressToSet);
     }
 
-    function setVotingContractAddress(address contractAddressToSet) external onlyOwner {
-        require(raiseBoxVotingContractAddress == address(0), "voting contract already set");
 
-        raiseBoxVotingContractAddress = contractAddressToSet;
+
+    function setDripHandlerContract(address contractAddressToSet) external onlyOwner {
+        require(address(raiseBoxDripHandler) == address(0), "dripper contract already set");
+
+        if (!_isContract(contractAddressToSet)) {
+            revert RaiseBoxCore_setDripHandler_InvalidContract();
+        }
+
+        raiseBoxDripHandler = contractAddressToSet;
+
+        // grantRole(PROPOSAL_HOST, contractAddressToSet);
+        authorizedCallers[DRIPPER][contractAddressToSet] = true;
+
+        emit DripperContractSet(contractAddressToSet);
     }
 
-    function updateIDsStorage(bytes32 projectId) internal {
-        IDexists[projectId] = true;
+    function setVotingContract(address contractAddressToSet) external onlyOwner {
+        require(address(raiseBoxVoting) == address(0), "voting contract already set");
 
-        emit RaiseBoxCore_IDsStorageSuccessfullyUpdated(IDexists[projectId], projectId);
+        if (!_isContract(contractAddressToSet)) {
+            revert RaiseBoxCore_setRaiseCreation_InvalidCA();
+        }
+
+        raiseBoxVoting = contractAddressToSet;
+
+        // grantRole(VOTER, contractAddressToSet);
+        authorizedCallers[VOTER][contractAddressToSet] = true;
+
+        emit VotingContractSet(contractAddressToSet);
     }
 
     /**
-     * @notice incrementProjectCount
+     * @notice incrementRaiseCount
      * @notice tracks and increases total number of projects on protocol by 1
      * @dev only a project creation event can increment the projectCreationCount
-     * @dev only calls from `RaiseBoxProjectCreation.sol` can pass
+     * @dev only calls from `RaiseBoxCreation.sol` can pass
      */
-    function incrementProjectCount() external returns (uint256) {
-        if (msg.sender != raiseBoxCreationContractAddress) {
-            revert RaiseBoxCore_getRaiseBoxProjectCount_CallNotFromProjectCreation();
-        } else {
-            return raiseBoxProjectCounter++;
+    function incrementRaiseCount() external {
+        if (!authorizedCallers[RAISE_CREATOR][msg.sender]) {
+            revert RaiseBoxCore_NotAuthorized();
         }
+        raiseBoxRaiseCounter++;
     }
 
-    function updateAmountRaisedByProject(bytes32 projectID, uint256 amount) internal returns (uint256 amountRaised) {
+    function _updateAmountRaisedByProject(bytes32 projectID, uint256 amount) internal returns (uint256 amountRaised) {
         ProjectInfo storage projectInfo;
 
         projectInfo = projectIDToProject[projectID];
@@ -134,7 +216,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         projectInfo.amountRaisedByProject;
     }
 
-    function updateProposalsHostedByProject(bytes32 projectId) internal {
+    function _updateProposalsHostedByProject(bytes32 projectId) internal {
         ProjectInfo storage projectInfo;
 
         projectInfo = projectIDToProject[projectId];
@@ -159,8 +241,8 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
         projectInfo = projectIDToProject[projectId];
 
-        if (msg.sender == raiseBoxCreationContractAddress) {
-            updateProjectCreationInStorage(
+        if (authorizedCallers[RAISE_CREATOR][msg.sender]) {
+            _updateRaiseCreationStorage(
                 projectId,
                 _projectName,
                 _projectOwner,
@@ -171,16 +253,16 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
                 _wenProjectCreated,
                 _numberOfProjectsCreatedByProjectOwner
             );
-        } else if (msg.sender == raiseBoxContributionContractAddress) {
-            updateAmountRaisedByProject(projectId, _amountRaisedByProject);
+        } else if (authorizedCallers[CONTRIBUTOR][msg.sender]) {
+            _updateAmountRaisedByProject(projectId, _amountRaisedByProject);
         } else {
             // this calls must always come from a raisebox related contract
             // each of the raisebox contract is allowed access to specific internal functions
-            revert RaiseBox_updateStorage_CallNotFromRaiseBoxProjectCreationContract();
+            revert RaiseBoxCore_UnAuthorizedCaller();
         }
     }
 
-    function updateProjectCreationInStorage(
+    function _updateRaiseCreationStorage(
         bytes32 projectId,
         string memory projectName,
         address projectOwner,
@@ -205,32 +287,28 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         projectInfo.timeCreated = timeCreated;
         projectInfo.numberOfProjectsCreatedByProjectOwner = numberOfProjectsCreatedByProjectOwner;
 
-        emit StorageUpdatedWithProjectCreationDetails(projectId);
+        emit RaiseCreationDetailsUpdated(projectId);
     }
 
     function updateAmountRaisedInStorage(bytes32 projectId, uint256 amountRaised) external {
-        if (msg.sender == raiseBoxContributionContractAddress) {
-            updateAmountRaisedByProject(projectId, amountRaised);
-        } else {
-            revert RaiseBox_updateStorage_CallNotFromRaiseBoxProjectCreationContract();
+        if (!authorizedCallers[CONTRIBUTOR][msg.sender]) {
+            revert RaiseBoxCore_NotAuthorized();
         }
+        _updateAmountRaisedByProject(projectId, amountRaised);
+
+        emit AmountRaisedUpdateSuccessful();
     }
 
     function updateNumOfProposals(bytes32 projectId) external {
-        if (msg.sender == raiseBoxProposalContractAddress) {
-            updateProposalsHostedByProject(projectId);
-        } else {
-            revert NotProposalContract();
+        if (!authorizedCallers[PROPOSAL_HOST][msg.sender]) {
+            revert RaiseBoxCore_NotAuthorized();
         }
+        _updateProposalsHostedByProject(projectId);
+
+        emit RaiseHostedProposalsUpdated();
     }
 
     // getters:
-
-    function getIDsFromStorage() external returns (bytes32 id) {
-        for (uint256 i = 0; i < s_raiseBoxProjectIDs.length; i++) {
-            return s_raiseBoxProjectIDs[i];
-        }
-    }
 
     function getProtocol() public view returns (address payable) {
         if (protocol == address(0)) {
@@ -239,48 +317,82 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         return (protocol);
     }
 
+    // // ---- Role management (owner-only) ----
+    // function grantRole(bytes32 role, address account) public override {
+    //     require(account != address(0), "invalid account");
+    //     require(_isContract(account), "account not a contract");
+    //     authorizedCallers[role][account] = true;
+    //     _grantRole(role, account);
+    // }
+
+    // function revokeRole(bytes32 role, address account) public override {
+    //     require(account != address(0), "invalid account");
+    //     authorizedCallers[role][account] = false;
+    //     _revokeRole(role, account);
+
+    // }
+
     function getMinimumContribution() public view returns (uint256) {
         return MINIMUM_CONTRIBUTION;
     }
 
-    function getProject(bytes32 projectId) public returns (ProjectInfo memory projectInfo) {
+    function getProject(bytes32 projectId) external view returns (ProjectInfo memory projectInfo) {
         if (!this.doesProjectExist(projectId)) {
-            revert RaiseBox_getProject_InvalidProjectId();
+            revert RaiseBoxCore_getProject_InvalidProjectId();
         }
         projectInfo = projectIDToProject[projectId];
     }
 
     function getAmountToRaise(bytes32 projectId) external view returns (uint256) {
-        if (!this.doesProjectExist(projectId)) {
-            revert RaiseBox_getProject_InvalidProjectId();
-        }
-        return projectIDToProject[projectId].amountToRaise;
+        return this.getProject(projectId).amountToRaise;
     }
 
-    function getAmountRaisedByProject(bytes32 projectId) external returns (uint256) {
-        if (!this.doesProjectExist(projectId)) {
-            revert RaiseBox_getProject_InvalidProjectId();
-        }
-        return projectIDToProject[projectId].amountRaisedByProject;
+    function getAmtRaisedByProject(bytes32 projectId) external returns (uint256) {
+        return this.getProject(projectId).amountRaisedByProject;
     }
 
     function getProtocolFeeAddress() external view returns (address) {
         return protocolFeeAddress;
     }
 
-    function getProjectCount() external returns (uint256) {
-        return raiseBoxProjectCounter;
+    function getRaiseCount() external returns (uint256) {
+        return raiseBoxRaiseCounter;
     }
 
-    // function getProjectMapping(
-    //     bytes32 projectID
-    // ) external returns (ProjectInfo memory) {
-    //     return projectIDToProject[projectID];
-    // }
+    function getAcceptedToken() external view returns (address) {
+        return iRBT;
+    }
+
+    /**
+     * @dev allows owner to set accepted token address
+     *   @param newTokenAddress the address of the new accepted token
+     *     @notice only tokens set here can be used for contributions
+     *     @notice raiseBoxFaucet contract (deployed) already exists and drips RBT for testing/testnet use
+     */
+    function setAcceptedToken(address newTokenAddress) external onlyOwner {
+        require(newTokenAddress != address(0), "invalid address");
+        if (!_isContract(newTokenAddress)) revert RaiseBoxCore_NotSupportedToken();
+
+        iRBTInstance = IERC20(newTokenAddress);
+
+        emit RaiseBoxCore_AcceptedTokenSet(newTokenAddress);
+    }
 
     function getProjectInfo(bytes32 projectID)
         external
-        returns (string memory , address, string memory, uint256, uint256, bytes32, bool, uint256, uint256, uint256, uint256)
+        returns (
+            string memory,
+            address,
+            string memory,
+            uint256,
+            uint256,
+            bytes32,
+            bool,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
     {
         // get from storage
         ProjectInfo storage projectInfo;
@@ -305,14 +417,12 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
         projectInfo = projectIDToProject[projectID];
 
-        if (projectInfo.projectExists == true) {
+        if (projectInfo.projectExists) {
             return true;
-        } else {
-            return false;
         }
     }
 
-    function getProjectCreator(bytes32 projectId) external view returns (address) {
+    function getRaiseCreator(bytes32 projectId) external view returns (address) {
         ProjectInfo storage projectInfo;
 
         projectInfo = projectIDToProject[projectId];
@@ -320,7 +430,35 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         return projectInfo.projectOwner;
     }
 
-    function getOwner() external view returns (address) {
-        return Ownable.owner();
+    function getRaiseBoxOwner() external view returns (address) {
+        return raiseBoxOwner;
     }
+
+    // get all the set contracts from above:
+
+    function getRaiseCreationContract() external view returns (address) {
+        return (raiseBoxRaiseCreation);
+    }
+
+    function getContributionContract() external view returns (address) {
+        return address(raiseBoxContribution);
+    }
+
+    function getProposalContract() external view returns (address) {
+        return raiseBoxProposal;
+    }
+
+    function getDripHandlerContract() external view returns (address) {
+        return raiseBoxDripHandler;
+    }
+
+    function getVotingContract() external view returns (address) {
+        return raiseBoxVoting;
+    }
+
+    function isAuthorizedCaller(bytes32 role, address caller) external returns (bool) {
+        return authorizedCallers[role][caller];
+    }
+
+
 }

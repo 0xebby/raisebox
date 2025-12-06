@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {RaiseBox} from "../src/RaiseBoxProjectCreation.sol";
+import {RaiseBoxCreation} from "../src/RaiseBoxRaiseCreation.sol";
 import {Script} from "forge-std/Script.sol";
 import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {RaiseBoxContribution} from "../src/RaiseBoxContribution.sol";
-import {IRaiseBoxProjectCreation} from "../src/interfaces/IRaiseBoxProjectCreation.sol";
 import {RaiseBoxProposal} from "../src/RaiseBoxProposal.sol";
 import {RaiseBoxVoting} from "../src/RaiseBoxVoting.sol";
+import {RaiseBoxDripHandler} from "src/RaiseBoxDripHandler.sol";
 
 contract DeployRaiseBoxCore is Script {
     function run() public {
@@ -15,40 +15,55 @@ contract DeployRaiseBoxCore is Script {
         RaiseBoxCore raiseBoxCore;
 
         // project creation contract
-        RaiseBox raiseBoxProjectCreationContract;
+        RaiseBoxCreation raiseBoxRaiseCreationContract;
 
         // contribution contract
         RaiseBoxContribution raiseBoxContributionContract;
 
         // proposal contract
         RaiseBoxProposal raiseBoxProposalContract;
+
+        // voting contract
+        RaiseBoxVoting raiseBoxVoting;
+
+        // drip handler:
+        RaiseBoxDripHandler raiseBoxDripHandler;
+
         vm.startBroadcast();
+
+        // setter contract
+        // setter = new SetterContract()
+
 
         raiseBoxCore = new RaiseBoxCore();
 
-        raiseBoxProjectCreationContract = new RaiseBox(address(raiseBoxCore));
+        // setter.setRaiseBoxCore(address())
 
-        raiseBoxCore.setProjectCreationContractAddress(address(raiseBoxProjectCreationContract));
+        raiseBoxRaiseCreationContract = new RaiseBoxCreation(address(raiseBoxCore));
 
-        raiseBoxContributionContract = new RaiseBoxContribution(address(raiseBoxCore));
+        raiseBoxCore.setRaiseCreationContract(address(raiseBoxRaiseCreationContract));
 
-        raiseBoxCore.setContributionContractAddress(address(raiseBoxContributionContract));
 
-        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore), address(0)); // set voting contract address later
+        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore)); 
 
-        raiseBoxCore.setProposalContractAddress(address(raiseBoxProposalContract));
-
-        RaiseBoxVoting raiseBoxVotingContract =
-            new RaiseBoxVoting(address(raiseBoxCore), address(raiseBoxContributionContract));
-
-        raiseBoxCore.setVotingContractAddress(address(raiseBoxVotingContract));
-
-        // now set the voting contract address in proposal contract
-        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore), address(raiseBoxVotingContract));
+        raiseBoxCore.setProposalContract(address(raiseBoxProposalContract));
 
         
+        raiseBoxDripHandler = new RaiseBoxDripHandler(address(raiseBoxCore), address(raiseBoxProposalContract), address(0));
 
+        raiseBoxCore.setDripHandlerContract(address(raiseBoxDripHandler));
+        
 
+        raiseBoxContributionContract = new RaiseBoxContribution(address(raiseBoxCore), address(raiseBoxDripHandler));
+
+        raiseBoxCore.setContributionContract(address(raiseBoxContributionContract));
+
+        
+        raiseBoxVoting = new RaiseBoxVoting(address(raiseBoxCore), address(raiseBoxContributionContract), address(raiseBoxProposalContract), address(raiseBoxDripHandler));
+
+        raiseBoxCore.setVotingContract(address(raiseBoxVoting));
+
+        raiseBoxDripHandler.setVoting(address(raiseBoxVoting));
 
         vm.stopBroadcast();
     }

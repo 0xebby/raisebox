@@ -2,19 +2,13 @@
 pragma solidity ^0.8.19;
 
 /*
-    Note: this is the interface for the RaiseBox Proposal contract
+    Note: this is the interface for the RaiseBoxCreation Proposal contract
 */
 
 interface IRaiseBoxProposal {
-
     // proposal related events:
     event NewProposalHosted(
-        address indexed projectCreator,
-        uint256 proposalId,
-        string proposalDescription,
-        string proposalAchievement,
-        uint256 lastProposalTime,
-        uint256 numberOfProposalsHosted
+        address indexed projectCreator, uint256 indexed proposalId, uint8 dripPercent, uint256 lastProposalTime
     );
     event ProposalPassed();
 
@@ -22,9 +16,10 @@ interface IRaiseBoxProposal {
     error RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
     error RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
     error RaiseBoxProposal_hostProposal_RaiseNotEnded();
-    error RaiseBoxProposal_InvalidDrip();
+    error RaiseBoxProposal_InvalidDripPercent();
     error RaiseBoxProposal_hostProposal_MaxYearlyProposalsReached();
     error RaiseBoxProposal_getProposalDetails_InvalidProposalId();
+    error RaiseBoxProposal_ProposalsExceedsMax(uint256 max);
 
     struct MileStoneProposalDetails {
         // different milestones: mvp ready, testnet ready, distribution site ready,
