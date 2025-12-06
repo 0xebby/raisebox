@@ -6,54 +6,35 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {console} from "../lib/forge-std/src/Test.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 import {IRaiseBoxVoting} from "../src/interfaces/IRaiseBoxVoting.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract RaiseBoxProposal is IRaiseBoxProposal {
+
+contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
     IRaiseBoxVoting public  raiseBoxVoting; // voting contract
 
-     constructor(address raiseBoxCoreAddress) {
+     constructor(address raiseBoxCoreAddress) Ownable(msg.sender) {
         raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
     }
 
-    function setVotingContract(address contractToSet) external {
-        raiseBoxVoting = IRaiseBoxVoting(contractToSet);
-    }
-
-
-    using Strings for uint256;
-
-    MileStoneProposalDetails[] public proposals;
-
-    mapping(bytes32 => bool) public hasHostedProposal;
-
-    mapping(bytes32 => uint256) public lastProposalTimeByProject;
-
-    uint256 public blockTimeOfLastProposal; // track all proposals made and update +30 days for each call to host proposal
-    //milestone struct to track proposals based on milestone reached
-    uint256 public proposalCount; // protocol wide proposal count
-    mapping(bytes32 => uint256) public proposalCountByProject; // track proposal count by project
-
-    mapping(bytes32 => mapping(uint256 => MileStoneProposalDetails)) public proposalIdByProject;
-
-    uint256 public constant INTERVAL_BETWEEN_PROPOSALS = 4 weeks;
-
     // events
 
-    modifier canHostProposal(address projectCreator, bytes32 projectId) {
+    modifier canHostProposal(address raiseCreator, bytes32 projectId) {
         // does all checks before hosting proposal
 
         // get valid project from storage
 
         (
             ,
-            address projectOwner,
+            address raiseOwner,
             ,
-            uint256 amtToRaise,
+            uint256 amountToRaise,
             uint256 duration,
             ,
             ,
-            uint256 timeCreated,
+            ,
             uint256 amountRaisedByProject,
+            uint256 proposals
             ,
         ) = raiseBoxCore.getProjectInfo(projectId);
 
@@ -61,18 +42,24 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
             revert IRaiseBoxCore.RaiseBox_RaiseEnded(projectId);
         } else {
             // ascertain owner is host of project and is trying to host proposal
-            if (projectOwner == address(0) || projectOwner != projectCreator) {
+            if (raiseOwner == address(0) || raiseOwner != raiseCreator) {
                 revert raiseBoxProposal_InvalidProjectOwner();
             }
 
+            // proposal count within raise duration cannot exceed 10(tentative)
+
+            if (proposals > 10) {
+                revert RaiseBoxProposal_ProposalsExceedsMax(MAX_ALLOWED_PROPOSALS);
+            }
+
             // ascertain that raise has infact ended
-            if (amtToRaise != amountRaisedByProject) {
+            if (amountToRaise != amountRaisedByProject) {
                 revert RaiseBoxProposal_hostProposal_RaiseNotEnded();
             }
 
             // ascertain that project has not hosted proposal in the last 30 days
             if (hasHostedProposal[projectId]) {
-                if ((block.timestamp - lastProposalTimeByProject[projectId]) < INTERVAL_BETWEEN_PROPOSALS) {
+                if ((block.timestamp - lastProposalTime[projectId]) < INTERVAL_BETWEEN_PROPOSALS) {
                     revert RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
                 }
             }
@@ -81,11 +68,6 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
         _;
     }
 
-    address public votingRaise;
-
-    // function setRaiseBoxVoting(address contractToSet) external {
-    //     raiseBoxVoting = contractToSet;
-    // }
 
     function hostProposal(string memory proposalTitle, string memory proposal, bytes32 projectId, uint8 dripPercent)
         external
@@ -94,7 +76,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
     {
         // validate dripPercent: must be multiple of 5 between 5 and 25
         if (dripPercent < 5 || dripPercent > 25 || (dripPercent % 5 != 0)) {
-            revert RaiseBoxProposal_InvalidDrip();
+            revert RaiseBoxProposal_InvalidDripPercent();
         }
         // checks already done in canHostProposal modifier above.
 
@@ -102,28 +84,28 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
 
         hasHostedProposal[projectId] = true;
         proposalCount += 1;
-        proposalCountByProject[projectId] += 1;
-        lastProposalTimeByProject[projectId] = block.timestamp;
+        proposalsHosted[projectId] += 1;
+        lastProposalTime[projectId] = block.timestamp;
 
-        proposalIdByProject[projectId][proposalCountByProject[projectId]] = MileStoneProposalDetails({
-            lastProposalTime: lastProposalTimeByProject[projectId],
+        proposalIdByProject[projectId][proposalsHosted[projectId]] = MileStoneProposalDetails({
+            lastProposalTime: lastProposalTime[projectId],
             description: proposalTitle,
             milestone: proposal,
-            proposalId: proposalCountByProject[projectId],
+            proposalId: proposalsHosted[projectId],
             dripPercent: dripPercent
         });
 
         // set voting start time in RaiseBoxVoting (10 minutes after proposal hosting)
         
-        raiseBoxVoting.setVotingStartTime(projectId, proposalCountByProject[projectId], block.timestamp + 10 minutes);
+        raiseBoxVoting.setVotingStartTime(projectId, proposalsHosted[projectId], block.timestamp + 10 minutes);
 
         // update storage in RaiseBoxCore contract
         raiseBoxCore.updateNumOfProposals(projectId);
+
         // interactions:
+        proposalId = proposalsHosted[projectId];
 
-        proposalId = proposalCountByProject[projectId];
-
-        emit NewProposalHosted(msg.sender, proposalId, dripPercent, lastProposalTimeByProject[projectId]);
+        emit NewProposalHosted(msg.sender, proposalId, dripPercent, lastProposalTime[projectId]);
 
         return proposalId;
     }
@@ -133,7 +115,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
     ////                                           ////
 
     function getProposalCount(bytes32 projectId) external view returns (uint256) {
-        return proposalCountByProject[projectId];
+        return proposalsHosted[projectId];
     }
 
     function getTotalProposals() external view returns (uint256) {
@@ -141,7 +123,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
     }
 
     function getLastProposalTime(bytes32 projectId) external view returns (uint256) {
-        return lastProposalTimeByProject[projectId];
+        return lastProposalTime[projectId];
     }
 
     function getHasHostedProposal(bytes32 projectId) external returns (bool) {
@@ -153,10 +135,34 @@ contract RaiseBoxProposal is IRaiseBoxProposal {
         view
         returns (MileStoneProposalDetails memory proposalDetails_)
     {
-        if (proposalId == 0 || proposalId > proposalCountByProject[projectId]) {
+        if (proposalId == 0 || proposalId > proposalsHosted[projectId]) {
             revert RaiseBoxProposal_getProposalDetails_InvalidProposalId();
         }
         proposalDetails_ = proposalIdByProject[projectId][proposalId];
         return proposalDetails_;
     }
+
+    
+    function setVotingContract(address contractToSet) external onlyOwner() {
+        raiseBoxVoting = IRaiseBoxVoting(contractToSet);
+    }
+
+    using Strings for uint256;
+
+    MileStoneProposalDetails[] public proposals;
+
+    mapping(bytes32 => bool) public hasHostedProposal;
+
+    mapping(bytes32 => uint256) public lastProposalTime;
+
+    //milestone struct to track proposals based on milestone reached
+    uint256 public proposalCount; // protocol wide proposal count
+
+    mapping(bytes32 => uint256) public proposalsHosted; // track proposal count by project
+
+    mapping(bytes32 => mapping(uint256 => MileStoneProposalDetails)) public proposalIdByProject;
+
+    uint256 public constant INTERVAL_BETWEEN_PROPOSALS = 4 weeks;
+
+    uint256 public constant MAX_ALLOWED_PROPOSALS = 5;
 }

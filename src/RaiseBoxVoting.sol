@@ -73,7 +73,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         // if voting elapsed, mark ended and revert
         if (block.timestamp >= _start + VOTING_DURATION) {
             votingEnded[projectId][proposalId] = true;
-            this.tallyVotes(projectId, proposalId);
+            _tallyVotes(projectId, proposalId);
 
             revert RaiseBoxVoting_VotingEnded(projectId, proposalId);
         }
@@ -96,7 +96,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         // if voting elapsed, mark ended and emit events:
         if (block.timestamp >= _start + VOTING_DURATION) {
             votingEnded[projectId][proposalId] = true;
-            this.tallyVotes(projectId, proposalId);
+            _tallyVotes(projectId, proposalId);
         } else {
             revert RaiseBoxVoting_VotingNotEnded();
         }
@@ -158,10 +158,6 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
 
 
-    function getVoteStartTime(bytes32 projectId, uint256 proposalId) external view returns (uint256 voteStartTime) { return votingStartTime[projectId][proposalId]; }
-
-
-
     function delegateVote(bytes32 projectId, uint256 proposalId, address from, address to) external 
     /**
      * canVote(projectId, from, proposalId) canVote(projectId, to, proposalId)
@@ -196,8 +192,8 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
 
 
-    function tallyVotes(bytes32 projectId, uint256 proposalId)
-        external
+    function _tallyVotes(bytes32 projectId, uint256 proposalId)
+        internal
         returns (uint256 forVotes, uint256 againstVotes)
     {
         (uint256 forVotes, uint256 againstVotes, uint256 totalVotes) = this.getProposalVotes(projectId, proposalId);
@@ -251,6 +247,8 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
         if (validProposal) return (forVotes, againstVotes, totalVotes);
     }
+
+    function getVoteStartTime(bytes32 projectId, uint256 proposalId) external view returns (uint256 voteStartTime) { return votingStartTime[projectId][proposalId]; }
 
     function hasVotedForProposal(address contributor, bytes32 projectId, uint256 proposalId)
         external

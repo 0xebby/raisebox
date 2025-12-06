@@ -206,7 +206,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         raiseBoxRaiseCounter++;
     }
 
-    function updateAmountRaisedByProject(bytes32 projectID, uint256 amount) internal returns (uint256 amountRaised) {
+    function _updateAmountRaisedByProject(bytes32 projectID, uint256 amount) internal returns (uint256 amountRaised) {
         ProjectInfo storage projectInfo;
 
         projectInfo = projectIDToProject[projectID];
@@ -216,7 +216,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         projectInfo.amountRaisedByProject;
     }
 
-    function updateProposalsHostedByProject(bytes32 projectId) internal {
+    function _updateProposalsHostedByProject(bytes32 projectId) internal {
         ProjectInfo storage projectInfo;
 
         projectInfo = projectIDToProject[projectId];
@@ -242,7 +242,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         projectInfo = projectIDToProject[projectId];
 
         if (authorizedCallers[RAISE_CREATOR][msg.sender]) {
-            updateRaiseCreationStorage(
+            _updateRaiseCreationStorage(
                 projectId,
                 _projectName,
                 _projectOwner,
@@ -254,7 +254,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
                 _numberOfProjectsCreatedByProjectOwner
             );
         } else if (authorizedCallers[CONTRIBUTOR][msg.sender]) {
-            updateAmountRaisedByProject(projectId, _amountRaisedByProject);
+            _updateAmountRaisedByProject(projectId, _amountRaisedByProject);
         } else {
             // this calls must always come from a raisebox related contract
             // each of the raisebox contract is allowed access to specific internal functions
@@ -262,7 +262,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         }
     }
 
-    function updateRaiseCreationStorage(
+    function _updateRaiseCreationStorage(
         bytes32 projectId,
         string memory projectName,
         address projectOwner,
@@ -294,7 +294,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         if (!authorizedCallers[CONTRIBUTOR][msg.sender]) {
             revert RaiseBoxCore_NotAuthorized();
         }
-        updateAmountRaisedByProject(projectId, amountRaised);
+        _updateAmountRaisedByProject(projectId, amountRaised);
 
         emit AmountRaisedUpdateSuccessful();
     }
@@ -303,7 +303,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         if (!authorizedCallers[PROPOSAL_HOST][msg.sender]) {
             revert RaiseBoxCore_NotAuthorized();
         }
-        updateProposalsHostedByProject(projectId);
+        _updateProposalsHostedByProject(projectId);
 
         emit RaiseHostedProposalsUpdated();
     }

@@ -54,9 +54,6 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     function contribute(uint256 amount, bytes32 projectId) external payable nonReentrant {
         // projectId should be filled automatically via UI for project clicked by user
 
-        // get protocol address so funds can be sent there:
-        address payable raiseBoxProtocol = raiseBoxCore.getProtocol();
-
         // get valid project from storage
 
         (, address projectOwner,, uint256 amtToRaise,, bytes32 projectId,,,,,) = raiseBoxCore.getProjectInfo(projectId);
