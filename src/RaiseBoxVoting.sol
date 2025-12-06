@@ -28,10 +28,6 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         owner = msg.sender;
     }
 
-    // address public raiseBoxContribution = raiseBoxCore.getContributionContract();
-    // address public raiseBoxProposal = raiseBoxCore.getProposalContract();
-    // address public raiseBoxDripHandler = raiseBoxCore.getDripHandlerContract();
-
     // /// @notice Set the RaiseBoxProposal contract address (callable by deployer)
     // function setProposalContract(address proposalContract) external {
     //     require(msg.sender == owner, "Only owner");
@@ -41,10 +37,6 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     modifier canVote(bytes32 projectId, address user, uint256 proposalId) {
         // ascertain msg.sender has contributed to project
         bool hasContributedToProject = raiseBoxContribution.getHasContributed(projectId, user);
-
-        // if (msg.sender == raiseBoxCore.getRaiseCreator(projectId)) {
-        //     revert RaiseBoxVoting_RaiseCreator(msg.sender);
-        // } -- cannot even vote since owner cannot contribute -- ebby
 
         if (!hasContributedToProject) {
             revert RaiseBoxVoting_NotContributor(projectId, user);
@@ -61,12 +53,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         uint256 _start = votingStartTime[projectId][proposalId];
 
         // voting must have been scheduled (start set) before voting commences
-        if (_start == 0) {
-            revert RaiseBoxVoting_VotingNotStarted(projectId, proposalId);
-        }
-
-        // voting not yet started (start is in future)
-        if (block.timestamp < _start) {
+        if (_start == 0 || block.timestamp < _start ) {
             revert RaiseBoxVoting_VotingNotStarted(projectId, proposalId);
         }
 
@@ -97,12 +84,13 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         if (block.timestamp >= _start + VOTING_DURATION) {
             votingEnded[projectId][proposalId] = true;
             _tallyVotes(projectId, proposalId);
+             emit RaiseBoxVoting_VotingEndedSucessfully();
         } else {
             revert RaiseBoxVoting_VotingNotEnded();
         }
 
         emit RaiseBoxVoting_VoteTallyTriggered(msg.sender, proposalId, block.timestamp);
-        emit RaiseBoxVoting_VotingEndedSucessfully();
+       
 
     }
 
@@ -142,34 +130,43 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
      *     @param proposalId unique id of a proposal within the project.
      *     @param startTime voting start time.
      *     @dev emits VotingStartTimeSet to mark success.
-     *
-     *
      */
     function setVotingStartTime(bytes32 projectId, uint256 proposalId, uint256 startTime) external {
 
         // only the proposal contract should be able to set voting start times
         if (msg.sender != address(raiseBoxProposal)) {
-            revert("Only proposal contract");
+            revert("Only proposal contract can set voting start time.");
         }
         votingStartTime[projectId][proposalId] = startTime;
 
         emit VotingStartTimeSet(projectId, proposalId, startTime);
     }
 
+    modifier canDelegate(bytes32 projectId, uint256 proposalId, address from, address to) {
+        bool fromIsContributor = raiseBoxContribution.getHasContributed(projectId, from);
+        bool toIsContributor = raiseBoxContribution.getHasContributed(projectId, to);
 
-
-    function delegateVote(bytes32 projectId, uint256 proposalId, address from, address to) external 
-    /**
-     * canVote(projectId, from, proposalId) canVote(projectId, to, proposalId)
-     */
-    {
-        if (to == from) {
+        if (to == from ) {
             revert RaiseBoxVoting_CannotDelegateToSelf();
         }
 
         if (to == address(0)) {
             revert RaiseBoxVoting_DelegationToZeroAddress(address(0));
         }
+
+        if (!fromIsContributor || !toIsContributor) { revert IRaiseBoxContribution.RaiseBoxContribution_NotAContributor(projectId); }
+
+        if (delegatee[to][projectId][proposalId] || delegatee[from][projectId][proposalId]) { revert RaiseBoxVoting_LoopDelegationForbidden(); }
+        _;
+    }
+
+
+
+    function delegateVote(bytes32 projectId, uint256 proposalId, address from, address to) external canDelegate(projectId, proposalId, from, to)
+    /**
+     * canVote(projectId, from, proposalId) canVote(projectId, to, proposalId)
+     */
+    {
 
         if (hasDelegatedForProposal[from][projectId][proposalId]) {
             revert RaiseBoxVoting_CannotDelegateTwice();
@@ -194,7 +191,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     function _tallyVotes(bytes32 projectId, uint256 proposalId)
         internal
-        returns (uint256 forVotes, uint256 againstVotes)
+        returns (uint256, uint256)
     {
         (uint256 forVotes, uint256 againstVotes, uint256 totalVotes) = this.getProposalVotes(projectId, proposalId);
 
@@ -236,16 +233,23 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
      */
     function getProposalVotes(bytes32 projectId, uint256 proposalId)
         external
-        returns (uint256 forVotes, uint256 againstVotes, uint256 totalVotes)
+        returns (uint256, uint256, uint256)
     {
         // checks:
         bool validProposal = _isValidProposal(projectId, proposalId);
 
-        forVotes = votesForProposal[projectId][proposalId];
-        againstVotes = votesAgainstProposal[projectId][proposalId];
-        totalVotes = forVotes + againstVotes;
+        uint256 forVotes = votesForProposal[projectId][proposalId];
+        uint256 againstVotes = votesAgainstProposal[projectId][proposalId];
+        uint256 totalVotes = (forVotes + againstVotes);
 
         if (validProposal) return (forVotes, againstVotes, totalVotes);
+    }
+
+    function getAbsenteeVoters(bytes32 projectId, uint256 proposalId) external returns (uint256) {
+        uint256 totalContributors = raiseBoxContribution.getRaiseContributorsCount(projectId);
+        (,, uint256 totalVotes) = this.getProposalVotes(projectId, proposalId);
+
+        return (totalContributors - totalVotes);
     }
 
     function getVoteStartTime(bytes32 projectId, uint256 proposalId) external view returns (uint256 voteStartTime) { return votingStartTime[projectId][proposalId]; }
