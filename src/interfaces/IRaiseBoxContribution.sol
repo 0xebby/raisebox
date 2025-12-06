@@ -17,6 +17,7 @@ interface IRaiseBoxContribution {
     error RaiseBoxContribution_contribute_AboveMaxAllowed(uint256, string);
     error RaiseBoxContribution_getMaxContributionAllowedForProject_CannotBeZero();
     error RaiseBoxContribution_SelfContribution();
+    error RaiseBoxContribution_NotAContributor(bytes32 projectId);
 
     // contribution related events:
     event Contributed(address indexed user, uint256 indexed amountContributed, bytes32 indexed projectId, uint256 amountRaised);
@@ -34,4 +35,6 @@ interface IRaiseBoxContribution {
     function getContributorsCount(bytes32 projectId) external returns (uint256 contributorCount);
 
     function getHasContributed(bytes32 projectId, address user) external view returns (bool);
+
+    function getRaiseContributorsCount(bytes32 projectId) external returns (uint256);
 }

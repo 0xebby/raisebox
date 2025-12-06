@@ -20,6 +20,7 @@ interface IRaiseBoxVoting {
     error RaiseBoxVoting_NotRaiseOwner(address raiseOwner);
     error RaiseBoxVoting_VotingNotEnded();
     error RaiseBoxVoting_ProposalFailed();
+    error RaiseBoxVoting_LoopDelegationForbidden();
 
     event VoteDelegated(address indexed from, address indexed to);
     event Voted(address indexed voter, bytes32 indexed projectId, uint256 indexed proposalId, bool side);
@@ -49,4 +50,5 @@ interface IRaiseBoxVoting {
 
         // owner only special function
     function triggerVoteTally(bytes32 projectId, uint256 proposalId) external;
+    function getAbsenteeVoters(bytes32 projectId, uint256 proposalId) external returns (uint256);
 }
