@@ -231,55 +231,8 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 
         vm.stopPrank();
 
-        // contribute to project 2:
-
-        vm.startPrank(mark);
-
-        raiseBoxContributionContract.contribute{value: 4 ether}(
-            4 ether, 0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad
-        );
-
-        vm.stopPrank();
-
-        vm.startPrank(max);
-
-        raiseBoxContributionContract.contribute{value: 4 ether}(
-            4 ether, 0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad
-        );
-
-        vm.stopPrank();
-
-        vm.startPrank(sally);
-
-        raiseBoxContributionContract.contribute{value: 4 ether}(
-            4 ether, 0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad
-        );
-
-        vm.stopPrank();
-
-        vm.startPrank(uche);
-
-        raiseBoxContributionContract.contribute{value: 4 ether}(
-            4 ether, 0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad
-        );
-
-        vm.stopPrank();
-
-        vm.startPrank(joe);
-
-        raiseBoxContributionContract.contribute{value: 3 ether}(
-            3 ether, 0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad
-        );
-
-        vm.stopPrank();
-
-        vm.startPrank(ebby);
-
-        raiseBoxContributionContract.contribute{value: 1 ether}(
-            1 ether, 0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad
-        );
-
-        vm.stopPrank();
+        console.log("drip handler balance:", address(raiseBoxDripHandler).balance);
+        console.log("project owner balance:", ben.balance);
 
         // raise passed for project 1, can now host proposal
 
@@ -287,23 +240,8 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 
         vm.startPrank(ben);
 
-        console.log(address(raiseBoxProposalContract));
-        console.log(address(raiseBoxContributionContract));
-
         uint256 proposalId1 = raiseBoxProposalContract.hostProposal(
             "new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 10
-        );
-
-        vm.stopPrank();
-
-        // proposal 2
-
-        vm.startPrank(ben);
-
-        advanceBlockTime(4 weeks);
-
-        uint256 proposalId2 = raiseBoxProposalContract.hostProposal(
-            "new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 25
         );
 
         vm.stopPrank();
@@ -337,11 +275,6 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         raiseBoxVoting.vote(_project, 1, false, vitalik);
         vm.stopPrank();
 
-        // vm.warp(_start + 10 days);
-        // vm.startPrank(testOwner);
-        // raiseBoxVoting.vote(_project, 1, false, testOwner);
-        // vm.stopPrank();
-
         vm.startPrank(testOwner);
         raiseBoxVoting.vote(_project, 1, false, testOwner);
         vm.stopPrank();
@@ -350,6 +283,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
          console.log(address(raiseBoxProposalContract));
         // raiseBoxVoting.endVoting(_project, 1);
 
+        // special trigger by project owner if user voting doesn't lead to vote tallying, can only happen if voting has ended and the caller is in-fact the proposal owner
         vm.startPrank(ben);
         raiseBoxVoting.triggerVoteTally(_project, 1);
         vm.stopPrank();
@@ -358,13 +292,203 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 
         (uint256 forVotes, uint256 againstVotes, uint256 aggregate) = raiseBoxVoting.getProposalVotes(_project, 1);
 
-        raiseBoxVoting.hasVotedForProposal(ebby, _project, 1);
+        console.log("drip handler balance:", address(raiseBoxDripHandler).balance);
+        console.log("project owner balance:", ben.balance);
 
-        raiseBoxCore.getAmountToRaise(0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5);
 
-        console.log("yes votes:", forVotes, "no votes:", againstVotes);
 
-        raiseBoxVoting.getVoteStartTime(_project, 1);
+
+        // proposal 2
+
+        vm.startPrank(ben);
+
+        advanceBlockTime(4 weeks);
+
+        uint256 proposalId2 = raiseBoxProposalContract.hostProposal(
+            "new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 25
+        );
+
+        vm.stopPrank();
+
+        // jump to just after scheduled voting start for proposal 2
+        uint256 _start2 = raiseBoxVoting.votingStartTime(_project, proposalId2);
+        vm.warp(_start2 + 1);
+
+        vm.startPrank(mark);
+        raiseBoxVoting.vote(_project, proposalId2, false, mark);
+        vm.stopPrank();
+
+        vm.startPrank(sally);
+        raiseBoxVoting.vote(_project, proposalId2, true, sally);
+        vm.stopPrank();
+
+        vm.startPrank(uche);
+        raiseBoxVoting.vote(_project, proposalId2, true, uche);
+        vm.stopPrank();
+
+        vm.warp(_start2 + 10 days);
+
+        // special trigger by project owner if user voting doesn't lead to vote tallying, can only happen if voting has ended and the caller is in-fact the proposal owner
+        vm.startPrank(ben);
+        raiseBoxVoting.triggerVoteTally(_project, proposalId2);
+        vm.stopPrank();
+
+
+
+
+
+        console.log("drip handler balance:", address(raiseBoxDripHandler).balance);
+        console.log("project owner balance:", ben.balance);
+
+
+
+         // proposal 3
+
+        vm.startPrank(ben);
+
+        advanceBlockTime(4 weeks);
+
+        uint256 proposalId3 = raiseBoxProposalContract.hostProposal(
+            "launch mvp", "beta test mvp", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 20
+        );
+
+        vm.stopPrank();
+
+        // jump to just after scheduled voting start for proposal 2
+        uint256 _start3 = raiseBoxVoting.votingStartTime(_project, proposalId3);
+        vm.warp(_start3 + 1);
+
+        vm.startPrank(mark);
+        raiseBoxVoting.vote(_project, proposalId3, false, mark);
+        vm.stopPrank();
+
+        vm.startPrank(sally);
+        raiseBoxVoting.vote(_project, proposalId3, true, sally);
+        vm.stopPrank();
+
+        vm.startPrank(uche);
+        raiseBoxVoting.vote(_project, proposalId3, true, uche);
+        vm.stopPrank();
+
+        vm.warp(_start3 + 10 days);
+
+        // special trigger by project owner if user voting doesn't lead to vote tallying, can only happen if voting has ended and the caller is in-fact the proposal owner
+        vm.startPrank(ben);
+        raiseBoxVoting.triggerVoteTally(_project, proposalId3);
+        vm.stopPrank();
+
+
+
+
+
+        console.log("drip handler balance:", address(raiseBoxDripHandler).balance);
+        console.log("project owner balance:", ben.balance);
+
+
+        // proposal 4
+
+        vm.startPrank(ben);
+
+        advanceBlockTime(4 weeks);
+
+        uint256 proposalId4 = raiseBoxProposalContract.hostProposal(
+            "first testnet app", "testnet faucet and app v1 creation", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 20
+        );
+
+        vm.stopPrank();
+
+        // jump to just after scheduled voting start for proposal 2
+        uint256 _start4 = raiseBoxVoting.votingStartTime(_project, proposalId4);
+        vm.warp(_start4 + 1);
+
+        vm.startPrank(mark);
+        raiseBoxVoting.vote(_project, proposalId4, false, mark);
+        vm.stopPrank();
+
+        vm.startPrank(sally);
+        raiseBoxVoting.vote(_project, proposalId4, true, sally);
+        vm.stopPrank();
+
+        vm.startPrank(uche);
+        raiseBoxVoting.vote(_project, proposalId4, true, uche);
+        vm.stopPrank();
+
+        vm.warp(_start4 + 10 days);
+
+        // special trigger by project owner if user voting doesn't lead to vote tallying, can only happen if voting has ended and the caller is in-fact the proposal owner
+        vm.startPrank(ben);
+        raiseBoxVoting.triggerVoteTally(_project, proposalId4);
+        vm.stopPrank();
+
+
+
+
+
+        console.log("drip handler balance:", address(raiseBoxDripHandler).balance);
+        console.log("project owner balance:", ben.balance);
+
+        // proposal 5
+
+        vm.startPrank(ben);
+
+        advanceBlockTime(5 weeks);
+
+        uint256 proposalId5 = raiseBoxProposalContract.hostProposal(
+            "v2 launch", "version 2 of testnet app is ready to be tested", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 20
+        );
+
+        vm.stopPrank();
+
+        // jump to just after scheduled voting start for proposal 2
+        uint256 _start5 = raiseBoxVoting.votingStartTime(_project, proposalId5);
+        vm.warp(_start5 + 1);
+
+        vm.startPrank(mark);
+        raiseBoxVoting.vote(_project, proposalId5, false, mark);
+        vm.stopPrank();
+
+        vm.startPrank(sally);
+        raiseBoxVoting.vote(_project, proposalId5, true, sally);
+        vm.stopPrank();
+
+        vm.startPrank(uche);
+        raiseBoxVoting.vote(_project, proposalId5, true, uche);
+        vm.stopPrank();
+
+        vm.startPrank(testOwner);
+        raiseBoxVoting.vote(_project, proposalId5, false, testOwner);
+        vm.stopPrank();
+
+        vm.startPrank(vitalik);
+        raiseBoxVoting.vote(_project, proposalId5, true, vitalik);
+        vm.stopPrank();
+
+        vm.startPrank(joe);
+        raiseBoxVoting.vote(_project, proposalId5, true, joe);
+        vm.stopPrank();
+
+        vm.startPrank(max);
+        raiseBoxVoting.delegateVote(0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, proposalId5, max, ebby);
+        vm.stopPrank();
+
+        vm.startPrank(ebby);
+        raiseBoxVoting.vote(_project, proposalId5, true, ebby);
+        vm.stopPrank();
+
+        
+
+        vm.warp(_start5 + 10 days);
+
+        // special trigger by project owner if user voting doesn't lead to vote tallying, can only happen if voting has ended and the caller is in-fact the proposal owner
+        vm.startPrank(ben);
+        raiseBoxVoting.triggerVoteTally(_project, proposalId5);
+        vm.stopPrank();
+
+
+        console.log("drip handler balance:", address(raiseBoxDripHandler).balance);
+        console.log("project owner balance:", ben.balance);
+
+        raiseBoxProposalContract.getProposalCount(0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5);
 
     }
 }
