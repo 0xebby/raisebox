@@ -19,7 +19,7 @@ interface IRaiseBoxContribution {
     error RaiseBoxContribution_SelfContribution();
 
     // contribution related events:
-    event Contributed(address indexed user, uint256 indexed amount, bytes32 indexed projectId, uint256 amountRaised);
+    event Contributed(address indexed user, uint256 indexed amountContributed, bytes32 indexed projectId, uint256 amountRaised);
 
     function contribute(uint256 amount, bytes32 projectId) external payable;
 

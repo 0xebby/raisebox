@@ -16,9 +16,10 @@ interface IRaiseBoxProposal {
     error RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
     error RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
     error RaiseBoxProposal_hostProposal_RaiseNotEnded();
-    error RaiseBoxProposal_InvalidDrip();
+    error RaiseBoxProposal_InvalidDripPercent();
     error RaiseBoxProposal_hostProposal_MaxYearlyProposalsReached();
     error RaiseBoxProposal_getProposalDetails_InvalidProposalId();
+    error RaiseBoxProposal_ProposalsExceedsMax(uint256 max);
 
     struct MileStoneProposalDetails {
         // different milestones: mvp ready, testnet ready, distribution site ready,

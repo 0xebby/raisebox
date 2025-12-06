@@ -32,9 +32,9 @@ interface IRaiseBoxVoting {
 
     function delegateVote(bytes32 projectId, uint256 proposalId, address from, address to) external;
 
-    function tallyVotes(bytes32 projectId, uint256 proposalId)
-        external
-        returns (uint256 forVotes, uint256 againstVotes);
+    // function _tallyVotes(bytes32 projectId, uint256 proposalId)
+    //     external
+    //     returns (uint256 forVotes, uint256 againstVotes);
 
     function getProposalVotes(bytes32 projectId, uint256 proposalId)
         external
