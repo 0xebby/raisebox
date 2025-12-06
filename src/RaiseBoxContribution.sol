@@ -40,6 +40,8 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
     mapping(bytes32 => uint256) public totalContributionsToProject;
 
+    mapping(bytes32 => uint256) public raisers;
+
     // contribution state enum
     enum ContributionState {
         CONTRIBUTION_LIVE,
@@ -116,6 +118,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
         amountContributedToProject[msg.sender][projectId] = userPrevContribution;
         totalContributionsToProject[projectId] = totalContributions;
+        raisers[projectId]++;
 
         if (!hasContributed[projectId][msg.sender]) {
             contributors[projectId].push(msg.sender);
@@ -177,6 +180,8 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     function getContributors(bytes32 projectId) external view returns (address[] memory) {
         return contributors[projectId];
     }
+
+    function getRaiseContributorsCount(bytes32 projectId) external returns (uint256) { return raisers[projectId]; }
 
     function getContributionsToProject(address user, bytes32 projectId) external returns (uint256[] memory) {
         if (!raiseBoxCore.doesProjectExist(projectId)) {
