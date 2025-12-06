@@ -48,9 +48,8 @@ contract DeployRaiseBoxCore is Script {
 
         raiseBoxCore.setProposalContract(address(raiseBoxProposalContract));
 
-
         
-        raiseBoxDripHandler = new RaiseBoxDripHandler(address(raiseBoxCore), address(raiseBoxProposalContract));
+        raiseBoxDripHandler = new RaiseBoxDripHandler(address(raiseBoxCore), address(raiseBoxProposalContract), address(0));
 
         raiseBoxCore.setDripHandlerContract(address(raiseBoxDripHandler));
         
@@ -64,26 +63,7 @@ contract DeployRaiseBoxCore is Script {
 
         raiseBoxCore.setVotingContract(address(raiseBoxVoting));
 
-
-      
-
-
-
-        // raiseBoxVoting = new RaiseBoxVoting(address(raiseBoxCore));
-
-        // raiseBoxCore.setVotingContract(address(raiseBoxVoting));
-
-
-
-
-
-
-        // raiseBoxVoting = new RaiseBoxVoting(address(raiseBoxCore), address(raiseBoxContributionContract), address(raiseBoxDripHandler));
-
-        // raiseBoxCore.setVotingContract(address(raiseBoxVoting));
-
-        // // now set the voting contract address in proposal contract
-        // raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore), address(raiseBoxVoting));
+        raiseBoxDripHandler.setVoting(address(raiseBoxVoting));
 
         vm.stopBroadcast();
     }

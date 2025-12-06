@@ -76,7 +76,7 @@ contract TestsHelpers is Test {
 
         raiseBoxCore.setProposalContract(address(raiseBoxProposalContract));
 
-        raiseBoxDripHandler = new RaiseBoxDripHandler(address(raiseBoxCore), address(raiseBoxProposalContract));
+        raiseBoxDripHandler = new RaiseBoxDripHandler(address(raiseBoxCore), address(raiseBoxProposalContract), address(0));
 
         raiseBoxCore.setDripHandlerContract(address(raiseBoxDripHandler));
 
@@ -89,6 +89,8 @@ contract TestsHelpers is Test {
         raiseBoxCore.setVotingContract(address(raiseBoxVoting));
 
         raiseBoxProposalContract.setVotingContract(address(raiseBoxVoting));
+
+        raiseBoxDripHandler.setVoting(address(raiseBoxVoting));
 
        
 
@@ -135,7 +137,7 @@ contract TestsHelpers is Test {
         vm.deal(testOwner, 500 ether);
         vm.deal(alice, 100 ether);
         vm.deal(joe, 100 ether);
-        vm.deal(ben, 100 ether);
+        // vm.deal(ben, 100 ether);
         vm.deal(max, 100 ether);
         vm.deal(uche, 100 ether);
         vm.deal(sam, 100 ether);
