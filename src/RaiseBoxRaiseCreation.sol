@@ -103,11 +103,11 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
             revert RaiseBoxCreation_createRaise_InvalidDuration();
         }
 
-        // generate projectID:
-        bytes32 projectID =
+        // generate raiseId:
+        bytes32 raiseId =
             keccak256(abi.encode(projectName_, raiseAmount_, timeCreated, valueProposition_, msg.sender));
 
-        bool doesProjectExists = raiseBoxCore.doesProjectExist(projectID);
+        bool doesProjectExists = raiseBoxCore.doesRaiseExist(raiseId);
 
         if (doesProjectExists) {
             revert RaiseCreation_createRaise_RaiseAlreadyExist();
@@ -117,7 +117,7 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
 
         if (!doesProjectExists) {
             raiseBoxCore.updateStorage(
-                projectID,
+                raiseId,
                 projectName_,
                 msg.sender,
                 valueProposition_,
@@ -135,7 +135,7 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
         i_lastRaiseCreated[msg.sender] = timeCreated;
         raiseBoxCore.incrementRaiseCount();
 
-        // projectIndexToProject[projectIndex] = projectIDToProject[projectID];
+        // projectIndexToProject[projectIndex] = projectIDToProject[raiseId];
 
         emit RaiseBoxCreateProject_ProjectCreated(
             projectName_,
@@ -143,25 +143,25 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
             valueProposition_,
             raiseAmount_,
             raiseDuration_,
-            projectID,
+            raiseId,
             !doesProjectExists,
             timeCreated,
             i_lastRaiseCreated[msg.sender] = timeCreated,
             raisesCreated[msg.sender]
         );
 
-        return projectID;
+        return raiseId;
     }
 
     ////////////////////////////////////////////////////////// GETTERS //////////////////////////////////////////////////////////
 
-    function getRaiseCreator(bytes32 projectId) external returns (address) {
-        (, address projectCreator,,,,,,,,,) = raiseBoxCore.getProjectInfo(projectId);
+    function getRaiseCreator(bytes32 raiseId) external returns (address) {
+        (, address projectCreator,,,,,,,,,) = raiseBoxCore.getRaiseInfo(raiseId);
         return projectCreator;
     }
 
-    function viewProjectInfo(bytes32 projectId) external {
-        raiseBoxCore.getProjectInfo(projectId);
+    function viewProjectInfo(bytes32 raiseId) external {
+        raiseBoxCore.getRaiseInfo(raiseId);
     }
 
     // function calProtocolFees(

@@ -17,20 +17,20 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
             string memory projectValuePropDesciption,
             uint256 amountToRaise,
             uint256 durationOfRaise,
-            bytes32 projectId,
+            bytes32 raiseId,
             bool projectExist,
             uint256 timeCreated,
             uint256 amountRaised,
             uint256 proposalsHosted,
             uint256 NumOfProjectCreated
-        ) = raiseBoxCore.getProjectInfo(projectID1);
+        ) = raiseBoxCore.getRaiseInfo(projectID1);
 
         assertEq(projectName, "project 1");
         assertEq(projectValuePropDesciption, "solve testnet sybil with zkp");
         assertEq(projectCreator, alice);
         assertEq(amountToRaise, 10 ether);
         assertEq(durationOfRaise, 60 weeks);
-        assertEq(projectId, projectID1);
+        assertEq(raiseId, projectID1);
         assertEq(amountRaised, 0);
         assertEq(timeCreated, block.timestamp);
         assertEq(proposalsHosted, 0);
@@ -162,74 +162,77 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     }
 
     function testContributeToProjects() public {
-        createTestProjects();
+        // createTestProjects();
 
         // project 1: 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
         // project 2: 0x7456a8ae53ee5e25e2fc38030f105dbd89ccbedfb840019297b9b32a586c69ad
 
-        vm.startPrank(mark);
+        // vm.startPrank(mark);
 
-        raiseBoxContributionContract.contribute{value: 4 ether}(
-            4 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
-        );
+        // raiseBoxContributionContract.contribute{value: 4 ether}(
+        //     4 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
+        // );
 
-        vm.stopPrank();
+        // vm.stopPrank();
 
-        vm.startPrank(max);
+        // vm.startPrank(max);
 
-        raiseBoxContributionContract.contribute{value: 2 ether}(
-            2 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
-        );
+        // raiseBoxContributionContract.contribute{value: 2 ether}(
+        //     2 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
+        // );
 
-        vm.stopPrank();
+        // vm.stopPrank();
 
-        vm.startPrank(testOwner);
+        // vm.startPrank(testOwner);
 
-        raiseBoxContributionContract.contribute{value: 2 ether}(
-            2 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
-        );
+        // raiseBoxContributionContract.contribute{value: 2 ether}(
+        //     2 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
+        // );
 
-        vm.stopPrank();
+        // vm.stopPrank();
 
-        vm.startPrank(sally);
+        // vm.startPrank(sally);
 
-        raiseBoxContributionContract.contribute{value: 4 ether}(
-            4 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
-        );
+        // raiseBoxContributionContract.contribute{value: 4 ether}(
+        //     4 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
+        // );
 
-        vm.stopPrank();
+        // vm.stopPrank();
 
-        vm.startPrank(uche);
+        // vm.startPrank(uche);
 
-        raiseBoxContributionContract.contribute{value: 4 ether}(
-            4 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
-        );
+        // raiseBoxContributionContract.contribute{value: 4 ether}(
+        //     4 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
+        // );
 
-        vm.stopPrank();
+        // vm.stopPrank();
 
-        vm.startPrank(joe);
+        // vm.startPrank(joe);
 
-        raiseBoxContributionContract.contribute{value: 2 ether}(
-            2 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
-        );
+        // raiseBoxContributionContract.contribute{value: 2 ether}(
+        //     2 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
+        // );
 
-        vm.stopPrank();
+        // vm.stopPrank();
 
-        vm.startPrank(ebby);
+        // vm.startPrank(ebby);
 
-        raiseBoxContributionContract.contribute{value: 1 ether}(
-            1 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
-        );
+        // raiseBoxContributionContract.contribute{value: 1 ether}(
+        //     1 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
+        // );
 
-        vm.stopPrank();
+        // vm.stopPrank();
 
-        vm.startPrank(vitalik);
+        // vm.startPrank(vitalik);
 
-        raiseBoxContributionContract.contribute{value: 1 ether}(
-            1 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
-        );
+        // raiseBoxContributionContract.contribute{value: 1 ether}(
+        //     1 ether, 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5
+        // );
 
-        vm.stopPrank();
+        // vm.stopPrank();
+
+        contributeToTestProject();
+        uint256 numOfProposalsHosted;
 
         console.log("drip handler balance:", address(raiseBoxDripHandler).balance);
         console.log("project owner balance:", ben.balance);
@@ -243,9 +246,9 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         uint256 proposalId1 = raiseBoxProposalContract.hostProposal(
             "new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 10
         );
+        numOfProposalsHosted++;
 
         vm.stopPrank();
-
 
         // proposal hosted, voting can now commence:
         bytes32 _project = 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5;
@@ -271,32 +274,27 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         raiseBoxVoting.vote(_project, 1, true, ebby);
         vm.stopPrank();
 
-        vm.startPrank(vitalik);
-        raiseBoxVoting.vote(_project, 1, false, vitalik);
-        vm.stopPrank();
+        // vm.startPrank(vitalik);
+        // raiseBoxVoting.vote(_project, 1, false, vitalik);
+        // vm.stopPrank();
 
-        vm.startPrank(testOwner);
-        raiseBoxVoting.vote(_project, 1, false, testOwner);
-        vm.stopPrank();
+        // vm.startPrank(testOwner);
+        // raiseBoxVoting.vote(_project, 1, false, testOwner);
+        // vm.stopPrank();
 
-         vm.warp(_start + 10 days);
-         console.log(address(raiseBoxProposalContract));
+        vm.warp(_start + 10 days);
+        console.log(address(raiseBoxProposalContract));
         // raiseBoxVoting.endVoting(_project, 1);
 
         // special trigger by project owner if user voting doesn't lead to vote tallying, can only happen if voting has ended and the caller is in-fact the proposal owner
         vm.startPrank(ben);
         raiseBoxVoting.triggerVoteTally(_project, 1);
         vm.stopPrank();
-        
-
 
         (uint256 forVotes, uint256 againstVotes, uint256 aggregate) = raiseBoxVoting.getProposalVotes(_project, 1);
 
         console.log("drip handler balance:", address(raiseBoxDripHandler).balance);
         console.log("project owner balance:", ben.balance);
-
-
-
 
         // proposal 2
 
@@ -307,6 +305,8 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         uint256 proposalId2 = raiseBoxProposalContract.hostProposal(
             "new website", "pay for new website", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 25
         );
+
+        numOfProposalsHosted++;
 
         vm.stopPrank();
 
@@ -333,16 +333,10 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         raiseBoxVoting.triggerVoteTally(_project, proposalId2);
         vm.stopPrank();
 
-
-
-
-
         console.log("drip handler balance:", address(raiseBoxDripHandler).balance);
         console.log("project owner balance:", ben.balance);
 
-
-
-         // proposal 3
+        // proposal 3
 
         vm.startPrank(ben);
 
@@ -351,6 +345,8 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         uint256 proposalId3 = raiseBoxProposalContract.hostProposal(
             "launch mvp", "beta test mvp", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 20
         );
+
+        numOfProposalsHosted++;
 
         vm.stopPrank();
 
@@ -377,13 +373,8 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         raiseBoxVoting.triggerVoteTally(_project, proposalId3);
         vm.stopPrank();
 
-
-
-
-
         console.log("drip handler balance:", address(raiseBoxDripHandler).balance);
         console.log("project owner balance:", ben.balance);
-
 
         // proposal 4
 
@@ -392,8 +383,13 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         advanceBlockTime(4 weeks);
 
         uint256 proposalId4 = raiseBoxProposalContract.hostProposal(
-            "first testnet app", "testnet faucet and app v1 creation", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 20
+            "first testnet app",
+            "testnet faucet and app v1 creation",
+            0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5,
+            20
         );
+
+        numOfProposalsHosted++;
 
         vm.stopPrank();
 
@@ -420,10 +416,6 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         raiseBoxVoting.triggerVoteTally(_project, proposalId4);
         vm.stopPrank();
 
-
-
-
-
         console.log("drip handler balance:", address(raiseBoxDripHandler).balance);
         console.log("project owner balance:", ben.balance);
 
@@ -434,8 +426,13 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         advanceBlockTime(5 weeks);
 
         uint256 proposalId5 = raiseBoxProposalContract.hostProposal(
-            "v2 launch", "version 2 of testnet app is ready to be tested", 0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, 20
+            "v2 launch",
+            "version 2 of testnet app is ready to be tested",
+            0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5,
+            20
         );
+
+        numOfProposalsHosted++;
 
         vm.stopPrank();
 
@@ -455,27 +452,27 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         raiseBoxVoting.vote(_project, proposalId5, true, uche);
         vm.stopPrank();
 
-        vm.startPrank(testOwner);
-        raiseBoxVoting.vote(_project, proposalId5, false, testOwner);
-        vm.stopPrank();
+        // vm.startPrank(testOwner);
+        // raiseBoxVoting.vote(_project, proposalId5, false, testOwner);
+        // vm.stopPrank();
 
-        vm.startPrank(vitalik);
-        raiseBoxVoting.vote(_project, proposalId5, true, vitalik);
-        vm.stopPrank();
+        // vm.startPrank(vitalik);
+        // raiseBoxVoting.vote(_project, proposalId5, true, vitalik);
+        // vm.stopPrank();
 
-        vm.startPrank(joe);
-        raiseBoxVoting.vote(_project, proposalId5, true, joe);
-        vm.stopPrank();
+        // vm.startPrank(joe);
+        // raiseBoxVoting.vote(_project, proposalId5, true, joe);
+        // vm.stopPrank();
 
         vm.startPrank(max);
-        raiseBoxVoting.delegateVote(0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, proposalId5, max, ebby);
+        raiseBoxVoting.delegateVote(
+            0xe782a32312a06263058014c3df094caa06944717afe05f450abc788106aae4e5, proposalId5, max, ebby
+        );
         vm.stopPrank();
 
         vm.startPrank(ebby);
         raiseBoxVoting.vote(_project, proposalId5, true, ebby);
         vm.stopPrank();
-
-        
 
         vm.warp(_start5 + 10 days);
 
@@ -484,9 +481,12 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         raiseBoxVoting.triggerVoteTally(_project, proposalId5);
         vm.stopPrank();
 
+        assert(raiseBoxProposalContract.getProposalCount(_project) == numOfProposalsHosted);
+        raiseBoxProposalContract.getTotalProposals();
+
+        
 
         // console.log("drip handler balance:", address(raiseBoxDripHandler).balance);
         // console.log("project owner balance:", ben.balance);
-
     }
 }

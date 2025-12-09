@@ -40,7 +40,7 @@ interface IRaiseBoxCreation {
         string projectValueProposition,
         uint256 amountToRaise,
         uint256 duration,
-        bytes32 projectID,
+        bytes32 raiseId,
         bool projectExist,
         uint256 timeCreated,
         uint256 lastRaiseCreated,
@@ -53,6 +53,6 @@ interface IRaiseBoxCreation {
     // project related events:
     event FundsWithdrawn(address indexed projectOwner, uint256 funds);
 
-    function getRaiseCreator(bytes32 projectId) external returns (address);
-    function viewProjectInfo(bytes32 projectId) external;
+    function getRaiseCreator(bytes32 raiseId) external returns (address);
+    function viewProjectInfo(bytes32 raiseId) external;
 }

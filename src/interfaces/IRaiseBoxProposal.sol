@@ -30,16 +30,16 @@ interface IRaiseBoxProposal {
         uint8 dripPercent;
     }
 
-    function getProposalCount(bytes32 projectId) external view returns (uint256);
+    function getProposalCount(bytes32 raiseId) external view returns (uint256);
 
-    function getProposalDetails(bytes32 projectId, uint256 proposalId)
+    function getProposalDetails(bytes32 raiseId, uint256 proposalId)
         external
         view
         returns (MileStoneProposalDetails memory proposalDetails_);
 
-    function getHasHostedProposal(bytes32 projectId) external returns (bool);
+    function getHasHostedProposal(bytes32 raiseId) external returns (bool);
 
-    function getLastProposalTime(bytes32 projectId) external view returns (uint256);
+    function getLastProposalTime(bytes32 raiseId) external view returns (uint256);
 
     // protocol wide total proposals
     function getTotalProposals() external view returns (uint256);

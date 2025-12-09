@@ -34,7 +34,6 @@ contract DeployRaiseBoxCore is Script {
         // setter contract
         // setter = new SetterContract()
 
-
         raiseBoxCore = new RaiseBoxCore();
 
         // setter.setRaiseBoxCore(address())
@@ -43,23 +42,25 @@ contract DeployRaiseBoxCore is Script {
 
         raiseBoxCore.setRaiseCreationContract(address(raiseBoxRaiseCreationContract));
 
-
-        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore)); 
+        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore));
 
         raiseBoxCore.setProposalContract(address(raiseBoxProposalContract));
 
-        
-        raiseBoxDripHandler = new RaiseBoxDripHandler(address(raiseBoxCore), address(raiseBoxProposalContract), address(0));
+        raiseBoxDripHandler =
+            new RaiseBoxDripHandler(address(raiseBoxCore), address(raiseBoxProposalContract), address(0));
 
         raiseBoxCore.setDripHandlerContract(address(raiseBoxDripHandler));
-        
 
         raiseBoxContributionContract = new RaiseBoxContribution(address(raiseBoxCore), address(raiseBoxDripHandler));
 
         raiseBoxCore.setContributionContract(address(raiseBoxContributionContract));
 
-        
-        raiseBoxVoting = new RaiseBoxVoting(address(raiseBoxCore), address(raiseBoxContributionContract), address(raiseBoxProposalContract), address(raiseBoxDripHandler));
+        raiseBoxVoting = new RaiseBoxVoting(
+            address(raiseBoxCore),
+            address(raiseBoxContributionContract),
+            address(raiseBoxProposalContract),
+            address(raiseBoxDripHandler)
+        );
 
         raiseBoxCore.setVotingContract(address(raiseBoxVoting));
 

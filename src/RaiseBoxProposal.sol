@@ -8,18 +8,17 @@ import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 import {IRaiseBoxVoting} from "../src/interfaces/IRaiseBoxVoting.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-
 contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
-    IRaiseBoxVoting public  raiseBoxVoting; // voting contract
+    IRaiseBoxVoting public raiseBoxVoting; // voting contract
 
-     constructor(address raiseBoxCoreAddress) Ownable(msg.sender) {
+    constructor(address raiseBoxCoreAddress) Ownable(msg.sender) {
         raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
     }
 
-    // events
+    // PROPOSAL MODIFIERS
 
-    modifier canHostProposal(address raiseCreator, bytes32 projectId) {
+    modifier canHostProposal(address raiseCreator, bytes32 raiseId) {
         // does all checks before hosting proposal
 
         // get valid project from storage
@@ -34,12 +33,11 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
             ,
             ,
             uint256 amountRaisedByProject,
-            uint256 proposals
-            ,
-        ) = raiseBoxCore.getProjectInfo(projectId);
+            uint256 proposals,
+        ) = raiseBoxCore.getRaiseInfo(raiseId);
 
         if (block.timestamp > duration) {
-            revert IRaiseBoxCore.RaiseBox_RaiseEnded(projectId);
+            revert IRaiseBoxCore.RaiseBox_RaiseEnded(raiseId);
         } else {
             // ascertain owner is host of project and is trying to host proposal
             if (raiseOwner == address(0) || raiseOwner != raiseCreator) {
@@ -58,8 +56,8 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
             }
 
             // ascertain that project has not hosted proposal in the last 30 days
-            if (hasHostedProposal[projectId]) {
-                if ((block.timestamp - lastProposalTime[projectId]) < INTERVAL_BETWEEN_PROPOSALS) {
+            if (hasHostedProposal[raiseId]) {
+                if ((block.timestamp - lastProposalTime[raiseId]) < INTERVAL_BETWEEN_PROPOSALS) {
                     revert RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
                 }
             }
@@ -68,10 +66,9 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         _;
     }
 
-
-    function hostProposal(string memory proposalTitle, string memory proposal, bytes32 projectId, uint8 dripPercent)
+    function hostProposal(string memory proposalTitle, string memory proposal, bytes32 raiseId, uint8 dripPercent)
         external
-        canHostProposal(msg.sender, projectId)
+        canHostProposal(msg.sender, raiseId)
         returns (uint256 proposalId)
     {
         // validate dripPercent: must be multiple of 5 between 5 and 25
@@ -82,30 +79,30 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
         // effects:
 
-        hasHostedProposal[projectId] = true;
+        hasHostedProposal[raiseId] = true;
         proposalCount += 1;
-        proposalsHosted[projectId] += 1;
-        lastProposalTime[projectId] = block.timestamp;
+        proposalsHosted[raiseId] += 1;
+        lastProposalTime[raiseId] = block.timestamp;
 
-        proposalIdByProject[projectId][proposalsHosted[projectId]] = MileStoneProposalDetails({
-            lastProposalTime: lastProposalTime[projectId],
+        proposalIdByProject[raiseId][proposalsHosted[raiseId]] = MileStoneProposalDetails({
+            lastProposalTime: lastProposalTime[raiseId],
             description: proposalTitle,
             milestone: proposal,
-            proposalId: proposalsHosted[projectId],
+            proposalId: proposalsHosted[raiseId],
             dripPercent: dripPercent
         });
 
         // set voting start time in RaiseBoxVoting (10 minutes after proposal hosting)
-        
-        raiseBoxVoting.setVotingStartTime(projectId, proposalsHosted[projectId], block.timestamp + 10 minutes);
+
+        raiseBoxVoting.setVotingStartTime(raiseId, proposalsHosted[raiseId], block.timestamp + 10 minutes);
 
         // update storage in RaiseBoxCore contract
-        raiseBoxCore.updateNumOfProposals(projectId);
+        raiseBoxCore.updateNumOfProposals(raiseId);
 
         // interactions:
-        proposalId = proposalsHosted[projectId];
+        proposalId = proposalsHosted[raiseId];
 
-        emit NewProposalHosted(msg.sender, proposalId, dripPercent, lastProposalTime[projectId]);
+        emit NewProposalHosted(msg.sender, proposalId, dripPercent, lastProposalTime[raiseId]);
 
         return proposalId;
     }
@@ -114,36 +111,35 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     //          EXTERNAL/GETTER FUNCTIONS             //
     ////                                           ////
 
-    function getProposalCount(bytes32 projectId) external view returns (uint256) {
-        return proposalsHosted[projectId];
+    function getProposalCount(bytes32 raiseId) external view returns (uint256) {
+        return proposalsHosted[raiseId];
     }
 
     function getTotalProposals() external view returns (uint256) {
         return proposalCount;
     }
 
-    function getLastProposalTime(bytes32 projectId) external view returns (uint256) {
-        return lastProposalTime[projectId];
+    function getLastProposalTime(bytes32 raiseId) external view returns (uint256) {
+        return lastProposalTime[raiseId];
     }
 
-    function getHasHostedProposal(bytes32 projectId) external returns (bool) {
-        return hasHostedProposal[projectId];
+    function getHasHostedProposal(bytes32 raiseId) external returns (bool) {
+        return hasHostedProposal[raiseId];
     }
 
-    function getProposalDetails(bytes32 projectId, uint256 proposalId)
+    function getProposalDetails(bytes32 raiseId, uint256 proposalId)
         external
         view
         returns (MileStoneProposalDetails memory proposalDetails_)
     {
-        if (proposalId == 0 || proposalId > proposalsHosted[projectId]) {
+        if (proposalId == 0 || proposalId > proposalsHosted[raiseId]) {
             revert RaiseBoxProposal_getProposalDetails_InvalidProposalId();
         }
-        proposalDetails_ = proposalIdByProject[projectId][proposalId];
+        proposalDetails_ = proposalIdByProject[raiseId][proposalId];
         return proposalDetails_;
     }
 
-    
-    function setVotingContract(address contractToSet) external onlyOwner() {
+    function setVotingContract(address contractToSet) external onlyOwner {
         raiseBoxVoting = IRaiseBoxVoting(contractToSet);
     }
 
