@@ -8,7 +8,7 @@ interface IRaiseBoxCore {
         string valueProposition;
         uint256 amountToRaise;
         uint256 duration;
-        bytes32 projectID;
+        bytes32 raiseId;
         bool projectExists;
         uint256 timeCreated;
         uint256 amountRaisedByProject;
@@ -68,9 +68,9 @@ interface IRaiseBoxCore {
 
     function getProject(bytes32 id) external returns (ProjectInfo memory projectInfo);
 
-    function getRaiseCreator(bytes32 projectId) external view returns (address);
+    function getRaiseCreator(bytes32 raiseId) external view returns (address);
 
-    function getProjectInfo(bytes32 projectID)
+    function getRaiseInfo(bytes32 raiseId)
         external
         returns (
             string memory,
@@ -86,10 +86,10 @@ interface IRaiseBoxCore {
             uint256
         );
 
-    function getAmountToRaise(bytes32 projectId) external returns (uint256);
+    function getAmountToRaise(bytes32 raiseId) external returns (uint256);
 
     function updateStorage(
-        bytes32 projectId,
+        bytes32 raiseId,
         string memory _projectName,
         address _projectOwner,
         string memory _valueProposition,
@@ -104,9 +104,9 @@ interface IRaiseBoxCore {
 
     function incrementRaiseCount() external;
 
-    function doesProjectExist(bytes32 projectID) external view returns (bool);
+    function doesRaiseExist(bytes32 raiseId) external view returns (bool);
 
-    function updateNumOfProposals(bytes32 projectId) external;
+    function updateNumOfProposals(bytes32 raiseId) external;
 
     function getRaiseBoxOwner() external view returns (address);
 
@@ -114,23 +114,11 @@ interface IRaiseBoxCore {
 
     // contribution methods:
 
-    function updateAmountRaisedInStorage(bytes32 projectId, uint256 amountRaised) external;
+    function updateAmountRaisedInStorage(bytes32 raiseId, uint256 amountRaised) external;
 
     // proposal methods;
 
     // voting methods:
 
-
     // expose all the contract addresses using the getters;
-
-    function getRaiseCreationContract() external view returns (address);
-
-    function getContributionContract() external view returns (address);
-
-    function getProposalContract() external view returns (address);
-
-    function getDripHandlerContract() external view returns (address);
-
-    function getVotingContract() external view returns (address);
-
 }
