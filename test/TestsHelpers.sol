@@ -12,7 +12,6 @@ import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {RaiseBoxVoting} from "../src/RaiseBoxVoting.sol";
 import {RaiseBoxDripHandler} from "src/RaiseBoxDripHandler.sol";
 
-
 contract TestsHelpers is Test {
     // main contract that holds general storage
     RaiseBoxCore raiseBoxCore;
@@ -29,7 +28,7 @@ contract TestsHelpers is Test {
     // voting contract
     RaiseBoxVoting raiseBoxVoting;
 
-     // drip handler:
+    // drip handler:
     RaiseBoxDripHandler raiseBoxDripHandler;
 
     // faucet contract address
@@ -61,7 +60,7 @@ contract TestsHelpers is Test {
 
         // deploy the main contract that holds general storage
         raiseBoxCore = new RaiseBoxCore();
-        
+
         raiseBoxOwner = raiseBoxCore.getRaiseBoxOwner();
 
         // setter.setRaiseBoxCore(address())
@@ -70,13 +69,12 @@ contract TestsHelpers is Test {
 
         raiseBoxCore.setRaiseCreationContract(address(raiseBoxRaiseCreationContract));
 
-
-
-        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore)); 
+        raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore));
 
         raiseBoxCore.setProposalContract(address(raiseBoxProposalContract));
 
-        raiseBoxDripHandler = new RaiseBoxDripHandler(address(raiseBoxCore), address(raiseBoxProposalContract), address(0));
+        raiseBoxDripHandler =
+            new RaiseBoxDripHandler(address(raiseBoxCore), address(raiseBoxProposalContract), address(0));
 
         raiseBoxCore.setDripHandlerContract(address(raiseBoxDripHandler));
 
@@ -84,52 +82,18 @@ contract TestsHelpers is Test {
 
         raiseBoxCore.setContributionContract(address(raiseBoxContributionContract));
 
-        raiseBoxVoting = new RaiseBoxVoting(address(raiseBoxCore), address(raiseBoxContributionContract), address(raiseBoxProposalContract), address(raiseBoxDripHandler));
+        raiseBoxVoting = new RaiseBoxVoting(
+            address(raiseBoxCore),
+            address(raiseBoxContributionContract),
+            address(raiseBoxProposalContract),
+            address(raiseBoxDripHandler)
+        );
 
         raiseBoxCore.setVotingContract(address(raiseBoxVoting));
 
         raiseBoxProposalContract.setVotingContract(address(raiseBoxVoting));
 
         raiseBoxDripHandler.setVoting(address(raiseBoxVoting));
-
-       
-
-
-
-
-        
-
-
-
-    
-
-
-
-
-        // // deploy project creation contract with CA of main contract above
-        // raiseBoxRaiseCreationContract = new RaiseBoxCreation(address(raiseBoxCore));
-
-        // // set the address of the project creation contract so it can be referenced
-        // raiseBoxCore.setRaiseCreationContract(address(raiseBoxRaiseCreationContract));
-
-        // raiseBoxContributionContract = new RaiseBoxContribution(address(raiseBoxCore));
-
-        // raiseBoxCore.setContributionContract(address(raiseBoxContributionContract));
-
-        // raiseBoxDripHandler = new RaiseBoxDripHandler(address(raiseBoxCore), address(0), address(0));
-
-        // raiseBoxCore.setDripHandlerContract(address(raiseBoxDripHandler));
-
-        // raiseBoxVoting = new RaiseBoxVoting(address(raiseBoxCore), address(raiseBoxContributionContract), address(raiseBoxDripHandler));
-
-        // raiseBoxProposalContract = new RaiseBoxProposal(address(raiseBoxCore), address(raiseBoxVoting));
-
-        // // link proposal contract back to voting contract
-        // raiseBoxVoting.setProposalContract(address(raiseBoxProposalContract));
-
-        // raiseBoxCore.setProposalContract(address(raiseBoxProposalContract));
-
-        // raiseBoxCore.setVotingContract(address(raiseBoxVoting));
 
         vm.stopPrank();
 
@@ -163,15 +127,24 @@ contract TestsHelpers is Test {
         vm.stopPrank();
 
         vm.startPrank(alice);
-        bytes32 projectID1 = raiseBoxRaiseCreationContract.createRaise(
-            "Hello Elsa", "Chat, trade and swap using AI", 20 ether, 60 weeks
-        );
+        bytes32 projectID1 =
+            raiseBoxRaiseCreationContract.createRaise("Hello Elsa", "Chat, trade and swap using AI", 20 ether, 60 weeks);
         vm.stopPrank();
     }
 
-    function contributeToTestProject(bytes32 projectId, address contributor, uint256 amount) public {
-        vm.startPrank(contributor);
-        raiseBoxContributionContract.contribute{value: amount}(amount, projectId);
+    function contributeToTestProject() public {
+        vm.startPrank(ben);
+        bytes32 projectID0 = raiseBoxRaiseCreationContract.createRaise(
+            "Sentient", "Building AGI - Collectively owned AI", 20 ether, 52 weeks
+        );
         vm.stopPrank();
+
+        address[5] memory contributors = [ebby, sally, uche, max, mark];
+
+        for (uint256 i = 0; i < contributors.length; i++) {
+            vm.startPrank(contributors[i]);
+            raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, projectID0);
+            vm.stopPrank();
+        }
     }
 }
