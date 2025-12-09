@@ -20,19 +20,15 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     IRaiseBoxVoting public raiseBoxVoting;
     IRaiseBoxProposal public raiseBoxProposal;
 
-    constructor(
-        address core,
-        address proposalAddress,
-        address votingAddress
-    ) Ownable(msg.sender) {
+    constructor(address core, address proposalAddress, address votingAddress) Ownable(msg.sender) {
         raiseBoxCore = IRaiseBoxCore(core);
         raiseBoxProposal = IRaiseBoxProposal(proposalAddress);
         raiseBoxVoting = IRaiseBoxVoting(votingAddress);
     }
 
-    function setVoting(address votingContract) external onlyOwner() {
+    function setVoting(address votingContract) external onlyOwner {
         raiseBoxVoting = IRaiseBoxVoting(votingContract);
-         emit VotingSet(votingContract);
+        emit VotingSet(votingContract);
     }
 
     // get needed raiseBox contracts from the core using the getters instead of doing it from constructor:
@@ -62,51 +58,51 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     /// @notice Accept ETH into the drip handler (protocol must point here)
     receive() external payable {}
 
-    
-    function dripFundsForProposal(bytes32 projectId, uint256 proposalId) external /**nonReentrant*/ {
+    function dripFundsForProposal(bytes32 raiseId, uint256 proposalId) external 
+    /**
+     * nonReentrant
+     */
+    {
         if (address(raiseBoxProposal) == address(0)) revert DripHandler_NotProposalContract();
 
         if (msg.sender != address(raiseBoxVoting)) revert DripHandler_NotVotingContract(msg.sender);
 
-        if (!raiseBoxCore.doesProjectExist(projectId)) revert Drip_InvalidProject();
+        if (!raiseBoxCore.doesRaiseExist(raiseId)) revert Drip_InvalidProject();
 
-        if (drippedForProposal[projectId][proposalId]) revert Drip_AlreadyExecuted(projectId, proposalId);
+        if (drippedForProposal[raiseId][proposalId]) revert Drip_AlreadyExecuted(raiseId, proposalId);
 
         // determine percentage to drip using proposal count and last drip data
-        uint256 propCount = raiseBoxProposal.getProposalCount(projectId);
-        uint8 dripPercent = _determineDripPercent(projectId, propCount);
+        uint256 propCount = raiseBoxProposal.getProposalCount(raiseId);
+        uint8 dripPercent = _determineDripPercent(raiseId, propCount);
 
         // compute amount to release based on amount raised at time of raise
-        uint256 amountRaised = raiseBoxCore.getAmtRaisedByProject(projectId);
-        uint256 amountToDrip = ((amountRaised - totalDrippedForProject[projectId]) * dripPercent) / 100;
+        uint256 amountRaised = raiseBoxCore.getAmtRaisedByProject(raiseId);
+        uint256 amountToDrip = ((amountRaised - totalDrippedForProject[raiseId]) * dripPercent) / 100;
 
         // ensure this contract has enough balance
         uint256 dripBalance = address(this).balance;
         if (dripBalance < amountToDrip) revert Drip_InsufficientBalance(dripBalance, amountToDrip);
 
         // effects
-        drippedForProposal[projectId][proposalId] = true;
-        totalDrippedForProject[projectId] += amountToDrip;
-        lastDripPercent[projectId] = dripPercent;
+        drippedForProposal[raiseId][proposalId] = true;
+        totalDrippedForProject[raiseId] += amountToDrip;
+        lastDripPercent[raiseId] = dripPercent;
 
         if (dripPercent == 25) {
             // increment 25% usage
-            if (_25DripsUsed[projectId] < type(uint8).max) {
-                _25DripsUsed[projectId] += 1;
+            if (_25DripsUsed[raiseId] < type(uint8).max) {
+                _25DripsUsed[raiseId] += 1;
             }
         }
 
         // interactions - send funds to project owner
-        address payable projectOwner = payable(raiseBoxCore.getRaiseCreator(projectId));
+        address payable projectOwner = payable(raiseBoxCore.getRaiseCreator(raiseId));
         (bool sent,) = projectOwner.call{value: amountToDrip}("");
-        
+
         if (!sent) revert Drip_InsufficientBalance(address(this).balance, amountToDrip);
 
-        emit FundsDripped(projectId, proposalId, dripPercent, amountToDrip);
+        emit FundsDripped(raiseId, proposalId, dripPercent, amountToDrip);
     }
-
-
-
 
     /// @notice Determine drip percent per project/proposal following rules
     /// @dev Rules implemented:
@@ -115,26 +111,26 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     /// - if proposalCount > 2 && lastDripPercent != 25 && _25DripsUsed < MAX_25P_DRIPS => 25%
     /// - if proposalCount > 2 && lastDripPercent == 25 => 15%
     /// - else => 10%
-    function _determineDripPercent(bytes32 projectId, uint256 propCount) internal view returns (uint8) {
+    function _determineDripPercent(bytes32 raiseId, uint256 propCount) internal view returns (uint8) {
         if (propCount <= 1) {
             return 10;
         }
 
         if (propCount == 2) {
-            if (_25DripsUsed[projectId] < MAX_25P_DRIPS && lastDripPercent[projectId] != 25) {
+            if (_25DripsUsed[raiseId] < MAX_25P_DRIPS && lastDripPercent[raiseId] != 25) {
                 return 25;
             }
             return 15;
         }
 
         // propCount > 2
-        if (lastDripPercent[projectId] == 25) {
+        if (lastDripPercent[raiseId] == 25) {
             // revert RaiseBoxDripHandler_PreviousDripIs25();
             return 15;
         }
 
         // attempt to give 25% if the project hasn't exhausted its two 25% drips
-        if (_25DripsUsed[projectId] < MAX_25P_DRIPS) {
+        if (_25DripsUsed[raiseId] < MAX_25P_DRIPS) {
             return 25;
         }
 
@@ -144,27 +140,23 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
 
     // ---------- Read helpers ----------
 
-    function hasDripped(bytes32 projectId, uint256 proposalId) external view returns (bool) {
-        return drippedForProposal[projectId][proposalId];
+    function hasDripped(bytes32 raiseId, uint256 proposalId) external view returns (bool) {
+        return drippedForProposal[raiseId][proposalId];
     }
 
-    function getLastDripPercent(bytes32 projectId) external view returns (uint8) {
-        return lastDripPercent[projectId];
+    function getLastDripPercent(bytes32 raiseId) external view returns (uint8) {
+        return lastDripPercent[raiseId];
     }
 
-    function get25DripUsed(bytes32 projectId) external view returns (uint8) {
-        return _25DripsUsed[projectId];
+    function get25DripUsed(bytes32 raiseId) external view returns (uint8) {
+        return _25DripsUsed[raiseId];
     }
 
-    function drip(bytes32 projectId, uint256 proposalId) external {
-        this.dripFundsForProposal(projectId, proposalId);
-     }
+    function drip(bytes32 raiseId, uint256 proposalId) external {
+        this.dripFundsForProposal(raiseId, proposalId);
+    }
 
-
-
-
-
-     // /// @notice Set the central RaiseBoxCore contract address
+    // /// @notice Set the central RaiseBoxCore contract address
     // function setCore(address coreAddress) external onlyOwner {
     //     require(coreAddress != address(0), "core address zero");
     //     raiseBoxCore = IRaiseBoxCore(coreAddress);
@@ -197,15 +189,14 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
      *       in the very next drip.
      *     - after first 25% fund drip, drips are capped at 15% untill a drip after the last 25% drip
      *     - drips %: in multiples of 5 up to 100
-     *     - only 10% of overall funds contributed at time of hosting proposal is released per time? 
+     *     - only 10% of overall funds contributed at time of hosting proposal is released per time?
      *     - if proposalCount <= 1 => 10% fund drip
      *     - if proposalCount == 2 => 25% fund drip
      *     - if proposalCount > 2 && lastDripPercent != 25 && _25DripsUsed < MAX_25P_DRIPS => 25%
      *     - if proposalCount > 2 && lastDripPercent == 25 => 15%
      *     - else => 10%
      *
-     *     @param projectId The project ID
+     *     @param raiseId The project ID
      *     @param proposalId The proposal ID
      */
-    
 }
