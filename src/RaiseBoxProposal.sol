@@ -26,12 +26,12 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
         IRaiseBoxCore._RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
         address raiseOwner = raiseInfo.projectInfo.projectOwner;
-        uint256 duration = raiseInfo.raiseDuration;
+        uint256 projectDuration = raiseInfo.projectInfo.projectDuration;
         uint256 raiseTarget = raiseInfo.projectInfo.raiseTarget;
         uint256 amountRaisedByProject = raiseInfo.amountRaisedByProject;
         uint256 proposals = raiseInfo.proposalsHosted;
 
-        if (block.timestamp > duration) {
+        if (block.timestamp > projectDuration) {
             revert RaiseBoxErrorsLib.RaiseBox_RaiseEnded(raiseId);
         } else {
             // ascertain owner is host of project and is trying to host proposal
@@ -39,7 +39,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
                 revert raiseBoxProposal_InvalidProjectOwner();
             }
 
-            // proposal count within raise duration cannot exceed 10(tentative)
+            // proposal count within raise projectDuration cannot exceed 10(tentative)
 
             if (proposals > 10) {
                 revert RaiseBoxProposal_ProposalsExceedsMax(MAX_ALLOWED_PROPOSALS);
@@ -57,8 +57,12 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
             }
 
             // ascertain that raise has infact ended
-            if (raiseTarget != amountRaisedByProject || raiseBoxCore.getRaiseState(raiseId) != IRaiseBoxCore.RaiseState.PROPOSAL) {
+            if (raiseTarget != amountRaisedByProject) {
                 revert RaiseBoxProposal_hostProposal_RaiseNotPassedYet();
+            }
+
+            if (raiseBoxCore.getRaiseState(raiseId) != IRaiseBoxCore.RaiseState.PROPOSAL) {
+                revert RaiseBoxErrorsLib.RaiseBoxProposal_hostProposal_NotInProposalState();
             }
 
            

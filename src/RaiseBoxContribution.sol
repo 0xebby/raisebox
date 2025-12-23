@@ -99,12 +99,12 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         if (block.timestamp > raiseInfo.raiseDuration && totalContributions != raiseInfo.projectInfo.raiseTarget ) { 
             IRaiseBoxCore.RaiseState.FAILED;
             
-            revert RaiseBoxErrorsLib.RaiseBox_RaiseEnded(raiseId);
+            revert RaiseBoxErrorsLib.RaiseBox_RaiseFailed(raiseId);
             
         }
 
         if (raiseInfo.raiseState == IRaiseBoxCore.RaiseState.FAILED) {
-            revert RaiseBoxErrorsLib.RaiseBoxContribution_RaiseFailed();
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_RaiseFailed(raiseId);
         }
 
         if (raiseBoxCore.getRaiseState(raiseId) == IRaiseBoxCore.RaiseState.PROPOSAL) {

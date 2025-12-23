@@ -30,6 +30,7 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
     mapping(address => uint16) public raisesCreated;
     mapping(address projectOwner => uint256 lastRaiseCreated) public i_lastRaiseCreated;
     mapping(address => bool) public hasCreatedRaise;
+    uint256 private raisesCreatedOnRaiseBox;
 
     // ----------------------------------------------------------------------- constructor -------------------------------------------------------------------------  //
 
@@ -39,7 +40,7 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
 
     function createNewRaise(
         IRaiseBoxCore.ProjectInfo calldata projectInfo
-     ) external returns (bytes32 raiseId) {
+     ) external returns (bytes32 _raiseId) {
 
 
         // clean up user input -- projectInfo
@@ -50,7 +51,7 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
         }
 
         if (projectInfo.projectDuration > PROJECT_LIFESPAN || projectInfo.projectDuration < MIN_PROJECT_DURATION ) {
-            revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_InvalidRaiseDuration();
+            revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_InvalidProjectDuration();
 
         }
 
@@ -60,14 +61,7 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
         
 
         // generate raiseId:
-        raiseId = keccak256(abi.encode(projectInfo.projectName, projectInfo.raiseTarget, timeCreated, projectInfo.valueProposition, msg.sender, projectInfo.projectDuration));
-
-        console.log(block.timestamp);
-
-        // if (block.timestamp >= PROJECT_LIFESPAN) {
-        //     hasCreatedRaise[msg.sender] = false;
-        //     raiseBoxCore.getRaiseState(raiseId) == IRaiseBoxCore.RaiseState.INACTIVE;
-        // }
+        bytes32 raiseId = keccak256(abi.encode(projectInfo.projectName, projectInfo.raiseTarget, timeCreated, projectInfo.valueProposition, msg.sender, projectInfo.projectDuration));
 
         // checks that a project cannot create more than one raise within 78 weeks
         if (raiseBoxCore.getRaiseState(raiseId) == IRaiseBoxCore.RaiseState.CONTRIBUTION || hasCreatedRaise[msg.sender] ) {
@@ -75,7 +69,6 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
                 revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_RaiseCreationCooldown();
             }
         }
-
 
         raisesCreated[msg.sender] += 1;
         raiseBoxCore.updateRaiseInfo( // updates storage with raiseCreation info
@@ -91,6 +84,7 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
         );
         i_lastRaiseCreated[msg.sender] = timeCreated;
         hasCreatedRaise[msg.sender] = true;
+        raisesCreatedOnRaiseBox++;
         
         
 
@@ -103,7 +97,9 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
             timeCreated
         );
 
-        return raiseId;
+        _raiseId = raiseId;
+
+        return _raiseId;
 
      }  
 
@@ -226,6 +222,10 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
 
     function viewProjectInfo(bytes32 raiseId) external {
         raiseBoxCore.getRaiseInfo(raiseId);
+    }
+
+    function getAllRaisesCreated() external view returns (uint256) {
+        return raisesCreatedOnRaiseBox;
     }
 
     // function calProtocolFees(

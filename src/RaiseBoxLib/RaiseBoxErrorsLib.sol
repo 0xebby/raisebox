@@ -22,12 +22,14 @@ library RaiseBoxErrorsLib {
 
     /// @notice errors thrown during raise creation on raisebox
     error RaiseCreation_createRaise_RaiseAlreadyExist();
-    error RaiseBoxCreation_createRaise_InvalidRaiseDuration();
+    error RaiseBoxCreation_createRaise_InvalidProjectDuration();
     error RaiseBoxCreation_createRaise_CannotRaiseZeroFunds();
     error RaiseBoxCreation_createRaise_RaiseCreationCooldown();
     error RaiseBoxCreation_createRaise_HasAlreadyCreatedRaise(address creator);
+    error RaiseBoxProposal_hostProposal_NotInProposalState();
 
-    error RaiseBoxContribution_RaiseFailed();
+    error RaiseBoxContribution_RaiseFailed(bytes32 raiseId);
+    error RaiseBox_RaiseFailed(bytes32 raiseId);
     error RaiseBoxCore_getProject_InvalidProjectId();
     error RaiseBoxCore_NotAuthorized();
     error RaiseBox_RaiseEnded(bytes32 raiseId);

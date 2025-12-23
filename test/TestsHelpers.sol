@@ -110,6 +110,10 @@ contract TestsHelpers is Test {
         vm.deal(sally, 100 ether);
         vm.deal(ebby, 100 ether);
         vm.deal(vitalik, 100 ether);
+
+        // whitelist 2 users to serve as raiseCreators:
+        raiseBoxCore.verifyAndAddToWhitelist(ebby);
+        raiseBoxCore.verifyAndAddToWhitelist(vitalik);
     }
 
     /**

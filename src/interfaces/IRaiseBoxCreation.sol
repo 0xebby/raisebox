@@ -60,6 +60,8 @@ interface IRaiseBoxCreation {
 
     function getRaiseCreator(bytes32 raiseId) external returns (address);
     function viewProjectInfo(bytes32 raiseId) external;
-        function getHasCreatedARaise(address creator) external returns (bool);
+    function getHasCreatedARaise(address creator) external returns (bool);
+    function getAllRaisesCreated() external view returns (uint256);
+
 
 }

@@ -6,166 +6,18 @@ import {TestsHelpers} from "./TestsHelpers.sol";
 import {IRaiseBoxCore} from "src/interfaces/IRaiseBoxCore.sol";
 
 contract RaiseBoxCreationTest is Test, TestsHelpers {
-    // function testCreateProject() public {
-    //     vm.startPrank(alice);
-    //     bytes32 projectID1 =
-    //         raiseBoxRaiseCreationContract.createRaise("project 1", "solve testnet sybil with zkp", 10 ether, 60 weeks);
-    //     vm.stopPrank();
-
-    //     (
-    //         string memory projectName,
-    //         address projectCreator,
-    //         string memory projectValuePropDesciption,
-    //         uint256 raiseTarget,
-    //         uint256 durationOfRaise,
-    //         bytes32 raiseId,
-    //         bool projectExist,
-    //         uint256 timeCreated,
-    //         uint256 amountRaised,
-    //         uint256 proposalsHosted,
-    //         uint256 NumOfProjectCreated
-    //     ) = raiseBoxCore.getRaiseInfo(projectID1);
-
-    //     assertEq(projectName, "project 1");
-    //     assertEq(projectValuePropDesciption, "solve testnet sybil with zkp");
-    //     assertEq(projectCreator, alice);
-    //     assertEq(raiseTarget, 10 ether);
-    //     assertEq(durationOfRaise, 60 weeks);
-    //     assertEq(raiseId, projectID1);
-    //     assertEq(amountRaised, 0);
-    //     assertEq(timeCreated, block.timestamp);
-    //     assertEq(proposalsHosted, 0);
-
-    //     vm.startPrank(ben);
-    //     bytes32 projectID2 = raiseBoxRaiseCreationContract.createRaise(
-    //         "sentient", "AGI: AI but collectively owned and decentralized", 30 ether, 55 weeks
-    //     );
-    //     vm.stopPrank();
-
-    //     vm.startPrank(joe);
-    //     bytes32 projectID3 = raiseBoxRaiseCreationContract.createRaise(
-    //         "FeedTheWorld NGO", "operation feed 2,000 kids", 100 ether, 55 weeks
-    //     );
-    //     vm.stopPrank();
-
-    //     vm.startPrank(sally);
-
-    //     raiseBoxContributionContract.contribute{value: 6 ether}(
-    //         6 ether, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-
-    //     raiseBoxContributionContract.getContributionsToProject(
-    //         ben, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-    //     raiseBoxContributionContract.getTotalContributionsToProject(
-    //         0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-
-    //     vm.stopPrank();
-
-    //     vm.startPrank(joe);
-
-    //     raiseBoxContributionContract.contribute{value: 6 ether}(
-    //         6 ether, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-
-    //     raiseBoxContributionContract.getContributionsToProject(
-    //         ben, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-    //     raiseBoxContributionContract.getTotalContributionsToProject(
-    //         0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-
-    //     vm.stopPrank();
-
-    //     vm.startPrank(alice);
-
-    //     raiseBoxContributionContract.contribute{value: 6 ether}(
-    //         6 ether, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-
-    //     raiseBoxContributionContract.getContributionsToProject(
-    //         ben, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-    //     raiseBoxContributionContract.getTotalContributionsToProject(
-    //         0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-
-    //     vm.stopPrank();
-
-    //     vm.startPrank(testOwner);
-
-    //     raiseBoxContributionContract.contribute{value: 6 ether}(
-    //         6 ether, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-
-    //     raiseBoxContributionContract.getContributionsToProject(
-    //         ben, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-    //     raiseBoxContributionContract.getTotalContributionsToProject(
-    //         0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-
-    //     vm.stopPrank();
-
-    //     vm.startPrank(address(0x1));
-    //     vm.deal(address(0x1), 50 ether);
-
-    //     raiseBoxContributionContract.contribute{value: 5 ether}(
-    //         5 ether, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-
-    //     raiseBoxContributionContract.getContributionsToProject(
-    //         ben, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-    //     raiseBoxContributionContract.getTotalContributionsToProject(
-    //         0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-
-    //     vm.stopPrank();
-
-    //     raiseBoxCore.getAmtRaisedByProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
-
-    //     vm.startPrank(address(0x11));
-    //     vm.deal(address(0x11), 50 ether);
-
-    //     raiseBoxContributionContract.contribute{value: 1 ether}(
-    //         1 ether, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-
-    //     raiseBoxContributionContract.getContributionsToProject(
-    //         ben, 0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-    //     raiseBoxContributionContract.getTotalContributionsToProject(
-    //         0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b
-    //     );
-
-    //     vm.stopPrank();
-
-    //     // advanceBlockTime(104 weeks); // 2 years
-    //     // vm.startPrank(joe);
-    //     // bytes32 projectID4 =
-    //     //     raiseBoxRaiseCreationContract.createRaise("NGO", "missionary journey to Rome", 50 ether, 30 days);
-    //     // vm.stopPrank();
-
-    //     raiseBoxCore.getRaiseCount();
-    //     raiseBoxCore.getProject(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
-
-    //     // raiseBoxContributionContract.getContributors(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
-    //     // raiseBoxContributionContract.getContributorsCount(0xae13d606d445835ab7365f6ea8fdd3208ece4b8c27adb5a3d65a2ebdbe39120b);
-    //     // raiseBoxContributionContract.getContributorsCount(0x17e319276da7a011fd833f23f0a7e1e61f6b68d4e50953d6b818b13ac05524e4);
-    //     // raiseBoxContributionContract.getContributorsCount(0x1fb69664d8a26cd9173477051b28805064fd6be187121907b1894822c61b27ea);
-    //     // // raiseBoxContributionContract.getContributorsCount(0x1fb69664d8a26cd9173477051b28805064fd6be187121907b1894822c61b27ae);
-    // }
-
+    
    function testCreateARaise() public {
 
     // whitelist raise creator first
+    // raise creators
     raiseBoxCore.verifyAndAddToWhitelist(uche);
-    raiseBoxCore.verifyAndAddToWhitelist(ebby);
+    // raiseBoxCore.verifyAndAddToWhitelist(ebby);
+    raiseBoxCore.verifyAndAddToWhitelist(max);
+    raiseBoxCore.verifyAndAddToWhitelist(sally);
 
     vm.startPrank(uche);
-   bytes32 projectId = raiseBoxRaiseCreationContract.createNewRaise(
+   bytes32 projectId1 = raiseBoxRaiseCreationContract.createNewRaise(
         IRaiseBoxCore.ProjectInfo({
             projectOwner:uche,
             projectName:"sentient",
@@ -176,75 +28,232 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     );
     vm.stopPrank();
 
-    raiseBoxCore.getRaiseInfo(projectId);
+    vm.startPrank(ebby);
+   bytes32 projectId2 = raiseBoxRaiseCreationContract.createNewRaise(
+        IRaiseBoxCore.ProjectInfo({
+            projectOwner:ebby,
+            projectName:"arbitrum",
+            valueProposition:"blazing fast L2 built on ethereum's security",
+            raiseTarget:200 ether,
+            projectDuration:55 weeks
+        })
+    );
+    vm.stopPrank();
 
-    raiseBoxCore.getRaiseState(projectId);
+    vm.startPrank(sally);
+   bytes32 projectId3 = raiseBoxRaiseCreationContract.createNewRaise(
+        IRaiseBoxCore.ProjectInfo({
+            projectOwner:sally,
+            projectName:"signal",
+            valueProposition:"decentralized social app",
+            raiseTarget:50 ether,
+            projectDuration:59 weeks
+        })
+    );
+    vm.stopPrank();
 
-    address[5] memory contributors = [ebby, sally, ben, max, mark];
+    vm.startPrank(max);
+   bytes32 projectId4 = raiseBoxRaiseCreationContract.createNewRaise(
+        IRaiseBoxCore.ProjectInfo({
+            projectOwner:max,
+            projectName:"navy opsec",
+            valueProposition:"provide combat gear for navy for period of 5 years",
+            raiseTarget:35 ether,
+            projectDuration:60 weeks
+        })
+    );
+    vm.stopPrank();
 
-    for (uint256 i = 0; i < contributors.length; i++) {
-            vm.startPrank(contributors[i]);
-            raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, projectId);
-            vm.stopPrank();
-        }
+
+
+
+//     raiseBoxCore.getRaiseInfo(projectId);
+
+//     raiseBoxCore.getRaiseState(projectId);
+
+//     address[5] memory contributors = [ebby, sally, ben, max, mark];
+
+//     for (uint256 i = 0; i < contributors.length; i++) {
+//             vm.startPrank(contributors[i]);
+//             raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, projectId);
+//             vm.stopPrank();
+//         }
 
     
-     vm.startPrank(uche);
+//      vm.startPrank(uche);
 
-        uint256 proposalId1 = raiseBoxProposalContract.hostProposal(
-            "new hires", "hiring of devs for project, 2 smart contract devs and 1 rust dev", projectId, 10
-        );
+//         uint256 proposalId1 = raiseBoxProposalContract.hostProposal(
+//             "new hires", "hiring of devs for project, 2 smart contract devs and 1 rust dev", projectId, 10
+//         );
 
-    vm.stopPrank();
-    raiseBoxCore.getRaiseInfo(projectId);
-    raiseBoxCore.getRaiseState(projectId);
+//     vm.stopPrank();
+//     raiseBoxCore.getRaiseInfo(projectId);
+//     raiseBoxCore.getRaiseState(projectId);
 
-    // advanceBlockTime(4 weeks);
+//     // advanceBlockTime(4 weeks);
 
-    //  vm.startPrank(uche);
+//     //  vm.startPrank(uche);
 
-    //     uint256 proposalId2 = raiseBoxProposalContract.hostProposal(
-    //         "second proposal", "hiring of devs for project, 2 smart contract devs and 1 rust dev", projectId, 10
-    //     );
+//     //     uint256 proposalId2 = raiseBoxProposalContract.hostProposal(
+//     //         "second proposal", "hiring of devs for project, 2 smart contract devs and 1 rust dev", projectId, 10
+//     //     );
 
-    // vm.stopPrank();
-    // raiseBoxCore.getRaiseInfo(projectId);
-    // raiseBoxCore.getRaiseState(projectId);
+//     // vm.stopPrank();
+//     // raiseBoxCore.getRaiseInfo(projectId);
+//     // raiseBoxCore.getRaiseState(projectId);
 
-   // jump to just after scheduled voting start for proposal 1
-        uint256 _start = raiseBoxVoting.votingStartTime(projectId, 1);
-        vm.warp(_start + 1);
+//    // jump to just after scheduled voting start for proposal 1
+//         uint256 _start = raiseBoxVoting.votingStartTime(projectId, 1);
+//         vm.warp(_start + 1);
 
-        vm.startPrank(mark);
-        raiseBoxVoting.vote(projectId, 1, true, mark);
-        vm.stopPrank();
+//         vm.startPrank(mark);
+//         raiseBoxVoting.vote(projectId, 1, true, mark);
+//         vm.stopPrank();
 
-        vm.startPrank(sally);
-        raiseBoxVoting.vote(projectId, 1, false, sally);
-        vm.stopPrank();
+//         vm.startPrank(sally);
+//         raiseBoxVoting.vote(projectId, 1, false, sally);
+//         vm.stopPrank();
 
-        vm.startPrank(max);
-        raiseBoxVoting.delegateVote(projectId, 1, max, ben);
-        raiseBoxVoting.vote(projectId, 1, true, ben);
-        vm.stopPrank();
+//         vm.startPrank(max);
+//         raiseBoxVoting.delegateVote(projectId, 1, max, ben);
+//         raiseBoxVoting.vote(projectId, 1, true, ben);
+//         vm.stopPrank();
 
-        vm.startPrank(ebby);
-        raiseBoxVoting.vote(projectId, 1, true, ebby);
-        vm.stopPrank();
+//         vm.startPrank(ebby);
+//         raiseBoxVoting.vote(projectId, 1, true, ebby);
+//         vm.stopPrank();
 
-        vm.warp(_start + 10 days);
-        console.log(address(raiseBoxProposalContract));
-        // raiseBoxVoting.endVoting(projectId, 1);
+//         vm.warp(_start + 10 days);
+//         console.log(address(raiseBoxProposalContract));
+//         // raiseBoxVoting.endVoting(projectId, 1);
 
-        // special trigger by project owner if user voting doesn't lead to vote tallying, can only happen if voting has ended(voting duration exceeded by atleast 12 hours) and the caller is in-fact the proposal owner
-        vm.startPrank(uche);
-        raiseBoxVoting.triggerVoteTally(projectId, 1);
-        vm.stopPrank();
+//         // special trigger by project owner if user voting doesn't lead to vote tallying, can only happen if voting has ended(voting duration exceeded by atleast 12 hours) and the caller is in-fact the proposal owner
+//         vm.startPrank(uche);
+//         raiseBoxVoting.triggerVoteTally(projectId, 1);
+//         vm.stopPrank();
 
-        raiseBoxCore.getRaiseState(projectId);
-        raiseBoxCore.getRaiseInfo(projectId);
+//         raiseBoxCore.getRaiseState(projectId);
+//         raiseBoxCore.getRaiseInfo(projectId);
 
    }
+
+   function testCreateARaiseWithoutWhitelist() public {
+        vm.startPrank(max);
+        vm.expectRevert();
+        bytes32 projectId4 = raiseBoxRaiseCreationContract.createNewRaise(
+        IRaiseBoxCore.ProjectInfo({
+            projectOwner:max,
+            projectName:"navy opsec",
+            valueProposition:"provide combat gear for navy for period of 5 years",
+            raiseTarget:35 ether,
+            projectDuration:60 weeks
+        })
+    );
+    vm.stopPrank();
+   }
+
+   function testContributionFailsAfterRaiseDurationElapse() public {
+    raiseBoxCore.verifyAndAddToWhitelist(max);
+      vm.startPrank(max);
+        bytes32 projectId4 = raiseBoxRaiseCreationContract.createNewRaise(
+        IRaiseBoxCore.ProjectInfo({
+            projectOwner:max,
+            projectName:"navy opsec",
+            valueProposition:"provide combat gear for navy for period of 5 years",
+            raiseTarget:35 ether,
+            projectDuration:60 weeks
+        })
+    );
+    vm.stopPrank();
+
+    vm.startPrank(uche);
+    raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, projectId4);
+    vm.stopPrank();
+
+    advanceBlockTime(20 weeks); // allowed raise duration is 5 weeks
+
+    vm.startPrank(uche);
+    vm.expectRevert();
+    raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, projectId4);
+    vm.stopPrank();
+
+
+   }
+
+   function testUserCanContributeExactlyMinimumContributionAmount() public {
+     vm.startPrank(vitalik);
+        bytes32 projectId = raiseBoxRaiseCreationContract.createNewRaise(
+        IRaiseBoxCore.ProjectInfo({
+            projectOwner:vitalik,
+            projectName:"navy opsec",
+            valueProposition:"provide combat gear for navy for period of 5 years",
+            raiseTarget:35 ether,
+            projectDuration:60 weeks
+        })
+    );
+    vm.stopPrank();
+
+    vm.startPrank(ebby);
+    raiseBoxContributionContract.contribute{value: 0.1 ether}(0.1 ether, projectId );
+    vm.stopPrank();
+
+    vm.startPrank(ebby);
+    raiseBoxContributionContract.contribute{value: 0.1 ether}(0.1 ether, projectId );
+    vm.stopPrank();
+
+    vm.startPrank(max);
+    raiseBoxContributionContract.contribute{value: 0.1 ether}(0.1 ether, projectId );
+    vm.stopPrank();
+   }
+
+      function testContributionRevertsIfAmountIsGreaterThanMaxAllowedOrEqualRaiseTarget() public {
+     vm.startPrank(vitalik);
+        bytes32 projectId = raiseBoxRaiseCreationContract.createNewRaise(
+        IRaiseBoxCore.ProjectInfo({
+            projectOwner:vitalik,
+            projectName:"navy opsec",
+            valueProposition:"provide combat gear for navy for period of 5 years",
+            raiseTarget:35 ether,
+            projectDuration:60 weeks
+        })
+    );
+    vm.stopPrank();
+
+    vm.startPrank(ebby);
+    raiseBoxContributionContract.contribute{value: 0.1 ether}(0.1 ether, projectId );
+    vm.stopPrank();
+
+    vm.startPrank(ebby);
+    vm.expectRevert();
+    raiseBoxContributionContract.contribute{value: 36 ether}(36 ether, projectId );
+    vm.stopPrank(); // 6.9 more ether alllowed for this user but my error doesn't cover decimal (fix required)
+
+    vm.startPrank(max);
+    vm.expectRevert();
+    raiseBoxContributionContract.contribute{value: 35 ether}(35 ether, projectId );
+    vm.stopPrank();
+
+    vm.startPrank(ebby);
+   vm.expectRevert();
+    raiseBoxContributionContract.contribute{value: 0 ether}(0 ether, projectId );
+    vm.stopPrank();
+   }
+
+   function testCannotContributeAfterRaiseStateEntersProposal() public {
+    // creates a project and contributes till raise passes
+    // state switches from inactive to contribution to proposal 0->1->2
+    // at proposal state, raise has already passed and any contribution afterwards should revert
+    bytes32 projectId = contributeToTestProject();
+
+    // try contributing after this, contributor must be user who hasn't contributed before
+vm.startPrank(vitalik);
+   vm.expectRevert();
+    raiseBoxContributionContract.contribute{value: 1 ether}(1 ether, projectId );
+vm.stopPrank();
+
+   }
+
+   
 
     function testContributeToProjects() public {
 
@@ -490,5 +499,48 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 
         assert(raiseBoxProposalContract.getProposalCount(projectId) == numOfProposalsHosted);
         raiseBoxProposalContract.getTotalProposals();
+        raiseBoxCore.getRaiseInfo(projectId);
+        raiseBoxCore.getRaiseState(projectId);
+
+        vm.startPrank(ben);
+
+        advanceBlockTime(5 weeks);
+
+        uint256 proposalId6 = raiseBoxProposalContract.hostProposal(
+            "v2 launch",
+            "version 2 of testnet app is ready to be tested",
+            projectId,
+            20
+        );
+
+        // numOfProposalsHosted++;
+
+        vm.stopPrank();
+
+         raiseBoxProposalContract.getTotalProposals();
+        raiseBoxCore.getRaiseInfo(projectId);
+        raiseBoxCore.getRaiseState(projectId);
+
+         vm.startPrank(ben);
+
+        advanceBlockTime(500 weeks);
+        vm.expectRevert();
+
+        uint256 proposalId7 = raiseBoxProposalContract.hostProposal(
+            "v2 launch",
+            "version 2 of testnet app is ready to be tested",
+            projectId,
+            20
+        );
+
+        // numOfProposalsHosted++;
+
+        vm.stopPrank();
+
+         raiseBoxProposalContract.getTotalProposals();
+        raiseBoxCore.getRaiseInfo(projectId);
+        raiseBoxCore.getRaiseState(projectId);
+
+        
     }
 }

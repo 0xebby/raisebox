@@ -57,7 +57,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
     // percent of the amount raised by the project that goes to protocol
     uint256 private constant PROTOCOL_FEE = 15; // 1.5%
-    uint256 public constant RAISE_DURATION = 5 weeks;
+    uint256 public constant RAISE_DURATION = 5 weeks; // 1month and 1 week
 
     // roles
     bytes32 public constant RAISE_CREATION_CONTRACT = keccak256("RAISEBOX_RAISE_CREATION");
@@ -285,14 +285,14 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
         _raiseInfo = raiseInfo[raiseId];
 
-        if (_raiseInfo.proposalsHosted < 1) {
+        
         _raiseInfo.proposalsHosted += 1;
 
         _raiseInfo.raiseState = _updateState(RaiseState.VOTING, raiseId);
 
-        } else {
-        _raiseInfo.raiseState = _updateState(RaiseState.PROPOSAL, raiseId);
-        }
+        //  else {
+        // _raiseInfo.raiseState = _updateState(RaiseState.PROPOSAL, raiseId);
+        // }
 
         emit RaiseBoxEventsLib.RaiseHostedProposalsUpdated();
        
@@ -418,8 +418,11 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         return raiseBoxOwner;
     }
 
-    function isRaiseCreator(address raiseCreator) external view returns (bool) {
-        authorizedCallers[RAISE_CREATION_CONTRACT][msg.sender];
+    function isRaiseCreator(address raiseCreator, bytes32 raiseId) external view returns (bool) {
+        _RaiseInfo memory raiseInfo = raiseInfo[raiseId];
+        if (raiseInfo.projectInfo.projectOwner == raiseCreator) {
+            return true;
+        }
       }
 
     function isAuthorizedCaller(bytes32 role, address caller) external returns (bool) {

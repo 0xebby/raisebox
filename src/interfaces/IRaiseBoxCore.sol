@@ -86,7 +86,7 @@ interface IRaiseBoxCore {
         RaiseState _raiseState
     ) external;
 
-    function isRaiseCreator(address raiseCreator) external view returns (bool);
+    function isRaiseCreator(address raiseCreator, bytes32 raiseId) external view returns (bool);
 
     function getRaiseInfo(bytes32 raiseId) external view returns (_RaiseInfo memory);
 
