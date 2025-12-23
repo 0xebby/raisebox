@@ -8,14 +8,17 @@ pragma solidity ^0.8.19;
 interface IRaiseBoxProposal {
     // proposal related events:
     event NewProposalHosted(
-        address indexed projectCreator, uint256 indexed proposalId, uint8 dripPercent, uint256 lastProposalTime
+        uint256 indexed proposalId, 
+        uint8 dripPercent, 
+        uint256 lastProposalTime
     );
+    
     event ProposalPassed();
 
     error raiseBoxProposal_InvalidProjectOwner();
     error RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
     error RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
-    error RaiseBoxProposal_hostProposal_RaiseNotEnded();
+    error RaiseBoxProposal_hostProposal_RaiseNotPassedYet();
     error RaiseBoxProposal_InvalidDripPercent();
     error RaiseBoxProposal_hostProposal_MaxYearlyProposalsReached();
     error RaiseBoxProposal_getProposalDetails_InvalidProposalId();
@@ -29,6 +32,13 @@ interface IRaiseBoxProposal {
         uint256 proposalId;
         uint8 dripPercent;
     }
+
+    enum ProposalState {
+        PROPOSAL,
+        FAILED,
+        IN_VOTING,
+        PROPOSAL_COOLDOWN
+    } // [0,1,2,3]
 
     function getProposalCount(bytes32 raiseId) external view returns (uint256);
 
