@@ -5,6 +5,8 @@ pragma solidity ^0.8.19;
     Note: this is the interface for the RaiseBoxCreation Raise Creation contract
 */
 
+import {IRaiseBoxCore} from "src/interfaces/IRaiseBoxCore.sol";
+
 interface IRaiseBoxCreation {
     // protocol fees related errors:
     error RaiseBox_NoFeesToWithdraw();
@@ -21,7 +23,7 @@ interface IRaiseBoxCreation {
     // project creation related errors:
     error RaiseCreation_createRaise_RaiseAlreadyExist();
     error RaiseBox_getProjectByIndex_InvalidProjectIndex();
-    error RaiseBoxCreation_createRaise_ActiveRaise();
+    error RaiseBoxCreation_createRaise_RaiseAlreadyActive();
     error RaiseBoxCreation_createRaise_ZeroAddress();
     error RaiseBoxCreation_createRaise_InvalidValueProp();
     error RaiseBoxCreation_createRaise_CannotRaiseZeroFunds();
@@ -29,16 +31,19 @@ interface IRaiseBoxCreation {
     error RaiseBoxCreation_createRaise_DurationCannotBeZero();
     error RaiseBoxCreation_createRaise_InvalidProjectName();
 
+    error RaiseBoxRaiseCreation_OwnerNotWhiteListed();
+
     // raise related errors:
     error RaiseBox_RaiseFailed();
 
     error RaiseBox_NoContributionsMade();
 
-    event RaiseBoxCreateProject_ProjectCreated(
+
+    event RaiseCreation_RaiseCreated(
         string projectName,
         address projectOwner,
         string projectValueProposition,
-        uint256 amountToRaise,
+        uint256 raiseTarget,
         uint256 duration,
         bytes32 raiseId,
         bool projectExist,
@@ -55,4 +60,6 @@ interface IRaiseBoxCreation {
 
     function getRaiseCreator(bytes32 raiseId) external returns (address);
     function viewProjectInfo(bytes32 raiseId) external;
+        function getHasCreatedARaise(address creator) external returns (bool);
+
 }
