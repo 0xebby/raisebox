@@ -69,7 +69,7 @@ Replace `<PROJECT_OWNER_ADDRESS>` with the desired EOA address.
 
 #### Deploy via Foundry
 ```bash
-forge script script/DeployCrowdFund.s.sol --rpc-url <SEPOLIA_RPC_URL> --broadcast --verify
+forge script script/DeployRaiseBox.s.sol --rpc-url <SEPOLIA_RPC_URL> --broadcast --verify
 ```
 
 ## Usage
@@ -90,4 +90,20 @@ MIT
 
 ## Contact
 For questions or support, open an issue or contact the repository maintainer.
+
+## raisebox protocol flow:
+user hosts a raise on raisebox protocol
+contributors contribute to the raise
+raise passes
+raise owner host proposals as milestones are reached requesting a percentage of raised amount
+contributors vote on proposal to determine if drip will be approved or rejected
+drip is released on successful proposal/milestone
+same flow untill entire raise is released to raise host and what they are building is achieved
+
+host raise -> contribute to raise -> host proposal -> vote on proposal -> drip raise percentage --
+
+raise failure instances:
+failed proposals exxceed max failed proposals allowed
+total proposals >= max proposals
+block.timestamp > projectDuration(60 weeks)
 

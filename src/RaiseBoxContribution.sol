@@ -9,9 +9,12 @@ import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {IRaiseBoxContribution} from "../src/interfaces/IRaiseBoxContribution.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 import {IRaiseBoxDripHandler} from "src/interfaces/IRaiseBoxDripHandler.sol";
+import {RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
+import {RaiseBoxEventsLib} from "src/RaiseBoxLib/RaiseBoxEventsLib.sol";
+
 
 contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
-    IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
+    IRaiseBoxCore public immutable raiseBoxCore;
 
     IRaiseBoxDripHandler public immutable raiseBoxDripHandler; // drip contract
 
@@ -21,8 +24,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     // contributions/users related state variables:
     mapping(address => uint256) public contributorsToAmountContributed; // not project dependent
 
-    mapping(address contributor => mapping(bytes32 raiseId => uint256 amtContributed)) public
-        amountContributedToProject;
+    mapping(address contributor => mapping(bytes32 raiseId => uint256 amtContributed)) public amountContributedToProject;
 
     mapping(bytes32 => address[]) private contributors;
 
@@ -38,12 +40,6 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
     mapping(bytes32 => uint256) public raisers;
 
-    // contribution state enum
-    enum ContributionState {
-        CONTRIBUTION_LIVE,
-        CONTRIBUTION_ENDED
-    }
-
     constructor(address raiseBoxCoreAddress, address dripHandlerAddress) {
         raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
         raiseBoxDripHandler = IRaiseBoxDripHandler(dripHandlerAddress);
@@ -52,45 +48,44 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     function contribute(uint256 amount, bytes32 raiseId) external payable nonReentrant {
         // raiseId should be filled automatically via UI for project clicked by user
 
-        // get valid project from storage
-
-        (, address projectOwner,, uint256 amtToRaise,, bytes32 raiseId,,,,,) = raiseBoxCore.getRaiseInfo(raiseId);
+        // get valid project from storage 
+        IRaiseBoxCore._RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
 
         uint256 totalContributions = totalContributionsToProject[raiseId];
 
-        uint256 maxContribution = calMaxContribution(raiseId, amtToRaise);
+        uint256 maxContribution = calMaxContribution(raiseId, raiseInfo.projectInfo.raiseTarget);
 
         uint256 userPrevContribution = amountContributedToProject[msg.sender][raiseId];
 
         // Checks
 
-        if (msg.sender == projectOwner) revert RaiseBoxContribution_SelfContribution();
+        if (msg.sender == raiseInfo.projectInfo.projectOwner) revert RaiseBoxErrorsLib.RaiseBoxContribution_SelfContribution();
 
-        if (raiseId == 0) {
-            revert RaiseBoxContribution_InvalidProject();
+        if (raiseId == 0 || raiseId != raiseInfo.raiseId) {
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_InvalidRaiseId();
         }
 
         // address projectOwner = project.projectOwner;
-        if (projectOwner == address(0)) {
-            revert RaiseBoxContribution_InvalidProject();
+        if (raiseInfo.projectInfo.projectOwner == address(0)) {
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_InvalidProject();
         }
 
         if (amount == 0) {
-            revert RaiseBoxContribution_ZeroAmount();
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_ZeroAmount();
         }
 
         uint256 minContribution = raiseBoxCore.getMinimumContribution();
         if (amount < minContribution) {
-            revert RaiseBoxContribution_ContributeMoreEth(minContribution);
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_ContributeMoreEth(minContribution);
         }
 
         if (msg.value != amount) {
-            revert RaiseBoxContribution_ValueSentMismatch();
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_ValueSentMismatch();
         }
 
         if ((userPrevContribution + amount) > maxContribution) {
-            revert RaiseBoxContribution_contribute_AboveMaxAllowed(
-                amtToRaise,
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_contribute_AboveMaxAllowed(
+                raiseInfo.projectInfo.raiseTarget,
                 string(
                     abi.encodePacked(
                         "Cannot over contribute: you can contribute only: ",
@@ -101,8 +96,19 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
             );
         }
 
-        if (totalContributions == amtToRaise) {
-            revert IRaiseBoxCore.RaiseBox_RaiseEnded(raiseId);
+        if (block.timestamp > raiseInfo.raiseDuration && totalContributions != raiseInfo.projectInfo.raiseTarget ) { 
+            IRaiseBoxCore.RaiseState.FAILED;
+            
+            revert RaiseBoxErrorsLib.RaiseBox_RaiseEnded(raiseId);
+            
+        }
+
+        if (raiseInfo.raiseState == IRaiseBoxCore.RaiseState.FAILED) {
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_RaiseFailed();
+        }
+
+        if (raiseBoxCore.getRaiseState(raiseId) == IRaiseBoxCore.RaiseState.PROPOSAL) {
+            revert RaiseBoxErrorsLib.RaiseBox_RaiseAlreadyPassed(raiseId, raiseInfo.projectInfo.raiseTarget, totalContributions);
         }
 
         // Effects
@@ -124,20 +130,20 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         // only update storage when raise has passed,
         // i.e. the amount to raise by project has been raised successfully
         // instead of updating storage everytime a contribution is made, wasteful
-        if (totalContributions == amtToRaise) {
-            raiseBoxCore.updateAmountRaisedInStorage(raiseId, totalContributions);
+        if (totalContributions == raiseInfo.projectInfo.raiseTarget) {
+            raiseBoxCore.updateRaiseInfo(raiseInfo.projectInfo, raiseInfo.raiseDuration, raiseInfo.raiseCreationTime, totalContributionsToProject[raiseId], raiseInfo.projectRaiseCount, raiseInfo.proposalsHosted, raiseInfo.raiseExists, raiseId, IRaiseBoxCore.RaiseState.PROPOSAL);
 
-            emit IRaiseBoxCore.RaiseBox_RaisePassed(amtToRaise, amtToRaise);
+            emit RaiseBoxEventsLib.RaiseBox_RaisePassed(raiseInfo.projectInfo.raiseTarget, raiseInfo.projectInfo.raiseTarget);
         }
 
         // Interactions
 
         (bool successfullyContributed,) = address(raiseBoxDripHandler).call{value: amount}(""); // funds sent to protocol for safekeeping pending release to project
         if (!successfullyContributed) {
-            revert RaiseBoxContribution_ContributionFailed();
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_ContributionFailed();
         }
 
-        emit Contributed(
+        emit RaiseBoxEventsLib.Contributed(
             msg.sender,
             amount,
             raiseId,
@@ -168,7 +174,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     function getMaxContributionAllowedForProject(bytes32 raiseId) external returns (uint256) {
         uint256 amountToRaise = raiseBoxCore.getAmountToRaise(raiseId);
         if (amountToRaise == 0) {
-            revert RaiseBoxContribution_getMaxContributionAllowedForProject_CannotBeZero();
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_getMaxContributionAllowedForProject_CannotBeZero();
         }
         return calMaxContribution(raiseId, amountToRaise);
     }
@@ -183,21 +189,21 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
     function getContributionsToProject(address user, bytes32 raiseId) external returns (uint256[] memory) {
         if (!raiseBoxCore.doesRaiseExist(raiseId)) {
-            revert IRaiseBoxCore.RaiseBoxCore_getProject_InvalidProjectId();
+            revert RaiseBoxErrorsLib.RaiseBoxCore_getProject_InvalidProjectId();
         }
         return contributionsToProjectArray[user][raiseId];
     }
 
     function getContributorsCount(bytes32 raiseId) external returns (uint256 contributorCount) {
         if (!raiseBoxCore.doesRaiseExist(raiseId)) {
-            revert IRaiseBoxCore.RaiseBoxCore_getProject_InvalidProjectId();
+            revert RaiseBoxErrorsLib.RaiseBoxCore_getProject_InvalidProjectId();
         }
         return contributors[raiseId].length;
     }
 
     function getTotalContributionsToProject(bytes32 raiseId) external returns (uint256 contributionsReceived) {
         if (!raiseBoxCore.doesRaiseExist(raiseId)) {
-            revert IRaiseBoxCore.RaiseBoxCore_getProject_InvalidProjectId();
+            revert RaiseBoxErrorsLib.RaiseBoxCore_getProject_InvalidProjectId();
         }
         return totalContributionsToProject[raiseId];
     }
@@ -205,5 +211,5 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     function getHasContributed(bytes32 raiseId, address user) external view returns (bool) {
         return hasContributed[raiseId][user];
     }
-    // testing
+
 }

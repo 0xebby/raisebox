@@ -11,6 +11,7 @@ import {RaiseBoxProposal} from "../src/RaiseBoxProposal.sol";
 import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {RaiseBoxVoting} from "../src/RaiseBoxVoting.sol";
 import {RaiseBoxDripHandler} from "src/RaiseBoxDripHandler.sol";
+import {IRaiseBoxCore} from "src/interfaces/IRaiseBoxCore.sol";
 
 contract TestsHelpers is Test {
     // main contract that holds general storage
@@ -101,7 +102,7 @@ contract TestsHelpers is Test {
         vm.deal(testOwner, 500 ether);
         vm.deal(alice, 100 ether);
         vm.deal(joe, 100 ether);
-        // vm.deal(ben, 100 ether);
+        vm.deal(ben, 100 ether);
         vm.deal(max, 100 ether);
         vm.deal(uche, 100 ether);
         vm.deal(sam, 100 ether);
@@ -119,32 +120,44 @@ contract TestsHelpers is Test {
         vm.warp(block.timestamp + raiseDuration_);
     }
 
-    function createTestProjects() public {
+    // function createTestProjects() public {
+    //     vm.startPrank(ben);
+    //     bytes32 projectID0 = raiseBoxRaiseCreationContract.createRaise(
+    //         "Sentient", "Building AGI - Collectively owned AI", 20 ether, 52 weeks
+    //     );
+    //     vm.stopPrank();
+
+    //     vm.startPrank(alice);
+    //     bytes32 projectID1 =
+    //         raiseBoxRaiseCreationContract.createRaise("Hello Elsa", "Chat, trade and swap using AI", 20 ether, 60 weeks);
+    //     vm.stopPrank();
+    // }
+
+    function contributeToTestProject() public returns (bytes32 projectId) {
+        raiseBoxCore.verifyAndAddToWhitelist(ben);
         vm.startPrank(ben);
-        bytes32 projectID0 = raiseBoxRaiseCreationContract.createRaise(
-            "Sentient", "Building AGI - Collectively owned AI", 20 ether, 52 weeks
+        projectId = raiseBoxRaiseCreationContract.createNewRaise(
+            IRaiseBoxCore.ProjectInfo({
+            projectOwner:ben,
+            projectName:"sentient",
+            valueProposition:"agi",
+            raiseTarget:20 ether,
+            projectDuration:56 weeks
+        })
         );
         vm.stopPrank();
 
-        vm.startPrank(alice);
-        bytes32 projectID1 =
-            raiseBoxRaiseCreationContract.createRaise("Hello Elsa", "Chat, trade and swap using AI", 20 ether, 60 weeks);
-        vm.stopPrank();
-    }
+        raiseBoxCore.getRaiseInfo(projectId);
 
-    function contributeToTestProject() public {
-        vm.startPrank(ben);
-        bytes32 projectID0 = raiseBoxRaiseCreationContract.createRaise(
-            "Sentient", "Building AGI - Collectively owned AI", 20 ether, 52 weeks
-        );
-        vm.stopPrank();
 
         address[5] memory contributors = [ebby, sally, uche, max, mark];
 
         for (uint256 i = 0; i < contributors.length; i++) {
             vm.startPrank(contributors[i]);
-            raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, projectID0);
+            raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, projectId);
             vm.stopPrank();
         }
+
+        return projectId;
     }
 }

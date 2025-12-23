@@ -7,9 +7,11 @@ import {IRaiseBoxContribution} from "../src/interfaces/IRaiseBoxContribution.sol
 import {IRaiseBoxProposal} from "../src/interfaces/IRaiseBoxProposal.sol";
 import "../lib/forge-std/src/Test.sol";
 import {IRaiseBoxDripHandler} from "src/interfaces/IRaiseBoxDripHandler.sol";
+import{RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
 
 contract RaiseBoxVoting is IRaiseBoxVoting {
-    IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
+    IRaiseBoxCore public immutable raiseBoxCore; // core contract
+
     IRaiseBoxContribution public immutable raiseBoxContribution; // contribution contract
 
     IRaiseBoxProposal public immutable raiseBoxProposal; // proposal contract
@@ -17,6 +19,10 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     IRaiseBoxDripHandler public immutable raiseBoxDripHandler; // drip contract
 
     address public owner;
+
+    //** ------------------------------------------------------------------ **//
+    //                        CONSTRUCTOR                                     //
+    //** ------------------------------------------------------------------ **//
 
     constructor(
         address raiseBoxCoreAddress,
@@ -31,11 +37,9 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         owner = msg.sender;
     }
 
-    // /// @notice Set the RaiseBoxProposal contract address (callable by deployer)
-    // function setProposalContract(address proposalContract) external {
-    //     require(msg.sender == owner, "Only owner");
-    //     raiseBoxProposal = IRaiseBoxProposal(proposalContract);
-    // }
+    //** ------------------------------------------------------------------ **//
+    //                        MODIFIERS                                       //
+    //** ------------------------------------------------------------------ **//
 
     modifier canVote(bytes32 raiseId, address user, uint256 proposalId) {
         // ascertain msg.sender has contributed to project
@@ -46,7 +50,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         }
 
         if (votingEnded[raiseId][proposalId]) {
-            revert RaiseBoxVoting_VotingEnded(raiseId, proposalId);
+            revert RaiseBoxVoting_VotingAlreadyEnded(raiseId, proposalId);
         }
 
         if (hasDelegatedForProposal[user][raiseId][proposalId]) {
@@ -62,82 +66,20 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
         // if voting elapsed, mark ended and revert
         if (block.timestamp >= _start + VOTING_DURATION) {
-            votingEnded[raiseId][proposalId] = true;
+            _endVoting(raiseId, proposalId);
             _tallyVotes(raiseId, proposalId);
 
-            revert RaiseBoxVoting_VotingEnded(raiseId, proposalId);
+            // revert RaiseBoxVoting_VotingAlreadyEnded(raiseId, proposalId);
         }
 
         if (hasVotedOnProposal[raiseId][proposalId][user]) {
             revert RaiseBoxVoting_AlreadyVoted(proposalId, user);
         }
+
+        if (raiseBoxCore.getRaiseState(raiseId) != IRaiseBoxCore.RaiseState.VOTING) {
+            revert RaiseBoxVoting_ProposalNotLive();
+        }
         _;
-    }
-
-    // special ownerOnly function that triggers vote end incase no voting attempt is made  after voting duration elapsed, this has to happen to trigger vote tallying and eventual funds drip
-
-    function triggerVoteTally(bytes32 raiseId, uint256 proposalId) external {
-        if (msg.sender != raiseBoxCore.getRaiseCreator(raiseId)) revert RaiseBoxVoting_NotRaiseOwner(msg.sender);
-
-        uint256 _start = votingStartTime[raiseId][proposalId];
-
-        if (votingEnded[raiseId][proposalId]) revert RaiseBoxVoting_VotingEnded(raiseId, proposalId);
-
-        // if voting elapsed, mark ended and emit events:
-        if (block.timestamp >= _start + VOTING_DURATION) {
-            votingEnded[raiseId][proposalId] = true;
-            _tallyVotes(raiseId, proposalId);
-            emit RaiseBoxVoting_VotingEndedSucessfully();
-        } else {
-            revert RaiseBoxVoting_VotingNotEnded();
-        }
-
-        emit RaiseBoxVoting_VoteTallyTriggered(msg.sender, proposalId, block.timestamp);
-    }
-
-    // function endVoting(bytes32 raiseId, uint256 proposalId) external {
-    //     votingEnded[raiseId][proposalId] = true;
-    // }
-
-    function vote(bytes32 raiseId, uint256 proposalId, bool side, address voter)
-        external
-        canVote(raiseId, voter, proposalId)
-    {
-        if (delegatee[voter][raiseId][proposalId]) {
-            if (side) {
-                votesForProposal[raiseId][proposalId] += (delegatedVotes[voter][raiseId][proposalId] + 1); // votes delegated to voter plus his vote
-            } else {
-                votesAgainstProposal[raiseId][proposalId] += (delegatedVotes[voter][raiseId][proposalId] + 1);
-            }
-        } else {
-            if (side) {
-                votesForProposal[raiseId][proposalId] += 1;
-            } else {
-                votesAgainstProposal[raiseId][proposalId] += 1;
-            }
-        }
-
-        hasVotedOnProposal[raiseId][proposalId][voter] = true;
-
-        emit Voted(voter, raiseId, proposalId, side);
-    }
-
-    /**
-     * @notice Set voting start time for a proposal (calls restircted to proposal contract)
-     *     @dev sets the start time for voting on a specific proposal within a project.
-     *     @param raiseId unique id of a project.
-     *     @param proposalId unique id of a proposal within the project.
-     *     @param startTime voting start time.
-     *     @dev emits VotingStartTimeSet to mark success.
-     */
-    function setVotingStartTime(bytes32 raiseId, uint256 proposalId, uint256 startTime) external {
-        // only the proposal contract should be able to set voting start times
-        if (msg.sender != address(raiseBoxProposal)) {
-            revert("Only proposal contract can set voting start time.");
-        }
-        votingStartTime[raiseId][proposalId] = startTime;
-
-        emit VotingStartTimeSet(raiseId, proposalId, startTime);
     }
 
     modifier canDelegate(bytes32 raiseId, uint256 proposalId, address from, address to) {
@@ -153,22 +95,13 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         }
 
         if (!fromIsContributor || !toIsContributor) {
-            revert IRaiseBoxContribution.RaiseBoxContribution_NotAContributor(raiseId);
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_NotAContributor(raiseId);
         }
 
         if (delegatee[to][raiseId][proposalId] || delegatee[from][raiseId][proposalId]) {
             revert RaiseBoxVoting_LoopDelegationForbidden();
         }
-        _;
-    }
 
-    function delegateVote(bytes32 raiseId, uint256 proposalId, address from, address to)
-        external
-        canDelegate(raiseId, proposalId, from, to)
-    /**
-     * canVote(raiseId, from, proposalId) canVote(raiseId, to, proposalId)
-     */
-    {
         if (hasDelegatedForProposal[from][raiseId][proposalId]) {
             revert RaiseBoxVoting_CannotDelegateTwice();
         }
@@ -176,7 +109,88 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         if (hasVotedOnProposal[raiseId][proposalId][from] || hasVotedOnProposal[raiseId][proposalId][to]) {
             revert RaiseBoxVoting_CannotDelegateAfterVoting(proposalId, from);
         }
+        _;
+    }
 
+
+    //** ------------------------------------------------------------------ **//
+    //                        EXTERNAL FUNCTIONS                              //
+    //** ------------------------------------------------------------------ **//
+
+    /// @notice special ownerOnly function that triggers vote end incase no voting    attempt is made after voting duration elapsed
+    /// @notice this has to happen to trigger vote tallying and eventual funds drip
+    /// @notice any attempt to end just after voting duration exceeds will fail
+    /// @dev ends voting if voting hasn't already been ended by another call
+    /// @dev can only end if voting duration has been exceeded by atleast 12 hours
+    function triggerVoteTally(bytes32 raiseId, uint256 proposalId) external {
+        if (msg.sender != raiseBoxCore.getRaiseCreator(raiseId)) revert RaiseBoxVoting_NotRaiseOwner(msg.sender);
+
+        uint256 _start = votingStartTime[raiseId][proposalId];
+
+        if (votingEnded[raiseId][proposalId]) revert RaiseBoxVoting_VotingAlreadyEnded(raiseId, proposalId);
+
+        // if voting duration elapsed, mark ended and emit events:
+        if (block.timestamp >= (_start + VOTING_DURATION + 12 hours)) {
+            _endVoting(raiseId, proposalId);
+            _tallyVotes(raiseId, proposalId);
+            emit RaiseBoxVoting_VoteTallyTriggered(msg.sender, proposalId, block.timestamp);
+        } else {
+            revert RaiseBoxVoting_VotingNotEnded();
+        }
+
+    }
+
+    /// @notice function to cast votes on an hosted proposal
+    /// @notice only raise contributors can call `vote` successfully
+    /// @param raiseId id of the raise where the proposal is hosted
+    /// @param proposalId id of the proposal to vote for
+    /// @param support direction of vote, either `for` or `against`
+    /// @param voter address of the voter, must be a `contributor` to raise to vote
+    function vote(bytes32 raiseId, uint256 proposalId, bool support, address voter)
+        external
+        canVote(raiseId, voter, proposalId)
+    {
+        if (delegatee[voter][raiseId][proposalId]) {
+            if (support) {
+                votesForProposal[raiseId][proposalId] += (delegatedVotes[voter][raiseId][proposalId] + 1); // votes delegated to voter plus his vote
+            } else {
+                votesAgainstProposal[raiseId][proposalId] += (delegatedVotes[voter][raiseId][proposalId] + 1);
+            }
+        } else {
+            if (support) {
+                votesForProposal[raiseId][proposalId] += 1;
+            } else {
+                votesAgainstProposal[raiseId][proposalId] += 1;
+            }
+        }
+
+        hasVotedOnProposal[raiseId][proposalId][voter] = true;
+
+        emit Voted(voter, raiseId, proposalId, support);
+    }
+
+    /**
+    /// @notice Set voting start time for a proposal, only prop contract can call
+    /// @dev sets the start time for voting on a specific proposal within a project.
+    /// @param raiseId unique id of a project.
+    /// @param proposalId unique id of a proposal within the project.
+    /// @param startTime voting start time.
+    /// @dev emits VotingStartTimeSet to mark success.
+    **/
+    function setVotingStartTime(bytes32 raiseId, uint256 proposalId, uint256 startTime) external {
+        // only the proposal contract should be able to set voting start times
+        if (msg.sender != address(raiseBoxProposal)) {
+            revert("Only proposal contract can set voting start time.");
+        }
+        votingStartTime[raiseId][proposalId] = startTime;
+
+        emit VotingStartTimeSet(raiseId, proposalId, startTime);
+    }
+
+    function delegateVote(bytes32 raiseId, uint256 proposalId, address from, address to)
+        external
+        canDelegate(raiseId, proposalId, from, to)
+    {
         // record delegation
         delegatedVoteTo[from][raiseId][proposalId] = to;
         // add voting right to 'to' address
@@ -188,35 +202,37 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         emit VoteDelegated(from, to);
     }
 
-    function _tallyVotes(bytes32 raiseId, uint256 proposalId) internal returns (uint256, uint256) {
-        (uint256 forVotes, uint256 againstVotes, uint256 totalVotes) = this.getProposalVotes(raiseId, proposalId);
+    //** ------------------------------------------------------------------ **//
+    //                        STATE VARIABLES                                 //
+    //** ------------------------------------------------------------------ **//
 
-        if (forVotes > againstVotes) {
-            // delegate call to dripHandler
-            raiseBoxDripHandler.dripFundsForProposal(raiseId, proposalId);
-        } else {
-            revert RaiseBoxVoting_ProposalFailed();
-        }
+    mapping(bytes32 => mapping(uint256 => mapping(address => bool))) public hasVotedOnProposal; // raiseId => proposalId => voter => hasVoted
 
-        // if for is greater than against, proposal passed and % of funds will be dripped
+    mapping(address => mapping(bytes32 => mapping(uint256 => address))) public delegatedVoteTo; // from => raiseId => proposalId => to
 
-        emit VotesTallied(raiseId, proposalId, forVotes, againstVotes, totalVotes);
+    mapping(bytes32 => mapping(uint256 => uint256)) public votesForProposal; // raiseId => proposalId => votesFor
 
-        return (forVotes, againstVotes);
-    }
+    mapping(bytes32 => mapping(uint256 => uint256)) public votesAgainstProposal; // raiseId => proposalId => votesAgainst
 
-    function _isValidProposal(bytes32 raiseId, uint256 proposalId) internal returns (bool) {
-        // get proposalCount
-        uint256 propCount = raiseBoxProposal.getProposalCount(raiseId);
+    mapping(bytes32 => mapping(uint256 => bool)) public votingEnded; // raiseId => proposalId => votingEnded
 
-        // get proposalDetails
-        IRaiseBoxProposal.MileStoneProposalDetails memory propDetails =
-            raiseBoxProposal.getProposalDetails(raiseId, proposalId);
+    mapping(bytes32 => mapping(uint256 => uint256)) public votingStartTime;
 
-        if (propDetails.proposalId <= propCount) {
-            return true;
-        }
-    }
+    uint256 public constant VOTING_DURATION = 7 days;
+
+    mapping(address => mapping(bytes32 => mapping(uint256 => uint256))) public delegatedVotes; // address => number of delegated votes received
+
+    mapping(address => bool) public delegated;
+
+    // delegated votes tracker scoped to proposal:
+    mapping(address => mapping(bytes32 => mapping(uint256 => bool))) public hasDelegatedForProposal; // address => raiseId => proposalId => hasDelegated
+
+    mapping(address => mapping(bytes32 => mapping(uint256 => bool))) public delegatee;
+
+
+    //** ------------------------------------------------------------------ **//
+    //                        GETTER FUNCTIONS                                //
+    //** ------------------------------------------------------------------ **//
 
     /**
      * @notice Get votes for, against, and total votes for a proposal
@@ -257,30 +273,54 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         return hasVotedOnProposal[raiseId][proposalId][contributor];
     }
 
-    // state variables:
 
-    mapping(bytes32 => mapping(uint256 => mapping(address => bool))) public hasVotedOnProposal; // raiseId => proposalId => voter => hasVoted
 
-    mapping(address => mapping(bytes32 => mapping(uint256 => address))) public delegatedVoteTo; // from => raiseId => proposalId => to
+    //** ------------------------------------------------------------------ **//
+    //                        INTERNAL FUNCTIONS                              //
+    //** ------------------------------------------------------------------ **//
 
-    mapping(bytes32 => mapping(uint256 => uint256)) public votesForProposal; // raiseId => proposalId => votesFor
 
-    mapping(bytes32 => mapping(uint256 => uint256)) public votesAgainstProposal; // raiseId => proposalId => votesAgainst
+    function _isValidProposal(bytes32 raiseId, uint256 proposalId) internal returns (bool) {
+        // get proposalCount
+        uint256 propCount = raiseBoxProposal.getProposalCount(raiseId);
 
-    mapping(bytes32 => mapping(uint256 => bool)) public votingEnded; // raiseId => proposalId => votingEnded
+        // get proposalDetails
+        IRaiseBoxProposal.MileStoneProposalDetails memory propDetails =
+            raiseBoxProposal.getProposalDetails(raiseId, proposalId);
 
-    mapping(bytes32 => mapping(uint256 => uint256)) public votingStartTime;
+        if (propDetails.proposalId <= propCount) {
+            return true;
+        }
+    }
 
-    uint256 public constant VOTING_DURATION = 7 days;
+    function _tallyVotes(bytes32 raiseId, uint256 proposalId) internal returns (uint256, uint256) {
+        (uint256 forVotes, uint256 againstVotes, uint256 totalVotes) = this.getProposalVotes(raiseId, proposalId);
 
-    mapping(address => mapping(bytes32 => mapping(uint256 => uint256))) public delegatedVotes; // address => number of delegated votes received
+        emit VotesTallied(raiseId, proposalId, forVotes, againstVotes, totalVotes);
 
-    mapping(address => bool) public delegated;
+        // if for is greater than against, proposal passed and % of funds will be dripped
+        if (forVotes > againstVotes) {
+            // delegate call to dripHandler since proposal has passed
+            raiseBoxDripHandler.dripFundsForProposal(raiseId, proposalId);
+        } else {
+            revert RaiseBoxVoting_ProposalFailed();
+        }
 
-    // delegated votes tracker scoped to proposal:
-    mapping(address => mapping(bytes32 => mapping(uint256 => bool))) public hasDelegatedForProposal; // address => raiseId => proposalId => hasDelegated
+        return (forVotes, againstVotes);
+    }
 
-    mapping(address => mapping(bytes32 => mapping(uint256 => bool))) public delegatee;
+    /// @dev sets voting ended for a given proposalId
+    function _endVoting(bytes32 raiseId, uint256 proposalId) internal {
+       votingEnded[raiseId][proposalId] = true;
+
+    IRaiseBoxCore._RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
+
+    raiseBoxCore.updateRaiseInfo(raiseInfo.projectInfo, raiseInfo.raiseDuration, raiseInfo.raiseCreationTime, raiseInfo.amountRaisedByProject, raiseInfo.projectRaiseCount, raiseInfo.proposalsHosted, raiseInfo.raiseExists, raiseId, IRaiseBoxCore.RaiseState.PROPOSAL);
+       emit RaiseBoxVoting_VotingEndedSucessfully();
+    }
+
+
+
 
     // get number of votes casted by individual voter
     // function getVotesCasted(address user, bytes32 raiseId, uint256 proposalId) external returns (uint256 votesCasted) {
@@ -325,7 +365,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     // i.e A delegates to B, B cannot delegate to C- a delegated vote cannot be re-delegated
     // 14. each contributor gets one vote per proposal regardless of amount contributed
     // 15. voting sides: yes/no (for/against)
-    // 16. votes are public, anyone can see how many votes each side has at any time but actual voters(address) are private using zk-SNARKS (to be implemented in future versions)
+    // 16. votes are public, anyone can see how many votes each support has at any time but actual voters(address) are private using zk-SNARKS (to be implemented in future versions)
     // 17. voting power cannot be transferred or sold?
     // 18. only one proposal can be active at a time per project - this is alreay enforced in RaiseBoxProposal contract
     // 19. project owner cannot vote on own proposals

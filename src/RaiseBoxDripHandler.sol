@@ -53,11 +53,6 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     // maximum allowed 25% drips per project lifecycle
     uint8 public constant MAX_25P_DRIPS = 2;
 
-    // constructor() Ownable(msg.sender) {}
-
-    /// @notice Accept ETH into the drip handler (protocol must point here)
-    receive() external payable {}
-
     function dripFundsForProposal(bytes32 raiseId, uint256 proposalId) external 
     /**
      * nonReentrant
@@ -155,6 +150,9 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     function drip(bytes32 raiseId, uint256 proposalId) external {
         this.dripFundsForProposal(raiseId, proposalId);
     }
+
+    /// @notice Accept ETH into the drip handler (protocol must point here)
+    receive() external payable {}
 
     // /// @notice Set the central RaiseBoxCore contract address
     // function setCore(address coreAddress) external onlyOwner {
