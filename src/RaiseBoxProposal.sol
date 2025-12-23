@@ -7,6 +7,7 @@ import {console} from "../lib/forge-std/src/Test.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 import {IRaiseBoxVoting} from "../src/interfaces/IRaiseBoxVoting.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
 
 contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     IRaiseBoxCore public immutable raiseBoxCore; // the central contract that holds main storage of raisebox
@@ -23,21 +24,15 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
         // get valid project from storage
 
-        (
-            ,
-            address raiseOwner,
-            ,
-            uint256 amountToRaise,
-            uint256 duration,
-            ,
-            ,
-            ,
-            uint256 amountRaisedByProject,
-            uint256 proposals,
-        ) = raiseBoxCore.getRaiseInfo(raiseId);
+        IRaiseBoxCore._RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
+        address raiseOwner = raiseInfo.projectInfo.projectOwner;
+        uint256 duration = raiseInfo.raiseDuration;
+        uint256 raiseTarget = raiseInfo.projectInfo.raiseTarget;
+        uint256 amountRaisedByProject = raiseInfo.amountRaisedByProject;
+        uint256 proposals = raiseInfo.proposalsHosted;
 
         if (block.timestamp > duration) {
-            revert IRaiseBoxCore.RaiseBox_RaiseEnded(raiseId);
+            revert RaiseBoxErrorsLib.RaiseBox_RaiseEnded(raiseId);
         } else {
             // ascertain owner is host of project and is trying to host proposal
             if (raiseOwner == address(0) || raiseOwner != raiseCreator) {
@@ -50,17 +45,23 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
                 revert RaiseBoxProposal_ProposalsExceedsMax(MAX_ALLOWED_PROPOSALS);
             }
 
-            // ascertain that raise has infact ended
-            if (amountToRaise != amountRaisedByProject) {
-                revert RaiseBoxProposal_hostProposal_RaiseNotEnded();
-            }
+            // if (block.timestamp >= INTERVAL_BETWEEN_PROPOSALS ) {
+            //        raiseInfo.raiseState = IRaiseBoxCore.RaiseState.PROPOSAL;
+            // }
 
             // ascertain that project has not hosted proposal in the last 30 days
             if (hasHostedProposal[raiseId]) {
                 if ((block.timestamp - lastProposalTime[raiseId]) < INTERVAL_BETWEEN_PROPOSALS) {
                     revert RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
-                }
+                } 
             }
+
+            // ascertain that raise has infact ended
+            if (raiseTarget != amountRaisedByProject || raiseBoxCore.getRaiseState(raiseId) != IRaiseBoxCore.RaiseState.PROPOSAL) {
+                revert RaiseBoxProposal_hostProposal_RaiseNotPassedYet();
+            }
+
+           
         }
 
         _;
@@ -76,6 +77,9 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
             revert RaiseBoxProposal_InvalidDripPercent();
         }
         // checks already done in canHostProposal modifier above.
+
+        // get valid project from storage 
+        IRaiseBoxCore._RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
 
         // effects:
 
@@ -97,12 +101,13 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         raiseBoxVoting.setVotingStartTime(raiseId, proposalsHosted[raiseId], block.timestamp + 10 minutes);
 
         // update storage in RaiseBoxCore contract
-        raiseBoxCore.updateNumOfProposals(raiseId);
+        raiseBoxCore.updateRaiseInfo(raiseInfo.projectInfo, raiseInfo.raiseDuration, raiseInfo.raiseCreationTime, raiseInfo.amountRaisedByProject, raiseInfo.projectRaiseCount, raiseInfo.proposalsHosted, raiseInfo.raiseExists, raiseId, IRaiseBoxCore.RaiseState.VOTING);
 
         // interactions:
         proposalId = proposalsHosted[raiseId];
+        IRaiseBoxCore.RaiseState.VOTING;
 
-        emit NewProposalHosted(msg.sender, proposalId, dripPercent, lastProposalTime[raiseId]);
+        emit NewProposalHosted(proposalId, dripPercent, lastProposalTime[raiseId]);
 
         return proposalId;
     }
