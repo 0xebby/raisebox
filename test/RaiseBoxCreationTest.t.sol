@@ -292,20 +292,20 @@ vm.stopPrank();
         vm.warp(_start + 1);
 
         vm.startPrank(mark);
-        raiseBoxVoting.vote(projectId, 1, true, mark);
+        raiseBoxVoting.vote(projectId, 1, true);
         vm.stopPrank();
 
         vm.startPrank(sally);
-        raiseBoxVoting.vote(projectId, 1, false, sally);
+        raiseBoxVoting.vote(projectId, 1, false);
         vm.stopPrank();
 
         vm.startPrank(max);
         raiseBoxVoting.delegateVote(projectId, 1, max, uche);
-        raiseBoxVoting.vote(projectId, 1, true, uche);
+        raiseBoxVoting.vote(projectId, 1, true);
         vm.stopPrank();
 
         vm.startPrank(ebby);
-        raiseBoxVoting.vote(projectId, 1, true, ebby);
+        raiseBoxVoting.vote(projectId, 1, true);
         vm.stopPrank();
 
         vm.warp(_start + 10 days);
@@ -343,15 +343,15 @@ vm.stopPrank();
         vm.warp(_start2 + 1);
 
         vm.startPrank(mark);
-        raiseBoxVoting.vote(projectId, proposalId2, false, mark);
+        raiseBoxVoting.vote(projectId, proposalId2, false);
         vm.stopPrank();
 
         vm.startPrank(sally);
-        raiseBoxVoting.vote(projectId, proposalId2, true, sally);
+        raiseBoxVoting.vote(projectId, proposalId2, true);
         vm.stopPrank();
 
         vm.startPrank(uche);
-        raiseBoxVoting.vote(projectId, proposalId2, true, uche);
+        raiseBoxVoting.vote(projectId, proposalId2, true);
         vm.stopPrank();
 
         vm.warp(_start2 + 10 days);
@@ -383,15 +383,15 @@ vm.stopPrank();
         vm.warp(_start3 + 1);
 
         vm.startPrank(mark);
-        raiseBoxVoting.vote(projectId, proposalId3, false, mark);
+        raiseBoxVoting.vote(projectId, proposalId3, false);
         vm.stopPrank();
 
         vm.startPrank(sally);
-        raiseBoxVoting.vote(projectId, proposalId3, true, sally);
+        raiseBoxVoting.vote(projectId, proposalId3, true);
         vm.stopPrank();
 
         vm.startPrank(uche);
-        raiseBoxVoting.vote(projectId, proposalId3, true, uche);
+        raiseBoxVoting.vote(projectId, proposalId3, true);
         vm.stopPrank();
 
         vm.warp(_start3 + 10 days);
@@ -426,15 +426,15 @@ vm.stopPrank();
         vm.warp(_start4 + 1);
 
         vm.startPrank(mark);
-        raiseBoxVoting.vote(projectId, proposalId4, false, mark);
+        raiseBoxVoting.vote(projectId, proposalId4, false);
         vm.stopPrank();
 
         vm.startPrank(sally);
-        raiseBoxVoting.vote(projectId, proposalId4, true, sally);
+        raiseBoxVoting.vote(projectId, proposalId4, true);
         vm.stopPrank();
 
         vm.startPrank(uche);
-        raiseBoxVoting.vote(projectId, proposalId4, true, uche);
+        raiseBoxVoting.vote(projectId, proposalId4, true);
         vm.stopPrank();
 
         vm.warp(_start4 + 10 days);
@@ -469,15 +469,15 @@ vm.stopPrank();
         vm.warp(_start5 + 1);
 
         vm.startPrank(mark);
-        raiseBoxVoting.vote(projectId, proposalId5, false, mark);
+        raiseBoxVoting.vote(projectId, proposalId5, false);
         vm.stopPrank();
 
         vm.startPrank(sally);
-        raiseBoxVoting.vote(projectId, proposalId5, true, sally);
+        raiseBoxVoting.vote(projectId, proposalId5, true);
         vm.stopPrank();
 
         vm.startPrank(uche);
-        raiseBoxVoting.vote(projectId, proposalId5, true, uche);
+        raiseBoxVoting.vote(projectId, proposalId5, true);
         vm.stopPrank();
 
         vm.startPrank(max);
@@ -487,7 +487,7 @@ vm.stopPrank();
         vm.stopPrank();
 
         vm.startPrank(ebby);
-        raiseBoxVoting.vote(projectId, proposalId5, true, ebby);
+        raiseBoxVoting.vote(projectId, proposalId5, true);
         vm.stopPrank();
 
         vm.warp(_start5 + 10 days);
@@ -542,5 +542,132 @@ vm.stopPrank();
         raiseBoxCore.getRaiseState(projectId);
 
         
+    }
+
+
+    function testVotingAndDelegationOnProposalsWorks() public {
+        // create and contribute to raise till it passes
+        bytes32 raiseId = contributeToTestProject();
+
+        // host first proposal ---> proposal1
+        vm.prank(ben);
+        uint256 proposalId = raiseBoxProposalContract.hostProposal(
+            "MVP",
+            "Finished buildin gthe minimum viable product for sentient agi and it's ready for testing",
+            raiseId,
+            20
+        );
+
+        // delegate votes to ethereum:
+        raiseBoxVoting.delegateVote(raiseId, proposalId, arbitrum, ethereum);
+        raiseBoxVoting.delegateVote(raiseId, proposalId, openseas, ethereum);
+        raiseBoxVoting.delegateVote(raiseId, proposalId, gowagr, ethereum);
+        raiseBoxVoting.delegateVote(raiseId, proposalId, elon, ethereum);
+        // vm.startPrank(ethereum);
+        // raiseBoxVoting.vote(raiseId, proposalId, true);
+
+        advanceBlockTime(45 hours);
+        raiseBoxVoting.delegateVote(raiseId, proposalId, magiceden, trump);
+        raiseBoxVoting.delegateVote(raiseId, proposalId, polymarket, trump);
+        // raiseBoxVoting.delegateVote(raiseId, proposalId, tether, trump);
+        advanceBlockTime(3 hours);
+
+        address[10] memory voters = [ebby, sally, uche, max, mark, alice, joe, testOwner, sam, vitalik];
+
+        // delegators votes:
+        vm.startPrank(ethereum);
+        raiseBoxVoting.vote(raiseId, proposalId, true);
+        vm.stopPrank();
+
+
+
+
+        for (uint256 i = 0; i < voters.length; i++) {
+            vm.startPrank(voters[i]);
+            if (i % 2 == 0) {
+                raiseBoxVoting.vote(raiseId, proposalId, true );
+
+            } else {
+                raiseBoxVoting.vote(raiseId, proposalId, false  );
+            }
+            
+            vm.stopPrank();
+        }
+
+        vm.startPrank(tether);
+        raiseBoxVoting.vote(raiseId, proposalId, false);
+        vm.stopPrank();
+
+        vm.startPrank(trump);
+        raiseBoxVoting.vote(raiseId, proposalId, false);
+        vm.stopPrank();
+
+        raiseBoxVoting.getProposalVotes(raiseId, proposalId);
+
+
+        advanceBlockTime(10 days);
+
+       
+
+        raiseBoxVoting.getProposalVotes(raiseId, proposalId);
+
+        // special trigger by project owner if user voting doesn't lead to vote tallying, can only happen if voting has ended and the caller is in-fact the proposal owner
+        vm.startPrank(ben);
+        // vm.expectRevert();
+        raiseBoxVoting.triggerVoteTally(raiseId, proposalId);
+        vm.stopPrank();
+
+         // host second proposal ---> proposal2
+         advanceBlockTime(8 weeks);
+        vm.prank(ben);
+        uint256 proposalId1 = raiseBoxProposalContract.hostProposal(
+            "built public API",
+            "Public API for use by other devs seeking to integrate sentient has been completed and tested",
+            raiseId,
+            20
+        );
+
+        advanceBlockTime(48 hours);
+
+        
+        // delegators votes:
+        vm.startPrank(ethereum);
+        raiseBoxVoting.vote(raiseId, proposalId1, true);
+        vm.stopPrank();
+
+    for (uint256 i = 0; i < voters.length; i++) {
+            vm.startPrank(voters[i]);
+            if (i % 2 == 0) {
+                raiseBoxVoting.vote(raiseId, proposalId1, true );
+
+            } else {
+                raiseBoxVoting.vote(raiseId, proposalId1, false  );
+            }
+            
+            vm.stopPrank();
+        }
+
+        vm.startPrank(tether);
+        raiseBoxVoting.vote(raiseId, proposalId1, true);
+        vm.stopPrank();
+
+        vm.startPrank(trump);
+        raiseBoxVoting.vote(raiseId, proposalId1, false);
+        vm.stopPrank();
+
+        raiseBoxVoting.getProposalVotes(raiseId, proposalId1);
+
+
+        advanceBlockTime(10 days);
+
+        raiseBoxVoting.getProposalVotes(raiseId, proposalId1);
+
+        // special trigger by project owner if user voting doesn't lead to vote tallying, can only happen if voting has ended and the caller is in-fact the proposal owner
+        vm.startPrank(ben);
+        // vm.expectRevert();
+        raiseBoxVoting.triggerVoteTally(raiseId, proposalId1);
+        vm.stopPrank();
+
+
     }
 }

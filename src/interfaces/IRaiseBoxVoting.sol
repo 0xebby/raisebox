@@ -76,7 +76,7 @@ interface IRaiseBoxVoting {
     error RaiseBoxVoting_ProposalFailed();
     error RaiseBoxVoting_LoopDelegationForbidden();
 
-    function vote(bytes32 raiseId, uint256 proposalId, bool support, address voter) external;
+    function vote(bytes32 raiseId, uint256 proposalId, bool support) external;
 
     function delegateVote(bytes32 raiseId, uint256 proposalId, address from, address to) external;
 

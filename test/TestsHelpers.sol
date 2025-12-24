@@ -12,6 +12,7 @@ import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {RaiseBoxVoting} from "../src/RaiseBoxVoting.sol";
 import {RaiseBoxDripHandler} from "src/RaiseBoxDripHandler.sol";
 import {IRaiseBoxCore} from "src/interfaces/IRaiseBoxCore.sol";
+import {RaiseBoxEventsLib} from "src/RaiseBoxLib/RaiseBoxEventsLib.sol";
 
 contract TestsHelpers is Test {
     // main contract that holds general storage
@@ -49,6 +50,18 @@ contract TestsHelpers is Test {
     address sally = makeAddr("sally");
     address ebby = makeAddr("ebby");
     address vitalik = makeAddr("vitalik");
+
+    address gowagr = makeAddr("gowagr");
+    address polymarket = makeAddr("polymarket");
+    address base = makeAddr("base");
+    address trump = makeAddr("trump");
+    address elon = makeAddr("elon");
+    address magiceden = makeAddr("magiceden");
+    address tether = makeAddr("tether");
+    address openseas = makeAddr("openseas");
+    address ethereum = makeAddr("ethereum");
+    address arbitrum = makeAddr("arbitrum");
+    address carl = makeAddr("carl");
 
     // get  would be ca of raisebox - project creation contract
 
@@ -110,10 +123,27 @@ contract TestsHelpers is Test {
         vm.deal(sally, 100 ether);
         vm.deal(ebby, 100 ether);
         vm.deal(vitalik, 100 ether);
+        vm.deal(carl, 100 ether);
+
+        // voters
+        vm.deal(arbitrum, 100 ether);
+        vm.deal(openseas, 100 ether);
+        vm.deal(magiceden, 100 ether);
+        vm.deal(base, 100 ether);
+        vm.deal(ethereum, 100 ether);
+        vm.deal(tether, 100 ether);
+        vm.deal(elon, 100 ether);
+        vm.deal(trump, 100 ether);
+        vm.deal(gowagr, 100 ether);
+        vm.deal(polymarket, 100 ether);
+
+
 
         // whitelist 2 users to serve as raiseCreators:
         raiseBoxCore.verifyAndAddToWhitelist(ebby);
         raiseBoxCore.verifyAndAddToWhitelist(vitalik);
+        raiseBoxCore.verifyAndAddToWhitelist(ben);
+
     }
 
     /**
@@ -122,6 +152,7 @@ contract TestsHelpers is Test {
      */
     function advanceBlockTime(uint256 raiseDuration_) internal {
         vm.warp(block.timestamp + raiseDuration_);
+        emit RaiseBoxEventsLib.BlockTimeAdvancedBy(raiseDuration_);
     }
 
     // function createTestProjects() public {
@@ -138,7 +169,6 @@ contract TestsHelpers is Test {
     // }
 
     function contributeToTestProject() public returns (bytes32 projectId) {
-        raiseBoxCore.verifyAndAddToWhitelist(ben);
         vm.startPrank(ben);
         projectId = raiseBoxRaiseCreationContract.createNewRaise(
             IRaiseBoxCore.ProjectInfo({
@@ -154,11 +184,11 @@ contract TestsHelpers is Test {
         raiseBoxCore.getRaiseInfo(projectId);
 
 
-        address[5] memory contributors = [ebby, sally, uche, max, mark];
+        address[20] memory contributors = [ebby, sally, uche, max, mark, alice, joe, testOwner, sam, vitalik, arbitrum, ethereum, polymarket, elon, trump, tether, base, magiceden, gowagr, openseas];
 
         for (uint256 i = 0; i < contributors.length; i++) {
             vm.startPrank(contributors[i]);
-            raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, projectId);
+            raiseBoxContributionContract.contribute{value: 1 ether}(1 ether, projectId);
             vm.stopPrank();
         }
 
