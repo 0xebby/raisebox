@@ -49,15 +49,18 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
             revert RaiseBoxVoting_NotContributor(raiseId, user);
         }
 
-        if (votingEnded[raiseId][proposalId]) {
-            revert RaiseBoxVoting_VotingAlreadyEnded(raiseId, proposalId);
-        }
-
         if (hasDelegatedForProposal[user][raiseId][proposalId]) {
             revert RaiseBoxVoting_AlreadyDelegatedVote(user);
         }
 
         uint256 _start = votingStartTime[raiseId][proposalId];
+
+        // this allows any attempt to vote after voting deadline to trigger funds dripper
+        if (votingEnded[raiseId][proposalId] || block.timestamp > (_start + VOTING_DURATION)) {
+            _endVoting(raiseId, proposalId);
+            _tallyVotes(raiseId, proposalId);
+            revert RaiseBoxVoting_VotingAlreadyEnded(raiseId, proposalId);
+        }
 
         // voting must have been scheduled (start set) before voting commences
         if (_start == 0 || block.timestamp < _start) {
@@ -98,20 +101,23 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_NotAContributor(raiseId);
         }
 
-        if (delegatee[to][raiseId][proposalId] || delegatee[from][raiseId][proposalId]) {
-            revert RaiseBoxVoting_LoopDelegationForbidden();
+        if (block.timestamp >= _voteStartTime(raiseId, proposalId)) {
+            revert RaiseBoxErrorsLib.RaiseBoxVoting_CannotDelegateAfterVotingBegins();
         }
+
+        if (delegatedVotes[from][raiseId][proposalId] > 0 ) {
+            revert RaiseBoxErrorsLib.RaiseBoxVoting_CannotReDelegate();
+        } // fixed redelegation after being delegated votes -- ebby
 
         if (hasDelegatedForProposal[from][raiseId][proposalId]) {
             revert RaiseBoxVoting_CannotDelegateTwice();
-        }
+        } 
 
         if (hasVotedOnProposal[raiseId][proposalId][from] || hasVotedOnProposal[raiseId][proposalId][to]) {
             revert RaiseBoxVoting_CannotDelegateAfterVoting(proposalId, from);
         }
         _;
     }
-
 
     //** ------------------------------------------------------------------ **//
     //                        EXTERNAL FUNCTIONS                              //
@@ -145,16 +151,15 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     /// @param raiseId id of the raise where the proposal is hosted
     /// @param proposalId id of the proposal to vote for
     /// @param support direction of vote, either `for` or `against`
-    /// @param voter address of the voter, must be a `contributor` to raise to vote
-    function vote(bytes32 raiseId, uint256 proposalId, bool support, address voter)
+    function vote(bytes32 raiseId, uint256 proposalId, bool support)
         external
-        canVote(raiseId, voter, proposalId)
+        canVote(raiseId, msg.sender, proposalId)
     {
-        if (delegatee[voter][raiseId][proposalId]) {
+        if (delegatee[msg.sender][raiseId][proposalId]) {
             if (support) {
-                votesForProposal[raiseId][proposalId] += (delegatedVotes[voter][raiseId][proposalId] + 1); // votes delegated to voter plus his vote
+                votesForProposal[raiseId][proposalId] += (delegatedVotes[msg.sender][raiseId][proposalId] + 1); // votes delegated to voter plus his vote
             } else {
-                votesAgainstProposal[raiseId][proposalId] += (delegatedVotes[voter][raiseId][proposalId] + 1);
+                votesAgainstProposal[raiseId][proposalId] += (delegatedVotes[msg.sender][raiseId][proposalId] + 1);
             }
         } else {
             if (support) {
@@ -164,9 +169,9 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
             }
         }
 
-        hasVotedOnProposal[raiseId][proposalId][voter] = true;
+        hasVotedOnProposal[raiseId][proposalId][msg.sender] = true;
 
-        emit Voted(voter, raiseId, proposalId, support);
+        emit Voted(msg.sender, raiseId, proposalId, support);
     }
 
     /**
@@ -191,12 +196,14 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         external
         canDelegate(raiseId, proposalId, from, to)
     {
+        
         // record delegation
         delegatedVoteTo[from][raiseId][proposalId] = to;
         // add voting right to 'to' address
 
         delegatedVotes[to][raiseId][proposalId] += 1;
         hasDelegatedForProposal[from][raiseId][proposalId] = true;
+        // hasReceivedDelegation[to][raiseId][proposalId] = true;
         delegatee[to][raiseId][proposalId] = true;
 
         emit VoteDelegated(from, to);
@@ -226,6 +233,9 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     // delegated votes tracker scoped to proposal:
     mapping(address => mapping(bytes32 => mapping(uint256 => bool))) public hasDelegatedForProposal; // address => raiseId => proposalId => hasDelegated
+
+    // track who has received delegation
+    mapping(address => mapping(bytes32 => mapping(uint256 => bool))) public hasReceivedDelegation;
 
     mapping(address => mapping(bytes32 => mapping(uint256 => bool))) public delegatee;
 
@@ -261,7 +271,11 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         return (totalContributors - totalVotes);
     }
 
-    function getVoteStartTime(bytes32 raiseId, uint256 proposalId) external view returns (uint256 voteStartTime) {
+    function getVoteStartTime(bytes32 raiseId, uint256 proposalId) external returns (uint256 voteStartTime) {
+        return _voteStartTime(raiseId, proposalId);
+    }
+
+    function _voteStartTime(bytes32 raiseId, uint256 proposalId) internal returns(uint256 voteStartTime) {
         return votingStartTime[raiseId][proposalId];
     }
 
