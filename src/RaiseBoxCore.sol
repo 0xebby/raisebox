@@ -290,10 +290,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
         _raiseInfo.raiseState = _updateState(RaiseState.VOTING, raiseId);
 
-        //  else {
-        // _raiseInfo.raiseState = _updateState(RaiseState.PROPOSAL, raiseId);
-        // }
-
         emit RaiseBoxEventsLib.RaiseHostedProposalsUpdated();
        
     }

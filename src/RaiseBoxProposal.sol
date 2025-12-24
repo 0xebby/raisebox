@@ -100,9 +100,10 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
             dripPercent: dripPercent
         });
 
-        // set voting start time in RaiseBoxVoting (10 minutes after proposal hosting)
+        // set voting start time in RaiseBoxVoting (48 hours after proposal hosting)
+        // this gives time for vote delegation and studying of proposals ahead of voting
 
-        raiseBoxVoting.setVotingStartTime(raiseId, proposalsHosted[raiseId], block.timestamp + 10 minutes);
+        raiseBoxVoting.setVotingStartTime(raiseId, proposalsHosted[raiseId], block.timestamp + 48 hours);
 
         // update storage in RaiseBoxCore contract
         raiseBoxCore.updateRaiseInfo(raiseInfo.projectInfo, raiseInfo.raiseDuration, raiseInfo.raiseCreationTime, raiseInfo.amountRaisedByProject, raiseInfo.projectRaiseCount, raiseInfo.proposalsHosted, raiseInfo.raiseExists, raiseId, IRaiseBoxCore.RaiseState.VOTING);

@@ -146,4 +146,8 @@ library RaiseBoxEventsLib {
         bytes32 indexed raiseId, 
         uint256 totalContributions
     );
+
+    event BlockTimeAdvancedBy(
+        uint256 duration
+    );
 }

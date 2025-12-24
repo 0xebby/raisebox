@@ -45,6 +45,9 @@ library RaiseBoxErrorsLib {
     error RaiseBoxCore_AlreadyWhiteListed(
         address founder
     );
+    error RaiseBoxVoting_CannotReDelegate();
+    error RaiseBoxVoting_CannotDelegateAfterVotingBegins();
+    error RaiseBoxDripHandler_dripFunds_DripAlreadyExecutedForProposal(bytes32 raiseId, uint256 proposalId);
 
     // contribution related errors:
     error RaiseBoxContribution_ValueSentMismatch();
