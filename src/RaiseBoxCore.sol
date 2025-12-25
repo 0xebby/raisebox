@@ -347,6 +347,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         _raiseInfo.raiseState = _updateRaiseState(RaiseState.CONTRIBUTION, _raiseId);
         
         emit RaiseBoxEventsLib.RaiseCreationDetailsUpdated(_raiseId);
+        /// neverland
     }
 
      /**

@@ -289,6 +289,7 @@ vm.stopPrank();
 
         // jump to just after scheduled voting start for proposal 1
         uint256 _start = raiseBoxVoting.votingStartTime(projectId, 1);
+        raiseBoxVoting.delegateVote(projectId, 1, max, uche);
         vm.warp(_start + 1);
 
         vm.startPrank(mark);
@@ -299,8 +300,7 @@ vm.stopPrank();
         raiseBoxVoting.vote(projectId, 1, false);
         vm.stopPrank();
 
-        vm.startPrank(max);
-        raiseBoxVoting.delegateVote(projectId, 1, max, uche);
+        vm.startPrank(uche);
         raiseBoxVoting.vote(projectId, 1, true);
         vm.stopPrank();
 
@@ -466,6 +466,14 @@ vm.stopPrank();
 
         // jump to just after scheduled voting start for proposal 2
         uint256 _start5 = raiseBoxVoting.votingStartTime(projectId, proposalId5);
+        
+        vm.startPrank(max);
+        raiseBoxVoting.delegateVote(
+        projectId, proposalId5, max, ebby
+        );
+
+        vm.stopPrank();
+
         vm.warp(_start5 + 1);
 
         vm.startPrank(mark);
@@ -478,12 +486,6 @@ vm.stopPrank();
 
         vm.startPrank(uche);
         raiseBoxVoting.vote(projectId, proposalId5, true);
-        vm.stopPrank();
-
-        vm.startPrank(max);
-        raiseBoxVoting.delegateVote(
-        projectId, proposalId5, max, ebby
-        );
         vm.stopPrank();
 
         vm.startPrank(ebby);
@@ -517,43 +519,54 @@ vm.stopPrank();
 
         vm.stopPrank();
 
-         raiseBoxProposalContract.getTotalProposals();
+        raiseBoxProposalContract.getTotalProposals();
         raiseBoxCore.getRaiseInfo(projectId);
         raiseBoxCore.getRaiseState(projectId);
 
-         vm.startPrank(ben);
+        //  vm.startPrank(ben);
 
-        advanceBlockTime(500 weeks);
-        vm.expectRevert();
+        // advanceBlockTime(500 weeks);
+        // vm.expectRevert();
 
-        uint256 proposalId7 = raiseBoxProposalContract.hostProposal(
-            "v2 launch",
-            "version 2 of testnet app is ready to be tested",
-            projectId,
-            20
-        );
+        // uint256 proposalId7 = raiseBoxProposalContract.hostProposal(
+        //     "v2 launch",
+        //     "version 2 of testnet app is ready to be tested",
+        //     projectId,
+        //     20
+        // );
 
-        // numOfProposalsHosted++;
+        // // numOfProposalsHosted++;
 
-        vm.stopPrank();
+        // vm.stopPrank();
 
-         raiseBoxProposalContract.getTotalProposals();
+        raiseBoxProposalContract.getTotalProposals();
+        // raiseBoxCore.incrementConFaildProposals(projectId);
         raiseBoxCore.getRaiseInfo(projectId);
-        raiseBoxCore.getRaiseState(projectId);
+        // raiseBoxCore.getRaiseState(projectId);
+        // raiseBoxProposalContract.isValidProposal(0x0ef765bb5612bfab35f0518fdb194eb02394c410530030a57d2fecaabd944ef8, 1);
+        // raiseBoxCore.doesRaiseExist(0x0ef765bb5612bfab35f0518fdb194eb02394c410530030a57d2fecaabd944ef8);
+        // raiseBoxProposalContract.getProposalDetails(projectId, 6);
+        // raiseBoxCore.getProposalState(0x0ef765bb5612bfab35f0518fdb194eb02394c410530030a57d2fecaabd944ef8, 6);
+        // raiseBoxProposalContract.getLastProposalState(projectId, 8);
 
         
     }
 
 
     function testVotingAndDelegationOnProposalsWorks() public {
+        console.log("drip handler intial balance:", address(raiseBoxDripHandler).balance);
+        console.log("raise owner initial balance:", ben.balance);
         // create and contribute to raise till it passes
         bytes32 raiseId = contributeToTestProject();
+
+        console.log("drip handler balance after raise passes:", address(raiseBoxDripHandler).balance);
+        console.log("raise owner balance after raise passes:", ben.balance);
 
         // host first proposal ---> proposal1
         vm.prank(ben);
         uint256 proposalId = raiseBoxProposalContract.hostProposal(
             "MVP",
-            "Finished buildin gthe minimum viable product for sentient agi and it's ready for testing",
+            "Finished building the minimum viable product for sentient agi and it's ready for testing",
             raiseId,
             20
         );
@@ -563,14 +576,14 @@ vm.stopPrank();
         raiseBoxVoting.delegateVote(raiseId, proposalId, openseas, ethereum);
         raiseBoxVoting.delegateVote(raiseId, proposalId, gowagr, ethereum);
         raiseBoxVoting.delegateVote(raiseId, proposalId, elon, ethereum);
+        raiseBoxVoting.delegateVote(raiseId, proposalId, magiceden, trump);
+        raiseBoxVoting.delegateVote(raiseId, proposalId, polymarket, trump);
         // vm.startPrank(ethereum);
         // raiseBoxVoting.vote(raiseId, proposalId, true);
 
-        advanceBlockTime(45 hours);
-        raiseBoxVoting.delegateVote(raiseId, proposalId, magiceden, trump);
-        raiseBoxVoting.delegateVote(raiseId, proposalId, polymarket, trump);
+        advanceBlockTime(48 hours);
+        
         // raiseBoxVoting.delegateVote(raiseId, proposalId, tether, trump);
-        advanceBlockTime(3 hours);
 
         address[10] memory voters = [ebby, sally, uche, max, mark, alice, joe, testOwner, sam, vitalik];
 
@@ -578,8 +591,6 @@ vm.stopPrank();
         vm.startPrank(ethereum);
         raiseBoxVoting.vote(raiseId, proposalId, true);
         vm.stopPrank();
-
-
 
 
         for (uint256 i = 0; i < voters.length; i++) {
@@ -605,20 +616,24 @@ vm.stopPrank();
         raiseBoxVoting.getProposalVotes(raiseId, proposalId);
 
 
-        advanceBlockTime(10 days);
-
-       
+        advanceBlockTime(7 days);
 
         raiseBoxVoting.getProposalVotes(raiseId, proposalId);
 
         // special trigger by project owner if user voting doesn't lead to vote tallying, can only happen if voting has ended and the caller is in-fact the proposal owner
         vm.startPrank(ben);
-        // vm.expectRevert();
         raiseBoxVoting.triggerVoteTally(raiseId, proposalId);
         vm.stopPrank();
 
+        console.log("drip handler balance after first proposal passes:", address(raiseBoxDripHandler).balance);
+        console.log("raise owner balance after first proposal passes:", ben.balance);
+
+         
+         
+         
          // host second proposal ---> proposal2
-         advanceBlockTime(8 weeks);
+         advanceBlockTime(4 weeks);
+         raiseBoxCore.getRaiseState(raiseId);
         vm.prank(ben);
         uint256 proposalId1 = raiseBoxProposalContract.hostProposal(
             "built public API",
@@ -658,7 +673,7 @@ vm.stopPrank();
         raiseBoxVoting.getProposalVotes(raiseId, proposalId1);
 
 
-        advanceBlockTime(10 days);
+        advanceBlockTime(7 days);
 
         raiseBoxVoting.getProposalVotes(raiseId, proposalId1);
 
@@ -667,6 +682,177 @@ vm.stopPrank();
         // vm.expectRevert();
         raiseBoxVoting.triggerVoteTally(raiseId, proposalId1);
         vm.stopPrank();
+
+        console.log("drip handler balance after second proposal passes:", address(raiseBoxDripHandler).balance);
+        console.log("raise owner balance after second proposal passes:", ben.balance);
+
+
+
+        // host third proposal ---> proposal3
+         advanceBlockTime(4 weeks);
+         raiseBoxCore.getRaiseState(raiseId);
+        vm.prank(ben);
+        uint256 proposalId2 = raiseBoxProposalContract.hostProposal(
+            "finished tesntet launch",
+            "public testnet is live and ready for testers to test how sentient agi works for real",
+            raiseId,
+            20
+        );
+
+        // delegate votes to ethereum:
+        address[4] memory delegators = [arbitrum, openseas, gowagr, elon];
+
+        for (uint256 i = 0; i < delegators.length; i++) {
+            if (i == delegators.length - 1) {
+            vm.startPrank(delegators[i]);
+            raiseBoxVoting.delegateVote(raiseId, proposalId2, delegators[i], ethereum);
+            vm.stopPrank();
+            } else {
+            vm.startPrank(delegators[i]);
+            raiseBoxVoting.delegateVote(raiseId, proposalId2, delegators[i], tether);
+            vm.stopPrank();
+            }
+        }
+        // raiseBoxVoting.delegateVote(raiseId, proposalId2, arbitrum, tether);
+        // raiseBoxVoting.delegateVote(raiseId, proposalId2, openseas, tether);
+        // raiseBoxVoting.delegateVote(raiseId, proposalId2, gowagr, tether);
+        // raiseBoxVoting.delegateVote(raiseId, proposalId2, elon, ethereum);
+
+        advanceBlockTime(48 hours);
+
+        
+        // delegators votes:
+        vm.startPrank(ethereum);
+        raiseBoxVoting.vote(raiseId, proposalId2, false);
+        vm.stopPrank();
+        
+
+    for (uint256 i = 0; i < voters.length; i++) {
+            vm.startPrank(voters[i]);
+            if (i % 2 == 0) {
+                raiseBoxVoting.vote(raiseId, proposalId2, true );
+
+            } else {
+                raiseBoxVoting.vote(raiseId, proposalId2, false  );
+            }
+            
+            vm.stopPrank();
+        }
+
+        vm.startPrank(tether);
+        raiseBoxVoting.vote(raiseId, proposalId2, false);
+        vm.stopPrank();
+
+        vm.startPrank(trump);
+        raiseBoxVoting.vote(raiseId, proposalId2, false);
+        vm.stopPrank();
+
+        raiseBoxVoting.getProposalVotes(raiseId, proposalId2);
+
+
+        advanceBlockTime(7 days);
+
+        raiseBoxVoting.getProposalVotes(raiseId, proposalId2);
+
+        // special trigger by project owner if user voting doesn't lead to vote tallying, can only happen if voting has ended and the caller is in-fact the proposal owner
+        vm.startPrank(ben);
+        // vm.expectRevert();
+        raiseBoxVoting.triggerVoteTally(raiseId, proposalId2);
+        vm.stopPrank();
+
+        console.log("drip handler balance after third proposal passes:", address(raiseBoxDripHandler).balance);
+        console.log("raise owner balance after third proposal passes:", ben.balance);
+
+        raiseBoxCore.isRaiseCreator(ben, raiseId);
+        raiseBoxCore.getAmtRaisedByProject(raiseId); // 13,200 -- 1,027
+        raiseBoxCore.getAmountToRaise(raiseId); // 13, 500 -- 1,300
+        raiseBoxCore.getRaiseInfo(raiseId);
+        uint256 proposalCount = 3;
+
+        for (uint256 i = 0; i < 12; i++ ) {
+        advanceBlockTime(4 weeks);
+        vm.startPrank(ben);
+        uint256 proposalId2 = raiseBoxProposalContract.hostProposal(
+            "finished tesntet launch",
+            "public testnet is live and ready for testers to test how sentient agi works for real",
+            raiseId,
+            20
+        );
+        proposalCount++;
+        vm.stopPrank();
+
+
+        // delegate votes to ethereum:
+        address[4] memory delegators = [arbitrum, openseas, gowagr, elon];
+
+        for (uint256 i = 0; i < delegators.length; i++) {
+            if (i == delegators.length - 1) {
+            vm.startPrank(delegators[i]);
+            raiseBoxVoting.delegateVote(raiseId, proposalId2, delegators[i], ethereum);
+            vm.stopPrank();
+            } else {
+            vm.startPrank(delegators[i]);
+            raiseBoxVoting.delegateVote(raiseId, proposalId2, delegators[i], tether);
+            vm.stopPrank();
+            }
+        }
+        // raiseBoxVoting.delegateVote(raiseId, proposalId2, arbitrum, tether);
+        // raiseBoxVoting.delegateVote(raiseId, proposalId2, openseas, tether);
+        // raiseBoxVoting.delegateVote(raiseId, proposalId2, gowagr, tether);
+        // raiseBoxVoting.delegateVote(raiseId, proposalId2, elon, ethereum);
+
+        advanceBlockTime(48 hours);
+
+        
+        // delegators votes:
+        vm.startPrank(ethereum);
+        raiseBoxVoting.vote(raiseId, proposalId2, false);
+        vm.stopPrank();
+        
+
+    for (uint256 i = 0; i < voters.length; i++) {
+            vm.startPrank(voters[i]);
+            if (i % 2 == 0) {
+                raiseBoxVoting.vote(raiseId, proposalId2, true );
+
+            } else {
+                raiseBoxVoting.vote(raiseId, proposalId2, false  );
+            }
+            
+            vm.stopPrank();
+        }
+
+        vm.startPrank(tether);
+        raiseBoxVoting.vote(raiseId, proposalId2, false);
+        vm.stopPrank();
+
+        vm.startPrank(trump);
+        raiseBoxVoting.vote(raiseId, proposalId2, false);
+        vm.stopPrank();
+
+        raiseBoxVoting.getProposalVotes(raiseId, proposalId2);
+
+
+        advanceBlockTime(7 days);
+
+        raiseBoxVoting.getProposalVotes(raiseId, proposalId2);
+
+        // special trigger by project owner if user voting doesn't lead to vote tallying, can only happen if voting has ended and the caller is in-fact the proposal owner
+        vm.startPrank(ben);
+        // vm.expectRevert();
+        raiseBoxVoting.triggerVoteTally(raiseId, proposalId2);
+        vm.stopPrank();
+
+        console.log("drip handler balance after", proposalCount, "proposal passes:", address(raiseBoxDripHandler).balance);
+        console.log("raise owner balance after", proposalCount, "proposal passes:", ben.balance);
+        raiseBoxVoting.getFailedProposalsCount(raiseId);
+        
+
+
+        }
+
+
+
 
 
     }

@@ -131,7 +131,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         // i.e. the amount to raise by project has been raised successfully
         // instead of updating storage everytime a contribution is made, wasteful
         if (totalContributions == raiseInfo.projectInfo.raiseTarget) {
-            raiseBoxCore.updateRaiseInfo(raiseInfo.projectInfo, raiseInfo.raiseDuration, raiseInfo.raiseCreationTime, totalContributionsToProject[raiseId], raiseInfo.projectRaiseCount, raiseInfo.proposalsHosted, raiseInfo.raiseExists, raiseId, IRaiseBoxCore.RaiseState.PROPOSAL);
+            raiseBoxCore.updateRaiseInfo(raiseInfo.projectInfo, raiseInfo.raiseDuration, raiseInfo.raiseCreationTime, totalContributionsToProject[raiseId], raiseInfo.projectRaiseCount, raiseInfo.proposalsHosted, raiseInfo.raiseExists, raiseId);
 
             emit RaiseBoxEventsLib.RaiseBox_RaisePassed(raiseInfo.projectInfo.raiseTarget, raiseInfo.projectInfo.raiseTarget);
         }

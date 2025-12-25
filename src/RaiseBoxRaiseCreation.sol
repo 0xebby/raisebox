@@ -64,7 +64,7 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
         bytes32 raiseId = keccak256(abi.encode(projectInfo.projectName, projectInfo.raiseTarget, timeCreated, projectInfo.valueProposition, msg.sender, projectInfo.projectDuration));
 
         // checks that a project cannot create more than one raise within 78 weeks
-        if (raiseBoxCore.getRaiseState(raiseId) == IRaiseBoxCore.RaiseState.CONTRIBUTION || hasCreatedRaise[msg.sender] ) {
+        if (hasCreatedRaise[msg.sender] ) {
             if (PROJECT_LIFESPAN > (block.timestamp - i_lastRaiseCreated[msg.sender])) {
                 revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_RaiseCreationCooldown();
             }
@@ -79,8 +79,7 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
             0,
             raisesCreated[msg.sender],
             true,
-            raiseId,
-            IRaiseBoxCore.RaiseState.CONTRIBUTION
+            raiseId
         );
         i_lastRaiseCreated[msg.sender] = timeCreated;
         hasCreatedRaise[msg.sender] = true;
@@ -232,7 +231,7 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
     //     bytes32 projectId_
     // ) external returns (uint256 fees) {
     //     // get project amount raised
-    //     uint256 amountToRaiseByProject = getProject(projectId_).raiseTarget;
+    //     uint256 amountToRaiseByProject = getRaiseInfo(projectId_).raiseTarget;
 
     //     // check if amount project needed to raise have been raised, raise failed
     //     if (

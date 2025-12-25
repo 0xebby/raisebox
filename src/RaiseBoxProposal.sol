@@ -36,13 +36,22 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         } else {
             // ascertain owner is host of project and is trying to host proposal
             if (raiseOwner == address(0) || raiseOwner != raiseCreator) {
-                revert raiseBoxProposal_InvalidProjectOwner();
+                revert raiseBoxProposal_InvalidRaiseOwner();
             }
 
             // proposal count within raise projectDuration cannot exceed 10(tentative)
 
-            if (proposals > 10) {
-                revert RaiseBoxProposal_ProposalsExceedsMax(MAX_ALLOWED_PROPOSALS);
+            // if (proposals > 15) {
+            //     revert RaiseBoxProposal_ProposalsExceedsMax(MAX_ALLOWED_FAILED_PROPOSALS);
+            // }
+
+            // if (proposals => 15 && block.timestamp < projectDuration) {
+            //     revert RaiseBoxErrorsLib.RaiseBox_RaiseFailed(raiseId);
+
+            // }
+
+            if (raiseBoxVoting.getFailedProposalsCount(raiseId) >= MAX_ALLOWED_FAILED_PROPOSALS) {
+                revert RaiseBoxErrorsLib.RaiseBox_RaiseFailed(raiseId); 
             }
 
             // if (block.timestamp >= INTERVAL_BETWEEN_PROPOSALS ) {
@@ -92,12 +101,13 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         proposalsHosted[raiseId] += 1;
         lastProposalTime[raiseId] = block.timestamp;
 
-        proposalIdByProject[raiseId][proposalsHosted[raiseId]] = MileStoneProposalDetails({
+        milestoneProposalInfo[raiseId][proposalsHosted[raiseId]] = MilestoneProposalInfo({
             lastProposalTime: lastProposalTime[raiseId],
             description: proposalTitle,
             milestone: proposal,
             proposalId: proposalsHosted[raiseId],
-            dripPercent: dripPercent
+            dripPercent: dripPercent,
+            proposalExist: true
         });
 
         // set voting start time in RaiseBoxVoting (48 hours after proposal hosting)
@@ -106,7 +116,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         raiseBoxVoting.setVotingStartTime(raiseId, proposalsHosted[raiseId], block.timestamp + 48 hours);
 
         // update storage in RaiseBoxCore contract
-        raiseBoxCore.updateRaiseInfo(raiseInfo.projectInfo, raiseInfo.raiseDuration, raiseInfo.raiseCreationTime, raiseInfo.amountRaisedByProject, raiseInfo.projectRaiseCount, raiseInfo.proposalsHosted, raiseInfo.raiseExists, raiseId, IRaiseBoxCore.RaiseState.VOTING);
+        raiseBoxCore.updateRaiseInfo(raiseInfo.projectInfo, raiseInfo.raiseDuration, raiseInfo.raiseCreationTime, raiseInfo.amountRaisedByProject, raiseInfo.projectRaiseCount, raiseInfo.proposalsHosted, raiseInfo.raiseExists, raiseId);
 
         // interactions:
         proposalId = proposalsHosted[raiseId];
@@ -116,6 +126,24 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
         return proposalId;
     }
+
+
+    //internal functions
+
+    function _isValidProposal(bytes32 raiseId, uint256 proposalId) internal returns (bool) {
+
+        // get proposalDetails
+        MilestoneProposalInfo memory propDetails =  milestoneProposalInfo[raiseId][proposalId];
+
+        if (propDetails.proposalExist) {
+            return true;
+        } else {
+        revert RaiseBoxErrorsLib.RaiseBoxProposal_isValidProposal_ProposalDoesNotExist();
+
+        }
+    }
+
+    function isValidProposal(bytes32 raiseId, uint256 proposalId) external returns(bool) { return _isValidProposal(raiseId, proposalId); }
 
     ////                                            ////
     //          EXTERNAL/GETTER FUNCTIONS             //
@@ -139,14 +167,13 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
     function getProposalDetails(bytes32 raiseId, uint256 proposalId)
         external
-        view
-        returns (MileStoneProposalDetails memory proposalDetails_)
+        returns (MilestoneProposalInfo memory proposalDetails_)
     {
-        if (proposalId == 0 || proposalId > proposalsHosted[raiseId]) {
-            revert RaiseBoxProposal_getProposalDetails_InvalidProposalId();
+
+        if (_isValidProposal(raiseId, proposalId)) {
+            proposalDetails_ = milestoneProposalInfo[raiseId][proposalId];
+            return proposalDetails_;
         }
-        proposalDetails_ = proposalIdByProject[raiseId][proposalId];
-        return proposalDetails_;
     }
 
     function setVotingContract(address contractToSet) external onlyOwner {
@@ -155,7 +182,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
     using Strings for uint256;
 
-    MileStoneProposalDetails[] public proposals;
+    MilestoneProposalInfo[] public proposals;
 
     mapping(bytes32 => bool) public hasHostedProposal;
 
@@ -166,9 +193,17 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
     mapping(bytes32 => uint256) public proposalsHosted; // track proposal count by project
 
-    mapping(bytes32 => mapping(uint256 => MileStoneProposalDetails)) public proposalIdByProject;
+    mapping(bytes32 => mapping(uint256 => MilestoneProposalInfo)) public milestoneProposalInfo;
 
     uint256 public constant INTERVAL_BETWEEN_PROPOSALS = 4 weeks;
 
-    uint256 public constant MAX_ALLOWED_PROPOSALS = 5;
+    uint256 public constant MAX_ALLOWED_FAILED_PROPOSALS = 5;
+
+
+
+    /// when no votes > yes votes, mark proposalState of that proposal as failed
+    /// also, check if the last proposal before that failed or passed, if failed, update conFailedProposals in storage, also update nonConFailedProposals, else if passed, go ahead and drip
+
+   
+
 }

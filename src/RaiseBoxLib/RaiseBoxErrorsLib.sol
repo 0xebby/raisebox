@@ -18,6 +18,9 @@ library RaiseBoxErrorsLib {
     /// @param caller the unauthorized caller
     error UnAuthorizedCaller(address caller);
 
+    // proposals errors
+    error RaiseBoxProposal_isValidProposal_ProposalDoesNotExist();
+
 
 
     /// @notice errors thrown during raise creation on raisebox
@@ -45,9 +48,12 @@ library RaiseBoxErrorsLib {
     error RaiseBoxCore_AlreadyWhiteListed(
         address founder
     );
+    error RaiseBoxCore_doesRaiseExist_RaiseDoesNotExist();
+    error RaiseBoxCore_isRaiseCreator_NotRaiseCreator(address raiseCreator);
     error RaiseBoxVoting_CannotReDelegate();
     error RaiseBoxVoting_CannotDelegateAfterVotingBegins();
     error RaiseBoxDripHandler_dripFunds_DripAlreadyExecutedForProposal(bytes32 raiseId, uint256 proposalId);
+    error RaiseBoxVoting_ProposalDoesNotExist(uint256 proposalId);
 
     // contribution related errors:
     error RaiseBoxContribution_ValueSentMismatch();

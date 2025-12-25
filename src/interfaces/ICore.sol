@@ -29,7 +29,7 @@ interface ICore {
 
     function getProtocolFeeAddress() external view returns (address);
 
-    function getProject(bytes32 id) external returns (ProjectInfo memory projectInfo);
+    function getRaiseInfo(bytes32 id) external returns (ProjectInfo memory projectInfo);
 
     function getProjectInfo(bytes32 projectID)
         external

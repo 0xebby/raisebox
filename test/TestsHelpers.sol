@@ -115,7 +115,7 @@ contract TestsHelpers is Test {
         vm.deal(testOwner, 500 ether);
         vm.deal(alice, 100 ether);
         vm.deal(joe, 100 ether);
-        vm.deal(ben, 100 ether);
+        // vm.deal(ben, 100 ether);
         vm.deal(max, 100 ether);
         vm.deal(uche, 100 ether);
         vm.deal(sam, 100 ether);
@@ -176,7 +176,7 @@ contract TestsHelpers is Test {
             projectName:"sentient",
             valueProposition:"agi",
             raiseTarget:20 ether,
-            projectDuration:56 weeks
+            projectDuration:60 weeks
         })
         );
         vm.stopPrank();
