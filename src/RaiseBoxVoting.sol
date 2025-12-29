@@ -53,7 +53,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
             revert RaiseBoxVoting_AlreadyDelegatedVote(user);
         }
 
-        if (proposalId > raiseBoxCore.getRaiseInfo(raiseId).proposalsHosted) {
+        if (proposalId > raiseBoxProposal.getProposalCount(raiseId)) {
             revert RaiseBoxErrorsLib.RaiseBoxVoting_ProposalDoesNotExist(proposalId);
         }
 
@@ -312,8 +312,8 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     //     uint256 propCount = raiseBoxProposal.getProposalCount(raiseId);
 
     //     // get proposalDetails
-    //     IRaiseBoxProposal.MilestoneProposalInfo memory propDetails =
-    //         raiseBoxProposal.getProposalDetails(raiseId, proposalId);
+    //     IRaiseBoxProposal.MilestoneInfo memory propDetails =
+    //         raiseBoxProposal.getProposalInfo(raiseId, proposalId);
 
     //     if (propDetails.proposalId <= propCount) {
     //         return true;
@@ -348,9 +348,16 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     function _endVoting(bytes32 raiseId, uint256 proposalId) internal {
        votingEnded[raiseId][proposalId] = true;
 
-    IRaiseBoxCore._RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
+    IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
 
-    raiseBoxCore.updateRaiseInfo(raiseInfo.projectInfo, raiseInfo.raiseDuration, raiseInfo.raiseCreationTime, raiseInfo.amountRaisedByProject, raiseInfo.projectRaiseCount, raiseInfo.proposalsHosted, raiseInfo.raiseExists, raiseId);
+    raiseBoxCore.updateRaiseInfo(
+        raiseInfo.raiseCreationInfo.projectInfo,
+        raiseInfo.raiseCreationInfo.raiseCreatedAt,
+        raiseInfo.raiseContributionInfo.amountRaisedByProject,
+        raiseInfo.raiseCreationInfo.doesRaiseExist,
+        raiseId,
+        raiseInfo.raiseCreationInfo.raiseOwner
+        );
        emit RaiseBoxVoting_VotingEndedSucessfully();
     }
 

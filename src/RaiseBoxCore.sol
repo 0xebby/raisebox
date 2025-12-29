@@ -49,9 +49,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
     address public raiseBoxRaiseCreation; // raise creation contract
 
-    // total projects on raisebox
-    uint256 private raiseBoxRaiseCounter;
-
     // MINIMUM_CONTRIBUTION = 0.1 ether; // 1e17
     uint256 public constant MINIMUM_CONTRIBUTION = 0.1 ether;
 
@@ -76,7 +73,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     uint256 public totalProtocolFees;
 
     // raiseId (Keccak hash) to raiseInfo
-    mapping(bytes32 => _RaiseInfo) public raiseInfo;
+    mapping(bytes32 => RaiseInfo) public raiseInfo;
 
     // role-based authorization (bytes32 role => (caller => allowed))
     mapping(bytes32 => mapping(address => bool)) public authorizedCallers;
@@ -89,7 +86,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     mapping(bytes32 => bool) raiseExists;
     mapping(bytes32 => RaiseState) raiseState;
     mapping(bytes32 => uint256) amountRaisedByProject;
-
 
     // constructor:
     constructor() Ownable(msg.sender) ERC20("token", "tokenname") {
@@ -202,24 +198,25 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         emit RaiseBoxEventsLib.VotingContractSet(contractAddressToSet);
     }
 
+
+
+
      function updateRaiseInfo(
         ProjectInfo calldata _projectInfo,
-        uint256 _raiseDuration,
-        uint256 _raiseCreationTime,
+        uint256 _raiseCreatedAt,
         uint256 _amountRaisedByProject,
-        uint256 _numOfProposalsHosted,
-        uint256 _projectRaiseCount,
-        bool _raiseExists,
-        bytes32 _raiseId
+        bool _doesRaiseExist,
+        bytes32 _raiseId,
+        address _raiseOwner
     ) external {
 
         if (authorizedCallers[RAISE_CREATION_CONTRACT][msg.sender]) {
             _updateRaiseCreation(
                 _projectInfo,
                 _raiseId,
-                _raiseExists,
-                _raiseCreationTime,
-                _projectRaiseCount
+                _raiseCreatedAt,
+                _doesRaiseExist,
+                _raiseOwner
             );
         } else if (authorizedCallers[CONTRIBUTION_CONTRACT][msg.sender]) {
             _updateContributions(_raiseId, _amountRaisedByProject);
@@ -238,6 +235,146 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
     }
 
+
+    function endRaise(bytes32 raiseId_) external {
+
+        if (
+            authorizedCallers[CONTRIBUTION_CONTRACT][msg.sender] ||
+            authorizedCallers[VOTING_CONTRACT][msg.sender]
+        ) {
+
+        RaiseInfo storage _raiseInfo;
+
+        _raiseInfo = raiseInfo[raiseId_];
+
+        _raiseInfo.raiseState = IRaiseBoxCore.RaiseState.FAILED;
+
+        } else {
+            revert RaiseBoxErrorsLib.RaiseBoxCore_UnauthorizedRaiseEnder(msg.sender);
+
+        }
+    }
+
+
+    function _updateContributions(bytes32 raiseId_, uint256 amount) internal {
+        RaiseInfo storage _raiseInfo;
+
+        _raiseInfo = raiseInfo[raiseId_];
+
+        _raiseInfo.raiseContributionInfo.amountRaisedByProject +=amount;
+
+        _raiseInfo.raiseState = _updateRaiseState(RaiseState.PROPOSAL, raiseId_);
+
+        emit RaiseBoxEventsLib.RaiseContributionInfoUpdated(raiseId_, amount);
+    }
+
+    function _updateProposalsHostedByProject(bytes32 raiseId_) internal {
+        RaiseInfo storage _raiseInfo;
+
+        _raiseInfo = raiseInfo[raiseId_];
+
+        _raiseInfo.proposalInfo.proposalsHostedByProject += 1;
+
+        // sets raise state to VOTING, allowing voting on proposals to happen
+        _raiseInfo.raiseState = _updateRaiseState(RaiseState.VOTING, raiseId_);
+
+        emit RaiseBoxEventsLib.RaiseProposalInfoUpdated();
+       
+    }
+
+    function _updateVotingInfo(bytes32 raiseId) internal {
+        RaiseInfo storage _raiseInfo;
+
+        _raiseInfo = raiseInfo[raiseId];
+
+       // resets raise state back to PROPOSAL allowing new proposals to be hosted
+       _raiseInfo.raiseState = _updateRaiseState(RaiseState.PROPOSAL, raiseId);
+
+       emit RaiseBoxEventsLib.RaiseVotingInfoUpdated();
+       
+    }
+
+    function _updateRaiseCreation(
+        ProjectInfo calldata _projectInfo,
+        bytes32 _raiseId,
+        uint256 _createdAt,
+        bool _doesRaiseExist,
+        address _raiseOwner
+        
+    ) internal {
+        RaiseInfo storage _raiseInfo;
+
+        _raiseInfo = raiseInfo[_raiseId];
+
+        // creation info update:
+        _raiseInfo.raiseCreationInfo.projectInfo = _projectInfo;
+        _raiseInfo.raiseCreationInfo.raiseId = _raiseId;
+        _raiseInfo.raiseCreationInfo.doesRaiseExist = _doesRaiseExist;
+        _raiseInfo.raiseCreationInfo.raiseCreatedAt = _createdAt;
+        _raiseInfo.raiseCreationInfo.raiseOwner = _raiseOwner;
+
+        // raise deadline update:
+        _raiseInfo.raiseDuration = RAISE_DURATION;
+
+        // raise state update: INACTIVE ---> CONTRIBUTION
+        // opens raise to contributions, only then can raisers contribute
+        _raiseInfo.raiseState = _updateRaiseState(RaiseState.CONTRIBUTION, _raiseId);
+
+        emit RaiseBoxEventsLib.RaiseCreationInfoUpdated(_raiseId);
+    }
+
+    function _updateRaiseState(RaiseState newRaiseState, bytes32 raiseId) internal returns(RaiseState) {
+
+        // current state to update from
+        RaiseState oldRaiseState = raiseInfo[raiseId].raiseState;
+        RaiseState state = oldRaiseState;
+
+        if (
+            authorizedCallers[PROPOSAL_CONTRACT][msg.sender] || 
+            authorizedCallers[RAISE_CREATION_CONTRACT][msg.sender] || 
+            authorizedCallers[CONTRIBUTION_CONTRACT][msg.sender] || 
+            authorizedCallers[VOTING_CONTRACT][msg.sender] 
+            ) {
+            state = newRaiseState;
+        } else {
+            revert RaiseBoxErrorsLib.UnAuthorizedCaller(msg.sender); 
+            }
+
+        emit RaiseBoxEventsLib.RaiseBoxCore_updateState_RaiseStateUpdated(oldRaiseState, newRaiseState);
+
+        return newRaiseState;
+
+    }
+
+     /**
+     * @notice method to check if a raise exists, returns true if raise is found in storage
+     * @param raiseId id of the raise to check if exist
+     * @dev internal but exposed by it's external counterpart whcih simply calls this
+     */
+     function _doesRaiseExist(bytes32 raiseId) internal view returns(bool) {
+         RaiseInfo memory raiseInfo = raiseInfo[raiseId];
+
+        if (raiseInfo.raiseCreationInfo.doesRaiseExist) {
+            return true;
+        } else {
+            revert RaiseBoxErrorsLib.RaiseBoxCore_doesRaiseExist_RaiseDoesNotExist();
+        }
+    }
+
+    /**
+     * @dev Returns true if `account` is a contract.
+     * NOTE: It is unsafe to assume that an address for which this function returns
+     * false is an externally-owned account (EOA) and not a contract. Among other
+     * things, `_isContract` will return false for the following types of addresses:
+     *  - an externally-owned account
+     *  - a contract in construction
+     *  - an address where a contract will be created
+     *  - an address where a contract lived, but was destroyed
+     */
+    function _isContract(address account) internal view returns (bool) {
+        return account.code.length > 0;
+    }
+
     /**
      * @dev allows owner to set accepted token address
      *   @param newTokenAddress the address of the new accepted token
@@ -253,119 +390,14 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         emit RaiseBoxEventsLib.RaiseBoxCore_AcceptedTokenSet(newTokenAddress);
     }
 
-    
-    /**
-     * @dev Returns true if `account` is a contract.
-     * NOTE: It is unsafe to assume that an address for which this function returns
-     * false is an externally-owned account (EOA) and not a contract. Among other
-     * things, `_isContract` will return false for the following types of addresses:
-     *  - an externally-owned account
-     *  - a contract in construction
-     *  - an address where a contract will be created
-     *  - an address where a contract lived, but was destroyed
-     */
-    function _isContract(address account) internal view returns (bool) {
-        return account.code.length > 0;
-    }
+    // function incrementConFailedProposals(bytes32 raiseId) external {
+    //     if (_doesRaiseExist(raiseId)) {
+    //         raiseInfo[raiseId].conFailedProposals++;
+    //     }
+    // }
 
-    function _updateContributions(bytes32 raiseId, uint256 amount) internal {
-        _RaiseInfo storage _raiseInfo;
 
-        _raiseInfo = raiseInfo[raiseId];
-
-        _raiseInfo.amountRaisedByProject += amount; // update
-
-        _raiseInfo.raiseState = _updateRaiseState(RaiseState.PROPOSAL, raiseId);
-
-        emit RaiseBoxEventsLib.RaiseContributionDetailsUpdated(raiseId, amount);
-    }
-
-    function _updateProposalsHostedByProject(bytes32 raiseId) internal {
-        _RaiseInfo storage _raiseInfo;
-
-        _raiseInfo = raiseInfo[raiseId];
-
-        _raiseInfo.proposalsHosted += 1;
-
-        _raiseInfo.raiseState = _updateRaiseState(RaiseState.VOTING, raiseId);
-
-        // _raiseInfo.proposalState = ProposalState.FAILED;
-
-        emit RaiseBoxEventsLib.RaiseHostedProposalsUpdated();
-       
-    }
-
-    function _updateVotingInfo(bytes32 raiseId) internal {
-        _RaiseInfo storage _raiseInfo;
-
-        _raiseInfo = raiseInfo[raiseId];
-
-       _raiseInfo.raiseState = _updateRaiseState(RaiseState.PROPOSAL, raiseId);
-
-       emit RaiseBoxEventsLib.VotingInfoUpdated();
-       
-    }
-
-    function incrementConFaildProposals(bytes32 raiseId) external {
-        if (_doesRaiseExist(raiseId)) {
-            raiseInfo[raiseId].conFailedProposals++;
-        }
-    }
-
-    function _updateRaiseState(RaiseState updateToState, bytes32 raiseId) internal returns(RaiseState) {
-        RaiseState raiseState = raiseInfo[raiseId].raiseState;
-
-        // RaiseState initialState = _raiseInfo.raiseState;
-
-        if (authorizedCallers[PROPOSAL_CONTRACT][msg.sender] || authorizedCallers[RAISE_CREATION_CONTRACT][msg.sender] || authorizedCallers[CONTRIBUTION_CONTRACT][msg.sender] || authorizedCallers[VOTING_CONTRACT][msg.sender] ) {
-            raiseState = updateToState;
-        } else {revert RaiseBoxErrorsLib.UnAuthorizedCaller(msg.sender); }
-
-        emit RaiseBoxEventsLib.RaiseBoxCore_updateState_RaiseStateUpdated(raiseInfo[raiseId].raiseState, updateToState);
-
-        return raiseState;
-
-    }
-
-    function _updateRaiseCreation(
-        ProjectInfo calldata _projectInfo,
-        bytes32 _raiseId,
-        bool _raiseExists,
-        uint256 _timeCreated,
-        uint256 _projectCount
-    ) internal {
-        _RaiseInfo storage _raiseInfo;
-
-        _raiseInfo = raiseInfo[_raiseId];
-
-        _raiseInfo.projectInfo = _projectInfo;
-        _raiseInfo.raiseId = _raiseId;
-        _raiseInfo.raiseExists = _raiseExists;
-        _raiseInfo.raiseCreationTime = _timeCreated;
-        _raiseInfo.projectRaiseCount = _projectCount;
-        _raiseInfo.raiseDuration = RAISE_DURATION;
-        _raiseInfo.raiseState = _updateRaiseState(RaiseState.CONTRIBUTION, _raiseId);
-        
-        emit RaiseBoxEventsLib.RaiseCreationDetailsUpdated(_raiseId);
-        /// neverland
-    }
-
-     /**
-     * @notice method to check if a raise exists, returns true if raise is found in storage
-     * @param raiseId id of the raise to check if exist
-     * @dev internal but exposed by it's external counterpart whcih simply calls this
-     */
-     function _doesRaiseExist(bytes32 raiseId) internal view returns(bool) {
-         _RaiseInfo memory raiseInfo = raiseInfo[raiseId];
-
-        if (raiseInfo.raiseExists) {
-            return true;
-        } else {
-            revert RaiseBoxErrorsLib.RaiseBoxCore_doesRaiseExist_RaiseDoesNotExist();
-        }
-    }
-
-    function _getRaiseInfo(bytes32 raiseId) internal view returns (_RaiseInfo memory) {
+    function _getRaiseInfo(bytes32 raiseId) internal view returns (RaiseInfo memory) {
          if (_doesRaiseExist(raiseId)) {
             return raiseInfo[raiseId];
         }
@@ -393,29 +425,24 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         return MINIMUM_CONTRIBUTION;
     }
 
-    function getRaiseInfo(bytes32 raiseId) external view returns (_RaiseInfo memory) {
+    function getRaiseInfo(bytes32 raiseId) external view returns (RaiseInfo memory) {
        return _getRaiseInfo(raiseId);
     }
 
     function getAmountToRaise(bytes32 raiseId) external view returns (uint256) {
         if (_doesRaiseExist(raiseId)) {
-            return raiseInfo[raiseId].projectInfo.raiseTarget;
-
+            return raiseInfo[raiseId].raiseCreationInfo.projectInfo.raiseTarget;
         }
     }
 
     function getAmtRaisedByProject(bytes32 raiseId) external returns (uint256) {
          if (_doesRaiseExist(raiseId)) {
-            return raiseInfo[raiseId].amountRaisedByProject;
+            return raiseInfo[raiseId].raiseContributionInfo.amountRaisedByProject;
         }
     }
 
     function getProtocolFeeAddress() external view returns (address) {
         return protocolFeeAddress;
-    }
-
-    function getRaiseCount() external returns (uint256) {
-        return raiseBoxRaiseCounter;
     }
 
     function getAcceptedToken() external view returns (address) {
@@ -426,9 +453,15 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
        return _doesRaiseExist(raiseId);
     }
 
+    function getRaiseCreatedAt(bytes32 raiseId_) external returns (uint256) {
+        if (_doesRaiseExist(raiseId_)) {
+            raiseInfo[raiseId_].raiseCreationInfo.raiseCreatedAt;
+        }
+    }
+
     function getRaiseCreator(bytes32 raiseId) external view returns (address) {
         if (_doesRaiseExist(raiseId)) {
-            return raiseInfo[raiseId].projectInfo.projectOwner;
+            return raiseInfo[raiseId].raiseCreationInfo.raiseOwner;
         }
     }
 
@@ -438,43 +471,36 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
     function isRaiseCreator(address raiseCreator, bytes32 raiseId) external view returns (bool) {
        if (_doesRaiseExist(raiseId)) {
-         if (raiseInfo[raiseId].projectInfo.projectOwner == raiseCreator) { return true ;}
-        else {
-            revert RaiseBoxErrorsLib.RaiseBoxCore_isRaiseCreator_NotRaiseCreator(raiseCreator);
-        }
+         if (raiseInfo[raiseId].raiseCreationInfo.raiseOwner == raiseCreator) { return true ;}
       }
-       }
+    }
 
     function isAuthorizedCaller(bytes32 role, address caller) external returns (bool) {
         return authorizedCallers[role][caller];
     }
 
-    function getRaiseDuration() external view returns (uint256) {
-        return RAISE_DURATION;
+    function getRaiseDeadline(bytes32 raiseId_) external view returns (uint256) {
+        RaiseInfo memory raiseInfo_;
+
+        if (_doesRaiseExist(raiseId_)) {
+
+        raiseInfo_ = raiseInfo[raiseId_];
+
+        return (RAISE_DURATION + raiseInfo_.raiseCreationInfo.raiseCreatedAt);
+
+        }
+        
+       
     }
 
-
-
-    mapping(bytes32 => mapping(uint256 => ProposalState)) private proposalState;
-
-    function getProposalState(bytes32 raiseId, uint256 proposalId) external returns(ProposalState) {
-        _getProposalState(raiseId, proposalId);
-    }
-
-    function _getProposalState(bytes32 raiseId, uint256 proposalId) internal returns(ProposalState) {
+    function getProposalsHosted(bytes32 raiseId) external returns(uint256) {
         if (_doesRaiseExist(raiseId)) {
-            return proposalState[raiseId][proposalId];
+            return raiseInfo[raiseId].proposalInfo.proposalsHostedByProject;
         }
     }
 
-    function _getLastProposalState(bytes32 raiseId, uint256 proposalId) internal returns(ProposalState) {
-        uint256 lastProposalId = (proposalId - 1);
-        return _getProposalState(raiseId, lastProposalId);
-    }
 
-    function getLastProposalState(bytes32 raiseId, uint256 proposalId) external returns(ProposalState) {
-        return _getLastProposalState(raiseId, proposalId);
-    }
+
 
     // this is raiseboxV2b branch
 }

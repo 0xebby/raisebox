@@ -44,9 +44,9 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
 
 
         // clean up user input -- projectInfo
-        if (projectInfo.projectOwner == address(0)) { revert RaiseBoxErrorsLib.ZeroAddress(); }
+        if (msg.sender == address(0)) { revert RaiseBoxErrorsLib.ZeroAddress(); }
 
-        if (!(raiseBoxCore.isVerifiedAndWhiteListed(projectInfo.projectOwner))) {
+        if (!(raiseBoxCore.isVerifiedAndWhiteListed(msg.sender))) {
             revert RaiseBoxErrorsLib.RaiseBoxRaiseCreation_OwnerNotWhiteListed();
         }
 
@@ -73,23 +73,20 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
         raisesCreated[msg.sender] += 1;
         raiseBoxCore.updateRaiseInfo( // updates storage with raiseCreation info
             projectInfo,
-            raiseBoxCore.getRaiseDuration(),
             timeCreated,
             0,
-            0,
-            raisesCreated[msg.sender],
             true,
-            raiseId
+            raiseId,
+            msg.sender
         );
         i_lastRaiseCreated[msg.sender] = timeCreated;
         hasCreatedRaise[msg.sender] = true;
-        raisesCreatedOnRaiseBox++;
-        
+        raisesCreatedOnRaiseBox++;        
         
 
         emit RaiseBoxEventsLib.RaiseCreation_RaiseCreated(
             projectInfo.projectName,
-            projectInfo.projectOwner,
+            msg.sender,
             projectInfo.valueProposition,
             projectInfo.raiseTarget,
             raiseId,
@@ -108,115 +105,11 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
 
 
 
-
-    // /**
-    //  *
-    //  * @param raiseName_ name of the project to be created
-    //  * @param valueProposition_ what problem the project is going to solve
-    //  * @param raiseAmount_ amount project wants to raise --in ethers now, usd later
-    //  * @param raiseDuration_ duration of the raise -- how long the raise period will last
-    //  * @dev 300154 initial gas estimate for createRaise function
-    //  * @dev 299980 gas after optimizations
-    //  */
-
-
-    // function createRaise(
-    //     string memory raiseName_,
-    //     string memory valueProposition_,
-    //     uint256 raiseAmount_,
-    //     uint256 raiseDuration_
-    // ) public returns (bytes32) {
-    //     // when raise is created on raisebox
-    //     uint256 timeCreated;
-
-    //     // checks that a project cannot create more than one project within 78 weeks
-    //     if (raisesCreated[msg.sender] > 0 ) {
-    //         if (PROJECT_LIFESPAN > (block.timestamp - i_lastRaiseCreated[msg.sender])) {
-    //             revert RaiseBoxCreation_createRaise_RaiseAlreadyActive();
-    //         }
-    //     }
-
-    //     if (msg.sender == address(0)) {
-    //         revert RaiseBoxCreation_createRaise_ZeroAddress();
-    //     }
-
-    //     if (bytes(raiseName_).length == 0) {
-    //         revert RaiseBoxCreation_createRaise_InvalidProjectName();
-    //     }
-
-    //     if (bytes(valueProposition_).length == 0) {
-    //         revert RaiseBoxCreation_createRaise_InvalidValueProp();
-    //     }
-
-    //     if (raiseAmount_ == 0) {
-    //         revert RaiseBoxCreation_createRaise_CannotRaiseZeroFunds();
-    //     }
-
-    //     if (raiseDuration_ == 0) {
-    //         revert RaiseBoxCreation_createRaise_DurationCannotBeZero();
-    //     }
-
-    //     if (raiseDuration_ > PROJECT_LIFESPAN || raiseDuration_ < 52 weeks) {
-    //         revert RaiseBoxCreation_createRaise_InvalidDuration();
-    //     }
-
-        
-
-    //     // generate raiseId:
-    //     bytes32 raiseId = keccak256(abi.encode(raiseName_, raiseAmount_, timeCreated, valueProposition_, msg.sender));
-    //     if (raiseBoxCore.getRaiseState(raiseId, msg.sender) != IRaiseBoxCore.RaiseState.CONTRIBUTION) {
-    //         revert RaiseCreation_createRaise_RaiseAlreadyExist();
-    //     }
-
-    //     bool doesRaiseExist = raiseBoxCore.doesRaiseExist(raiseId);
-
-    //     // if (doesRaiseExist) {
-    //     //     revert RaiseCreation_createRaise_RaiseAlreadyExist();
-    //     // }
-
-    //     timeCreated = block.timestamp;
-
-    //     if (!doesRaiseExist) {
-    //         raiseBoxCore.updateRaiseInfo(
-    //             raiseId,
-    //             raiseName_,
-    //             msg.sender,
-    //             valueProposition_,
-    //             raiseAmount_,
-    //             raiseDuration_,
-    //             true,
-    //             timeCreated,
-    //             0,
-    //             0,
-    //             raisesCreated[msg.sender] += 1
-    //         );
-    //     }
-
-    //     i_lastRaiseCreated[msg.sender] = timeCreated;
-    //     raiseBoxCore.incrementRaiseCount();
-    //     raiseBoxCore.setRaiseState(raiseId, IRaiseBoxCore.RaiseState.CONTRIBUTION, msg.sender);
-
-    //     emit RaiseCreation_RaiseCreated(
-    //         raiseName_,
-    //         msg.sender,
-    //         valueProposition_,
-    //         raiseAmount_,
-    //         raiseDuration_,
-    //         raiseId,
-    //         !doesRaiseExist,
-    //         timeCreated,
-    //         i_lastRaiseCreated[msg.sender] = timeCreated,
-    //         raisesCreated[msg.sender]
-    //     );
-
-    //     return raiseId;
-    // }
-
     ////////////////////////////////////////////////////////// GETTERS //////////////////////////////////////////////////////////
 
     function getRaiseCreator(bytes32 raiseId) external returns (address) {
-        IRaiseBoxCore._RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
-        return raiseInfo.projectInfo.projectOwner;
+        IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
+        return raiseInfo.raiseCreationInfo.raiseOwner;
     }
 
     function viewProjectInfo(bytes32 raiseId) external {

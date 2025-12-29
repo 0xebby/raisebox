@@ -20,6 +20,17 @@ library RaiseBoxErrorsLib {
 
     // proposals errors
     error RaiseBoxProposal_isValidProposal_ProposalDoesNotExist();
+    error RaiseBoxProposal_hostProposal_InvalidRaiseId(bytes32 raiseId);
+
+    // thrown when unauthorized caller tries to end raise
+    error RaiseBoxCore_UnauthorizedRaiseEnder(address caller);
+
+    error RaiseBoxProposal_hostProposal_InvalidDescLength();
+
+    error RaiseBoxProposal_hostProposal_InvalidMilestoneLength();
+
+    // thrown when an unauthorized caller tries to update proposalInfo
+    error RaiseBoxProposal_updateProposalInfo_Unauthorized();
 
 
 
@@ -59,7 +70,7 @@ library RaiseBoxErrorsLib {
     error RaiseBoxContribution_ValueSentMismatch();
     error RaiseBoxContribution_ContributeMoreEth(uint256);
     error RaiseBoxContribution_ZeroAmount();
-    error RaiseBoxContribution_ContributionFailed();
+    error RaiseBoxContribution_contribute_ContributionFailed();
     error RaiseBoxContribution_InvalidProject();
     error RaiseBoxContribution_RaiseBoxProtocolUnset();
     error RaiseContribution_ContributionEnded(uint256);

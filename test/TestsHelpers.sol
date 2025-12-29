@@ -12,6 +12,7 @@ import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {RaiseBoxVoting} from "../src/RaiseBoxVoting.sol";
 import {RaiseBoxDripHandler} from "src/RaiseBoxDripHandler.sol";
 import {IRaiseBoxCore} from "src/interfaces/IRaiseBoxCore.sol";
+import {IRaiseBoxProposal} from "src/interfaces/IRaiseBoxProposal.sol";
 import {RaiseBoxEventsLib} from "src/RaiseBoxLib/RaiseBoxEventsLib.sol";
 
 contract TestsHelpers is Test {
@@ -144,6 +145,9 @@ contract TestsHelpers is Test {
         raiseBoxCore.verifyAndAddToWhitelist(vitalik);
         raiseBoxCore.verifyAndAddToWhitelist(ben);
 
+        // warp time
+        advanceBlockTime(10 days);
+
     }
 
     /**
@@ -155,24 +159,10 @@ contract TestsHelpers is Test {
         emit RaiseBoxEventsLib.BlockTimeAdvancedBy(raiseDuration_);
     }
 
-    // function createTestProjects() public {
-    //     vm.startPrank(ben);
-    //     bytes32 projectID0 = raiseBoxRaiseCreationContract.createRaise(
-    //         "Sentient", "Building AGI - Collectively owned AI", 20 ether, 52 weeks
-    //     );
-    //     vm.stopPrank();
-
-    //     vm.startPrank(alice);
-    //     bytes32 projectID1 =
-    //         raiseBoxRaiseCreationContract.createRaise("Hello Elsa", "Chat, trade and swap using AI", 20 ether, 60 weeks);
-    //     vm.stopPrank();
-    // }
-
     function contributeToTestProject() public returns (bytes32 projectId) {
         vm.startPrank(ben);
         projectId = raiseBoxRaiseCreationContract.createNewRaise(
             IRaiseBoxCore.ProjectInfo({
-            projectOwner:ben,
             projectName:"sentient",
             valueProposition:"agi",
             raiseTarget:20 ether,
@@ -181,10 +171,15 @@ contract TestsHelpers is Test {
         );
         vm.stopPrank();
 
-        raiseBoxCore.getRaiseInfo(projectId);
-
-
-        address[20] memory contributors = [ebby, sally, uche, max, mark, alice, joe, testOwner, sam, vitalik, arbitrum, ethereum, polymarket, elon, trump, tether, base, magiceden, gowagr, openseas];
+        address[20] memory contributors = [
+            ebby, sally, uche, 
+            max, mark, alice, 
+            joe, testOwner, sam, 
+            vitalik, arbitrum, ethereum, 
+            polymarket, elon, trump, 
+            tether, base, magiceden, 
+            gowagr, openseas
+            ];
 
         for (uint256 i = 0; i < contributors.length; i++) {
             vm.startPrank(contributors[i]);

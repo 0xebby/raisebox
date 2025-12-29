@@ -6,6 +6,7 @@ pragma solidity ^0.8.19;
 /// @custom:contact tech.codemojo@gmail.com
 /// @notice Library exposing events.
 import {IRaiseBoxCore} from "src/interfaces/IRaiseBoxCore.sol";
+import {IRaiseBoxProposal} from "src/interfaces/IRaiseBoxProposal.sol";
 
 library RaiseBoxEventsLib {
 
@@ -26,13 +27,13 @@ library RaiseBoxEventsLib {
 
     /// @notice emitted when raise creation details are update in storage
     /// @param raiseId id of the raise updated in storage
-    event RaiseCreationDetailsUpdated(
+    event RaiseCreationInfoUpdated(
         bytes32 indexed raiseId
         );
 
     /// @notice emitted when raise creation details are update in storage
     /// @param raiseId id of the raise updated in storage
-    event RaiseContributionDetailsUpdated(
+    event RaiseContributionInfoUpdated(
         bytes32 indexed raiseId,
         uint256 indexed amount
         );
@@ -127,7 +128,7 @@ library RaiseBoxEventsLib {
         address indexed contractAddress
         );
 
-    event RaiseHostedProposalsUpdated();
+    event RaiseProposalInfoUpdated();
 
     event RaiseBoxCore_AcceptedTokenSet(
         address indexed acceptedToken
@@ -137,17 +138,25 @@ library RaiseBoxEventsLib {
         address contractAddress
         );
     
-    event VotingInfoUpdated();
+    event RaiseVotingInfoUpdated();
 
     // contribution related events:
     event Contributed(
         address indexed user, 
-        uint256 indexed amountContributed, 
+        uint256 indexed userContribution, 
         bytes32 indexed raiseId, 
-        uint256 totalContributions
+        uint256 amountRaisedSoFar
     );
 
     event BlockTimeAdvancedBy(
         uint256 duration
+    );
+
+    event ProposalStateUpdated(IRaiseBoxProposal.ProposalState newState); // tempp
+
+    event DebugProposalState(
+        bytes32 raiseId,
+        uint256 proposalId,
+        IRaiseBoxProposal.ProposalState proposalState
     );
 }
