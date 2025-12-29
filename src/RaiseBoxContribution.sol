@@ -49,24 +49,41 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         // raiseId should be filled automatically via UI for project clicked by user
 
         // get valid project from storage 
-        IRaiseBoxCore._RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
+        IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
+        address raiseOwner = raiseInfo.raiseCreationInfo.raiseOwner;
+        uint256 raiseTarget = raiseInfo.raiseCreationInfo.projectInfo.raiseTarget;
+
+        uint256 constRaiseDuration = raiseBoxCore.getRaiseDeadline(raiseId);
 
         uint256 totalContributions = totalContributionsToProject[raiseId];
 
-        uint256 maxContribution = calMaxContribution(raiseId, raiseInfo.projectInfo.raiseTarget);
+        uint256 maxContribution = calMaxContribution(raiseId, raiseInfo.raiseCreationInfo.projectInfo.raiseTarget);
 
         uint256 userPrevContribution = amountContributedToProject[msg.sender][raiseId];
 
         // Checks
 
-        if (msg.sender == raiseInfo.projectInfo.projectOwner) revert RaiseBoxErrorsLib.RaiseBoxContribution_SelfContribution();
+        if (block.timestamp > constRaiseDuration && totalContributions < raiseTarget) { 
+            raiseBoxCore.endRaise(raiseId);
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_RaiseFailed(raiseId);
+        }
 
-        if (raiseId == 0 || raiseId != raiseInfo.raiseId) {
+        if (raiseInfo.raiseState == IRaiseBoxCore.RaiseState.FAILED) {
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_RaiseFailed(raiseId);
+        }
+
+        if (raiseInfo.raiseState == IRaiseBoxCore.RaiseState.PROPOSAL) {
+            revert RaiseBoxErrorsLib.RaiseBox_RaiseAlreadyPassed(raiseId, raiseTarget, totalContributions);
+        }
+
+        if (msg.sender == raiseOwner) revert RaiseBoxErrorsLib.RaiseBoxContribution_SelfContribution();
+
+        if (raiseId == 0 || raiseId != raiseInfo.raiseCreationInfo.raiseId) {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_InvalidRaiseId();
         }
 
         // address projectOwner = project.projectOwner;
-        if (raiseInfo.projectInfo.projectOwner == address(0)) {
+        if (raiseInfo.raiseCreationInfo.raiseOwner == address(0)) {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_InvalidProject();
         }
 
@@ -85,7 +102,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
         if ((userPrevContribution + amount) > maxContribution) {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_contribute_AboveMaxAllowed(
-                raiseInfo.projectInfo.raiseTarget,
+                raiseTarget,
                 string(
                     abi.encodePacked(
                         "Cannot over contribute: you can contribute only: ",
@@ -94,21 +111,6 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
                     )
                 )
             );
-        }
-
-        if (block.timestamp > raiseInfo.raiseDuration && totalContributions != raiseInfo.projectInfo.raiseTarget ) { 
-            IRaiseBoxCore.RaiseState.FAILED;
-            
-            revert RaiseBoxErrorsLib.RaiseBox_RaiseFailed(raiseId);
-            
-        }
-
-        if (raiseInfo.raiseState == IRaiseBoxCore.RaiseState.FAILED) {
-            revert RaiseBoxErrorsLib.RaiseBoxContribution_RaiseFailed(raiseId);
-        }
-
-        if (raiseBoxCore.getRaiseState(raiseId) == IRaiseBoxCore.RaiseState.PROPOSAL) {
-            revert RaiseBoxErrorsLib.RaiseBox_RaiseAlreadyPassed(raiseId, raiseInfo.projectInfo.raiseTarget, totalContributions);
         }
 
         // Effects
@@ -130,17 +132,24 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         // only update storage when raise has passed,
         // i.e. the amount to raise by project has been raised successfully
         // instead of updating storage everytime a contribution is made, wasteful
-        if (totalContributions == raiseInfo.projectInfo.raiseTarget) {
-            raiseBoxCore.updateRaiseInfo(raiseInfo.projectInfo, raiseInfo.raiseDuration, raiseInfo.raiseCreationTime, totalContributionsToProject[raiseId], raiseInfo.projectRaiseCount, raiseInfo.proposalsHosted, raiseInfo.raiseExists, raiseId);
+        if (totalContributions == raiseTarget) {
+            raiseBoxCore.updateRaiseInfo(
+                raiseInfo.raiseCreationInfo.projectInfo,
+                raiseInfo.raiseCreationInfo.raiseCreatedAt,
+                totalContributions,
+                raiseInfo.raiseCreationInfo.doesRaiseExist,
+                raiseId,
+                raiseOwner
+                );
 
-            emit RaiseBoxEventsLib.RaiseBox_RaisePassed(raiseInfo.projectInfo.raiseTarget, raiseInfo.projectInfo.raiseTarget);
+        emit RaiseBoxEventsLib.RaiseBox_RaisePassed(raiseTarget, totalContributions);
         }
 
         // Interactions
 
         (bool successfullyContributed,) = address(raiseBoxDripHandler).call{value: amount}(""); // funds sent to protocol for safekeeping pending release to project
         if (!successfullyContributed) {
-            revert RaiseBoxErrorsLib.RaiseBoxContribution_ContributionFailed();
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_contribute_ContributionFailed();
         }
 
         emit RaiseBoxEventsLib.Contributed(
