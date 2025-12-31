@@ -10,13 +10,13 @@ import {IRaiseBoxDripHandler} from "src/interfaces/IRaiseBoxDripHandler.sol";
 import{RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
 
 contract RaiseBoxVoting is IRaiseBoxVoting {
-    IRaiseBoxCore public immutable raiseBoxCore; // core contract
+    IRaiseBoxCore public immutable raiseBoxCore; 
 
-    IRaiseBoxContribution public immutable raiseBoxContribution; // contribution contract
+    IRaiseBoxContribution public immutable raiseBoxContribution; 
 
-    IRaiseBoxProposal public immutable raiseBoxProposal; // proposal contract
+    IRaiseBoxProposal public immutable raiseBoxProposal; 
 
-    IRaiseBoxDripHandler public immutable raiseBoxDripHandler; // drip contract
+    IRaiseBoxDripHandler public immutable raiseBoxDripHandler; 
 
     address public owner;
 
@@ -42,6 +42,17 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     //** ------------------------------------------------------------------ **//
 
     modifier canVote(bytes32 raiseId, address user, uint256 proposalId) {
+
+        // checks if proposal is live for raise
+        
+        if (raiseBoxCore.getRaiseState(raiseId) != IRaiseBoxCore.RaiseState.VOTING) {
+            revert RaiseBoxErrorsLib.RaiseBoxVoting_RaiseNotInProposalState();
+        }
+
+        if (raiseBoxProposal.getProposalState(raiseId, proposalId) != IRaiseBoxProposal.ProposalState.ACTIVE) {
+            revert RaiseBoxVoting_ProposalNotLive();
+        }
+
         // ascertain msg.sender has contributed to project
         bool hasContributedToProject = raiseBoxContribution.getHasContributed(raiseId, user);
 
@@ -53,17 +64,11 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
             revert RaiseBoxVoting_AlreadyDelegatedVote(user);
         }
 
-        if (proposalId > raiseBoxProposal.getProposalCount(raiseId)) {
+        if (proposalId > raiseBoxProposal.getProposalCount(raiseId) || proposalId == 0) {
             revert RaiseBoxErrorsLib.RaiseBoxVoting_ProposalDoesNotExist(proposalId);
         }
 
-        uint256 _start = votingStartTime[raiseId][proposalId];
-
-        // if (votingEnded[raiseId][proposalId] || block.timestamp > (_start + VOTING_DURATION)) {
-        //     _endVoting(raiseId, proposalId);
-        //     _tallyVotes(raiseId, proposalId);
-        //     // revert RaiseBoxVoting_VotingAlreadyEnded(raiseId, proposalId);
-        // }
+        uint256 _start = _voteStartTime(raiseId, proposalId);
 
         // this allows any attempt to vote after voting deadline to trigger funds dripper
         if (votingEnded[raiseId][proposalId] || block.timestamp > (_start + VOTING_DURATION)) {
@@ -75,21 +80,10 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
             revert RaiseBoxVoting_VotingNotStarted(raiseId, proposalId);
         }
 
-        // if voting elapsed, mark ended and revert
-        // if (block.timestamp >= _start + VOTING_DURATION) {
-        //     _endVoting(raiseId, proposalId);
-        //     _tallyVotes(raiseId, proposalId);
-
-        //     // revert RaiseBoxVoting_VotingAlreadyEnded(raiseId, proposalId);
-        // }
-
         if (hasVotedOnProposal[raiseId][proposalId][user]) {
             revert RaiseBoxVoting_AlreadyVoted(proposalId, user);
         }
 
-        if (raiseBoxCore.getRaiseState(raiseId) != IRaiseBoxCore.RaiseState.VOTING) {
-            revert RaiseBoxVoting_ProposalNotLive();
-        }
         _;
     }
 
@@ -151,8 +145,8 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
         // if voting duration elapsed, mark ended and emit events:
         if (block.timestamp >= (_start + VOTING_DURATION)) {
-            _endVoting(raiseId, proposalId);
             _tallyVotes(raiseId, proposalId);
+            _endVoting(raiseId, proposalId);
             emit RaiseBoxVoting_VoteTallyTriggered(msg.sender, proposalId, block.timestamp);
         } else {
             revert RaiseBoxVoting_VotingNotEnded();
@@ -257,6 +251,10 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     //                        GETTER FUNCTIONS                                //
     //** ------------------------------------------------------------------ **//
 
+    function getProposalVotes(bytes32 raiseId_, uint256 proposalId_) external view returns (uint256, uint256, uint256) {
+        return _getProposalVotes(raiseId_, proposalId_);
+    }
+
     /**
      * @notice Get votes for, against, and total votes for a proposal
      *     @param raiseId unique id of a project.
@@ -266,7 +264,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
      *     @return totalVotes aggregate (for + against).
      *
      */
-    function getProposalVotes(bytes32 raiseId, uint256 proposalId) external returns (uint256, uint256, uint256) {
+    function _getProposalVotes(bytes32 raiseId, uint256 proposalId) internal view returns (uint256, uint256, uint256) {
         // checks:
         bool validProposal = raiseBoxProposal.isValidProposal(raiseId, proposalId);
 
@@ -274,21 +272,23 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         uint256 againstVotes = votesAgainstProposal[raiseId][proposalId];
         uint256 totalVotes = (forVotes + againstVotes);
 
-        if (validProposal) return (forVotes, againstVotes, totalVotes);
+        if (validProposal) {
+            return (forVotes, againstVotes, totalVotes);
+        } 
     }
 
-    function getAbsenteeVoters(bytes32 raiseId, uint256 proposalId) external returns (uint256) {
+    function getAbsenteeVoters(bytes32 raiseId, uint256 proposalId) external view returns (uint256) {
         uint256 totalContributors = raiseBoxContribution.getRaiseContributorsCount(raiseId);
-        (,, uint256 totalVotes) = this.getProposalVotes(raiseId, proposalId);
+        (,, uint256 totalVotes) = _getProposalVotes(raiseId, proposalId);
 
         return (totalContributors - totalVotes);
     }
 
-    function getVoteStartTime(bytes32 raiseId, uint256 proposalId) external returns (uint256 voteStartTime) {
+    function getVoteStartTime(bytes32 raiseId, uint256 proposalId) external view returns (uint256 voteStartTime) {
         return _voteStartTime(raiseId, proposalId);
     }
 
-    function _voteStartTime(bytes32 raiseId, uint256 proposalId) internal returns(uint256 voteStartTime) {
+    function _voteStartTime(bytes32 raiseId, uint256 proposalId) internal view returns(uint256 voteStartTime) {
         return votingStartTime[raiseId][proposalId];
     }
 
@@ -321,22 +321,29 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     // }
 
     function _tallyVotes(bytes32 raiseId, uint256 proposalId) internal returns (uint256, uint256) {
-        (uint256 forVotes, uint256 againstVotes, uint256 totalVotes) = this.getProposalVotes(raiseId, proposalId);
+        (uint256 forVotes, uint256 againstVotes, uint256 totalVotes) = _getProposalVotes(raiseId, proposalId);
 
 
         // if for is greater than against, proposal passed and % of funds will be dripped
         if (forVotes > againstVotes) {
+
+            raiseBoxProposal.updateProposalInfo(raiseId, proposalId);
+
             // delegate call to dripHandler since proposal has passed
             raiseBoxDripHandler.dripFundsForProposal(raiseId, proposalId);
         } else {
-            
+
+            raiseBoxProposal.updateProposalInfo(raiseId, proposalId);
+
             raiseFailedProposals[raiseId]++;
             // revert RaiseBoxVoting_ProposalFailed();
         }
 
+        emit VotesTallied(raiseId, proposalId, forVotes, againstVotes, totalVotes);
+
         return (forVotes, againstVotes);
 
-        emit VotesTallied(raiseId, proposalId, forVotes, againstVotes, totalVotes);
+   
 
     }
 
@@ -345,19 +352,31 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     }
 
     /// @dev sets voting ended for a given proposalId
-    function _endVoting(bytes32 raiseId, uint256 proposalId) internal {
-       votingEnded[raiseId][proposalId] = true;
+    function _endVoting(bytes32 raiseId_, uint256 proposalId_) internal {
+       votingEnded[raiseId_][proposalId_] = true;
 
-    IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
+    IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId_);
+
+    (uint forVotes_, uint againstVotes_, ) = _getProposalVotes(raiseId_, proposalId_);
 
     raiseBoxCore.updateRaiseInfo(
         raiseInfo.raiseCreationInfo.projectInfo,
         raiseInfo.raiseCreationInfo.raiseCreatedAt,
         raiseInfo.raiseContributionInfo.amountRaisedByProject,
         raiseInfo.raiseCreationInfo.doesRaiseExist,
-        raiseId,
-        raiseInfo.raiseCreationInfo.raiseOwner
+        raiseId_,
+        raiseInfo.raiseCreationInfo.raiseOwner,
+        forVotes_,
+        againstVotes_,
+        proposalId_
         );
+
+        raiseBoxProposal.updateProposalState(
+            raiseId_, 
+            proposalId_, 
+            IRaiseBoxProposal.ProposalState.INACTIVE
+            );
+
        emit RaiseBoxVoting_VotingEndedSucessfully();
     }
 

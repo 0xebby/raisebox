@@ -86,6 +86,7 @@ interface IRaiseBoxVoting {
 
     function getProposalVotes(bytes32 raiseId, uint256 proposalId)
         external
+        view
         returns (uint256 forVotes, uint256 againstVotes, uint256 totalVotes);
         
     function getFailedProposalsCount(bytes32 raiseId) external view returns (uint256);
@@ -107,5 +108,5 @@ interface IRaiseBoxVoting {
     function getAbsenteeVoters(
         bytes32 raiseId, 
         uint256 proposalId
-        ) external returns (uint256);
+        ) external view returns (uint256);
 }
