@@ -12,6 +12,11 @@ interface IRaiseBoxCore {
 
     struct RaiseProposalInfo {
         uint256 proposalsHostedByProject;
+        uint256 conFailedProposals;
+        uint256 currentConFailed;
+        uint256 nonConFailedProposals;
+        uint256 lastProposalId;
+        bool lastProposalFailed;
     }
 
     struct RaiseContributionInfo {
@@ -38,10 +43,11 @@ interface IRaiseBoxCore {
         INACTIVE, // raise not created yet, default state
         CONTRIBUTION, // raise has been created
         PROPOSAL, // raise passed but still active
-        FAILED, // raise failed and becomes inactive again
         VOTING, // raise in proposal hosting state, active, passed, in_proposal
-        ENDED, // raise started and then was ended successfully, either: all proposals passed and drips were successful or 60 weeks elapsed
-        REFUNDING // raise failed either by 3 consecutive failed proposals or 5 non consecutive failed proposals, raise failed by amtToRaise > amtRaised after raiseDuration
+        FAILED, // raise failed and becomes inactive again
+        PASSED,
+        REFUNDING, // raise failed either by 3 consecutive failed proposals or 5 non consecutive failed proposals, raise failed by amtToRaise > amtRaised after raiseDuration
+        ENDED // raise started and then was ended successfully, either: all proposals passed and drips were successful or 60 weeks elapsed
     } //[0,1,2,3,4, 5]
 
 
@@ -54,7 +60,7 @@ interface IRaiseBoxCore {
 
     function getMinimumContribution() external view returns (uint256);
 
-    function getAmtRaisedByProject(bytes32 projectId_) external returns (uint256);
+    function getAmtRaisedByProject(bytes32 projectId_) external view returns (uint256);
 
     function getProtocolFeeAddress() external view returns (address);
 
@@ -72,25 +78,15 @@ interface IRaiseBoxCore {
 
     function isRaiseCreator(address raiseCreator, bytes32 raiseId) external view returns (bool);
 
-    function getRaiseCreatedAt(bytes32 raiseId_) external returns (uint256);
+    function getRaiseCreatedAt(bytes32 raiseId_) external view returns (uint256);
 
     function getRaiseInfo(bytes32 raiseId) external view returns (RaiseInfo memory);
 
     function getRaiseDeadline(bytes32 raiseId_) external view returns (uint256);
     
-    function getProposalsHosted(bytes32 raiseId) external returns(uint256);
+    function getProposalsHosted(bytes32 raiseId) external view returns(uint256);
 
-
-//   function updateRaiseInfo(
-//         ProjectInfo calldata _projectInfo,
-//         uint256 _raiseDuration,
-//         uint256 _raiseCreationTime,
-//         uint256 _amountRaisedByProject,
-//         uint256 _numOfProposalsHosted,
-//         uint256 _raisesHostedByProject,
-//         bool _raiseExists,
-//         bytes32 _raiseId
-//     ) external;
+    // function getRaiseProposalsInfo(bytes32 raiseId) external returns (RaiseProposalInfo memory);
 
     function updateRaiseInfo(
         ProjectInfo calldata _projectInfo,
@@ -98,7 +94,10 @@ interface IRaiseBoxCore {
         uint256 _amountRaisedByProject,
         bool _doesRaiseExist,
         bytes32 _raiseId,
-        address _raiseOwner
+        address _raiseOwner,
+        uint256 _forVotes,
+        uint256 _againstVotes,
+        uint256 _proposalId
     ) external;
 
     function endRaise(bytes32 raiseId_) external;
