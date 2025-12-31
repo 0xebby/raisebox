@@ -39,8 +39,8 @@ library RaiseBoxEventsLib {
         );
 
     event RaiseBoxCore_updateState_RaiseStateUpdated(
-        IRaiseBoxCore.RaiseState indexed from,
-        IRaiseBoxCore.RaiseState indexed to
+        IRaiseBoxCore.RaiseState indexed oldRaiseState,
+        IRaiseBoxCore.RaiseState indexed newRaiseState
     );
 
     /// @notice events emitted during voting on a raise proposal
@@ -112,6 +112,10 @@ library RaiseBoxEventsLib {
         uint256 amountRaised
         );
 
+    event RaiseBox_RaiseFailed(
+        bytes32 indexed raiseId
+    );
+
     event RaiseBoxCore_RaiseCreationContractSet(
         address contractAddress
         );
@@ -154,9 +158,16 @@ library RaiseBoxEventsLib {
 
     event ProposalStateUpdated(IRaiseBoxProposal.ProposalState newState); // tempp
 
+    // emitted when proposalInfo is update
+    event RaiseBoxProposal_updateProposalInfo_ProposalInfoUpdated();
+
     event DebugProposalState(
         bytes32 raiseId,
         uint256 proposalId,
         IRaiseBoxProposal.ProposalState proposalState
     );
+
+    event RaiseBox_ExceededMaxConFailedProposals(uint maxConFailedProposals);
+
+    event RaiseBox_ExceededMaxFailedProposals(uint maxFailedProposals);
 }

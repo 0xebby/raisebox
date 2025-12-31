@@ -19,7 +19,7 @@ library RaiseBoxErrorsLib {
     error UnAuthorizedCaller(address caller);
 
     // proposals errors
-    error RaiseBoxProposal_isValidProposal_ProposalDoesNotExist();
+    error RaiseBoxProposal_isValidProposal_ProposalDoesNotExist(uint256 proposalId);
     error RaiseBoxProposal_hostProposal_InvalidRaiseId(bytes32 raiseId);
 
     // thrown when unauthorized caller tries to end raise
@@ -31,6 +31,9 @@ library RaiseBoxErrorsLib {
 
     // thrown when an unauthorized caller tries to update proposalInfo
     error RaiseBoxProposal_updateProposalInfo_Unauthorized();
+
+    // thrown when voting is attempted for a raise not in PROPOSAL state
+    error RaiseBoxVoting_RaiseNotInProposalState();
 
 
 
