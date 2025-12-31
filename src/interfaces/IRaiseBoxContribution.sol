@@ -13,13 +13,13 @@ interface IRaiseBoxContribution {
 
     function getMaxContributionAllowedForProject(bytes32 raiseId) external returns (uint256);
 
-    function getTotalContributionsToProject(bytes32 raiseId) external returns (uint256 contributions);
+    function getTotalContributionsToProject(bytes32 raiseId) external view returns (uint256 contributions);
 
-    function getContributionsToProject(address user, bytes32 raiseId) external returns (uint256[] memory);
+    function getContributionsToProject(address user, bytes32 raiseId) external view returns (uint256[] memory);
 
-    function getContributorsCount(bytes32 raiseId) external returns (uint256 contributorCount);
+    function getContributorsCount(bytes32 raiseId) external view returns (uint256 contributorCount);
 
     function getHasContributed(bytes32 raiseId, address user) external view returns (bool);
 
-    function getRaiseContributorsCount(bytes32 raiseId) external returns (uint256);
+    function getRaiseContributorsCount(bytes32 raiseId) external view returns (uint256);
 }

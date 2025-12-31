@@ -57,7 +57,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
         uint256 totalContributions = totalContributionsToProject[raiseId];
 
-        uint256 maxContribution = calMaxContribution(raiseId, raiseInfo.raiseCreationInfo.projectInfo.raiseTarget);
+        uint256 maxContribution = calMaxContribution(raiseId);
 
         uint256 userPrevContribution = amountContributedToProject[msg.sender][raiseId];
 
@@ -139,7 +139,10 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
                 totalContributions,
                 raiseInfo.raiseCreationInfo.doesRaiseExist,
                 raiseId,
-                raiseOwner
+                raiseOwner,
+                0,
+                0,
+                0
                 );
 
         emit RaiseBoxEventsLib.RaiseBox_RaisePassed(raiseTarget, totalContributions);
@@ -167,14 +170,16 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     /**
      * @dev calculates the maximum contribution allowed per user per project
      * @param raiseId the unique identifier of the project
-     * @param amountToRaise the total amount the project aims to raise
      * @return maxContributionPerUser the maximum contribution allowed
      */
-    function calMaxContribution(bytes32 raiseId, uint256 amountToRaise)
+    function calMaxContribution(bytes32 raiseId)
         internal
         returns (uint256 maxContributionPerUser)
     {
+        uint256 amountToRaise = raiseBoxCore.getAmountToRaise(raiseId);
+
         maxContributionPerUser = ((MAX_CONTRIBUTION_PERCENTAGE * amountToRaise) / 100);
+
         return maxContributionPerUser;
     }
 
@@ -185,32 +190,32 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         if (amountToRaise == 0) {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_getMaxContributionAllowedForProject_CannotBeZero();
         }
-        return calMaxContribution(raiseId, amountToRaise);
+        return calMaxContribution(raiseId);
     }
 
     function getContributors(bytes32 raiseId) external view returns (address[] memory) {
         return contributors[raiseId];
     }
 
-    function getRaiseContributorsCount(bytes32 raiseId) external returns (uint256) {
+    function getRaiseContributorsCount(bytes32 raiseId) external view returns (uint256) {
         return raisers[raiseId];
     }
 
-    function getContributionsToProject(address user, bytes32 raiseId) external returns (uint256[] memory) {
+    function getContributionsToProject(address user, bytes32 raiseId) external view returns (uint256[] memory) {
         if (!raiseBoxCore.doesRaiseExist(raiseId)) {
             revert RaiseBoxErrorsLib.RaiseBoxCore_getProject_InvalidProjectId();
         }
         return contributionsToProjectArray[user][raiseId];
     }
 
-    function getContributorsCount(bytes32 raiseId) external returns (uint256 contributorCount) {
+    function getContributorsCount(bytes32 raiseId) external view returns (uint256 contributorCount) {
         if (!raiseBoxCore.doesRaiseExist(raiseId)) {
             revert RaiseBoxErrorsLib.RaiseBoxCore_getProject_InvalidProjectId();
         }
         return contributors[raiseId].length;
     }
 
-    function getTotalContributionsToProject(bytes32 raiseId) external returns (uint256 contributionsReceived) {
+    function getTotalContributionsToProject(bytes32 raiseId) external view returns (uint256 contributionsReceived) {
         if (!raiseBoxCore.doesRaiseExist(raiseId)) {
             revert RaiseBoxErrorsLib.RaiseBoxCore_getProject_InvalidProjectId();
         }
