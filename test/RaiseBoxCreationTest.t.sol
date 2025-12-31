@@ -71,7 +71,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     vm.stopPrank();
 
     vm.startPrank(sally);
-    raiseBoxVoting.vote(raiseId1, proposalId, false);
+    raiseBoxVoting.vote(raiseId1, proposalId, true);
     vm.stopPrank();
 
     vm.startPrank(vitalik);
@@ -111,7 +111,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     vm.stopPrank();
 
     vm.startPrank(sally);
-    raiseBoxVoting.vote(raiseId1, proposalId2, false);
+    raiseBoxVoting.vote(raiseId1, proposalId2, true);
     vm.stopPrank();
 
     vm.startPrank(vitalik);
@@ -211,15 +211,23 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         );
 
     raiseBoxProposalContract.getProposalState(raiseId1, proposalId5);
+    vm.startPrank(sally);
+    raiseBoxVoting.delegateVote(raiseId1, proposalId5, sally, vitalik );
+    vm.stopPrank();
+
+    // vm.startPrank(vitalik);
+    // raiseBoxVoting.delegateVote(raiseId1, proposalId5, vitalik, ebby );
+    // vm.stopPrank();
+
     advanceBlockTime(2 days);
 
     vm.startPrank(ebby);
     raiseBoxVoting.vote(raiseId1, proposalId5, true);
     vm.stopPrank();
 
-    vm.startPrank(sally);
-    raiseBoxVoting.vote(raiseId1, proposalId5, false);
-    vm.stopPrank();
+    // vm.startPrank(sally);
+    // raiseBoxVoting.vote(raiseId1, proposalId5, false);
+    // vm.stopPrank();
 
     vm.startPrank(vitalik);
     raiseBoxVoting.vote(raiseId1, proposalId5, false);
