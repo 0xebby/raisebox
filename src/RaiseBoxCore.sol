@@ -17,6 +17,8 @@ import {IRaiseBoxProposal} from "src/interfaces/IRaiseBoxProposal.sol";
 import {IRaiseBoxVoting} from "../src/interfaces/IRaiseBoxVoting.sol";
 import {IRaiseBoxDripHandler} from "src/interfaces/IRaiseBoxDripHandler.sol";
 import {IRaiseBoxCreation} from "src/interfaces/IRaiseBoxCreation.sol";
+import "../lib/forge-std/src/Test.sol";
+
 
 
 // contract
@@ -55,6 +57,8 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     // percent of the amount raised by the project that goes to protocol
     uint256 private constant PROTOCOL_FEE = 15; // 1.5%
     uint256 public constant RAISE_DURATION = 5 weeks; // 1month and 1 week
+    uint public constant MAX_CON_FAILED_PROPOSALS = 3;
+    uint public constant MAX_FAILED_PROPOSALS = 5;
 
     // roles
     bytes32 public constant RAISE_CREATION_CONTRACT = keccak256("RAISEBOX_RAISE_CREATION");
@@ -207,7 +211,10 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         uint256 _amountRaisedByProject,
         bool _doesRaiseExist,
         bytes32 _raiseId,
-        address _raiseOwner
+        address _raiseOwner,
+        uint256 _yesVotes,
+        uint256 _noVotes,
+        uint256 proposalId_
     ) external {
 
         if (authorizedCallers[RAISE_CREATION_CONTRACT][msg.sender]) {
@@ -222,12 +229,12 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
             _updateContributions(_raiseId, _amountRaisedByProject);
             
         } else if (authorizedCallers[PROPOSAL_CONTRACT][msg.sender]) {
-            _updateProposalsHostedByProject(_raiseId);
+            _updateRaiseProposalInfo(_raiseId);
             // this calls must always come from a raisebox related contract
             // each of the raisebox contract is allowed access to specific internal functions
            
         } else if (authorizedCallers[VOTING_CONTRACT][msg.sender]) {
-            _updateVotingInfo(_raiseId);
+            _updateVotingInfo(_raiseId, _yesVotes, _noVotes, proposalId_);
         } 
         
         else {  revert RaiseBoxErrorsLib.RaiseBoxCore_UnAuthorizedCaller(); // call is not from any raiseBox related contract}
@@ -268,7 +275,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         emit RaiseBoxEventsLib.RaiseContributionInfoUpdated(raiseId_, amount);
     }
 
-    function _updateProposalsHostedByProject(bytes32 raiseId_) internal {
+    function _updateRaiseProposalInfo(bytes32 raiseId_) internal {
         RaiseInfo storage _raiseInfo;
 
         _raiseInfo = raiseInfo[raiseId_];
@@ -282,17 +289,71 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
        
     }
 
-    function _updateVotingInfo(bytes32 raiseId) internal {
-        RaiseInfo storage _raiseInfo;
+    function _updateVotingInfo(bytes32 raiseId, uint256 forVotes_, uint256 againstVotes_, uint256 proposalId_) internal {
 
-        _raiseInfo = raiseInfo[raiseId];
+        // get raise info from storage
+        RaiseInfo storage raiseInfo_ = raiseInfo[raiseId];
 
-       // resets raise state back to PROPOSAL allowing new proposals to be hosted
-       _raiseInfo.raiseState = _updateRaiseState(RaiseState.PROPOSAL, raiseId);
+        if (raiseInfo_.raiseState == RaiseState.VOTING) {
+
+            // happy branch for when voting passes
+            if (forVotes_ > againstVotes_) {
+
+                // do something
+                raiseInfo_.proposalInfo.lastProposalFailed = false;
+                
+            } else {
+
+                // for when voting does not pass
+
+                // update nonConFailedProposals, doesn't depend on the previous proposal failing
+                raiseInfo_.proposalInfo.nonConFailedProposals++;
+
+                // handle edge case where proposalId_ is 0 since valid proposalIds start from 1.*
+                if (proposalId_ == 1) {
+                    raiseInfo_.proposalInfo.conFailedProposals++;
+                    raiseInfo_.proposalInfo.lastProposalFailed = true;
+                    return;
+                }
+
+                // for consecutive proposal failures
+                if (raiseInfo_.proposalInfo.lastProposalFailed) {
+                    raiseInfo_.proposalInfo.conFailedProposals++;
+                }
+
+
+                // update lastProposalFailed in storage
+                raiseInfo_.proposalInfo.lastProposalFailed = true;
+                
+            }
+
+        }
+
+        // failure thresholds: whichever triggers first -> FAIL the raise
+        if (
+            raiseInfo_.proposalInfo.conFailedProposals >= MAX_CON_FAILED_PROPOSALS
+            
+            ) {
+            raiseInfo_.raiseState = _updateRaiseState(RaiseState.FAILED, raiseId);
+
+            emit RaiseBoxEventsLib.RaiseBox_ExceededMaxConFailedProposals(3);
+            emit RaiseBoxEventsLib.RaiseBox_RaiseFailed(raiseId);
+            return;
+        } else if (raiseInfo_.proposalInfo.nonConFailedProposals >= MAX_FAILED_PROPOSALS) {
+            raiseInfo_.raiseState = _updateRaiseState(RaiseState.FAILED, raiseId);
+
+            emit RaiseBoxEventsLib.RaiseBox_ExceededMaxFailedProposals(5);
+            emit RaiseBoxEventsLib.RaiseBox_RaiseFailed(raiseId);
+            return;
+        }
+
+        // reset raise state back to proposal state
+        raiseInfo_.raiseState = RaiseState.PROPOSAL;
+
 
        emit RaiseBoxEventsLib.RaiseVotingInfoUpdated();
        
-    }
+}
 
     function _updateRaiseCreation(
         ProjectInfo calldata _projectInfo,
@@ -421,7 +482,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         return (protocol);
     }
 
-    function getMinimumContribution() public view returns (uint256) {
+    function getMinimumContribution() public pure returns (uint256) {
         return MINIMUM_CONTRIBUTION;
     }
 
@@ -435,7 +496,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         }
     }
 
-    function getAmtRaisedByProject(bytes32 raiseId) external returns (uint256) {
+    function getAmtRaisedByProject(bytes32 raiseId) external view returns (uint256) {
          if (_doesRaiseExist(raiseId)) {
             return raiseInfo[raiseId].raiseContributionInfo.amountRaisedByProject;
         }
@@ -453,7 +514,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
        return _doesRaiseExist(raiseId);
     }
 
-    function getRaiseCreatedAt(bytes32 raiseId_) external returns (uint256) {
+    function getRaiseCreatedAt(bytes32 raiseId_) external view returns (uint256) {
         if (_doesRaiseExist(raiseId_)) {
             raiseInfo[raiseId_].raiseCreationInfo.raiseCreatedAt;
         }
@@ -475,7 +536,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
       }
     }
 
-    function isAuthorizedCaller(bytes32 role, address caller) external returns (bool) {
+    function isAuthorizedCaller(bytes32 role, address caller) external view returns (bool) {
         return authorizedCallers[role][caller];
     }
 
@@ -493,7 +554,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
        
     }
 
-    function getProposalsHosted(bytes32 raiseId) external returns(uint256) {
+    function getProposalsHosted(bytes32 raiseId) external view returns(uint256) {
         if (_doesRaiseExist(raiseId)) {
             return raiseInfo[raiseId].proposalInfo.proposalsHostedByProject;
         }
