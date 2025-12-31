@@ -118,14 +118,15 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
     function setRaiseCreationContract(address contractAddressToSet) external onlyOwner {
         if (contractAddressToSet == address(0)) {
-            revert RaiseBoxErrorsLib.RaiseBoxCore_setRaiseCreation_InvalidCA();
+            revert RaiseBoxErrorsLib.RaiseBoxCore_setRaiseCreationContract_ZeroAddress();
         }
+
         if (raiseBoxRaiseCreation != address(0)) {
             revert RaiseBoxErrorsLib.RaiseBoxCore_setRaiseCreation_ContractAlreadySet();
         }
 
         if (!_isContract(contractAddressToSet)) {
-            revert RaiseBoxErrorsLib.RaiseBoxCore_setRaiseCreation_InvalidCA();
+            revert RaiseBoxErrorsLib.RaiseBoxCore_isContract_NotAContractAddress(contractAddressToSet);
         }
 
         raiseBoxRaiseCreation = contractAddressToSet;
@@ -138,15 +139,15 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
     function setContributionContract(address contractAddressToSet) external onlyOwner {
         if (contractAddressToSet == address(0)) {
-            revert RaiseBoxErrorsLib.RaiseBoxCore_setRaiseContribution_InvalidContract();
+            revert RaiseBoxErrorsLib.RaiseBoxCore_setContributionContract_ZeroAddress();
         }
 
         if (raiseBoxContribution != address(0)) {
-            revert RaiseBoxErrorsLib.RaiseBoxCore_setRaiseContribution_ContractAlreadySet();
+            revert RaiseBoxErrorsLib.RaiseBoxCore_setRaiseContributionContract_ContractAlreadySet();
         }
 
         if (!_isContract(contractAddressToSet)) {
-            revert RaiseBoxErrorsLib.RaiseBoxCore_setRaiseContribution_InvalidContract();
+            revert RaiseBoxErrorsLib.RaiseBoxCore_isContract_NotAContractAddress(contractAddressToSet);
         }
 
         raiseBoxContribution = contractAddressToSet;
@@ -158,10 +159,16 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     }
 
     function setProposalContract(address contractAddressToSet) external onlyOwner {
-        require(address(raiseBoxProposal) == address(0), "proposal contract already set");
+        if (contractAddressToSet == address(0)) {
+            revert RaiseBoxErrorsLib.RaiseBoxCore_setProposalContract_ZeroAddress();
+        }
+
+        if (raiseBoxProposal != address(0)) {
+            revert RaiseBoxErrorsLib.RaiseBoxCore_setProposalContract_ContractAlreadySet();
+        }
 
         if (!_isContract(contractAddressToSet)) {
-            revert RaiseBoxErrorsLib.RaiseBoxCore_setRaiseCreation_InvalidCA();
+            revert RaiseBoxErrorsLib.RaiseBoxCore_isContract_NotAContractAddress(contractAddressToSet);
         }
 
         raiseBoxProposal = contractAddressToSet;
@@ -173,10 +180,17 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     }
 
     function setDripHandlerContract(address contractAddressToSet) external onlyOwner {
-        require(address(raiseBoxDripHandler) == address(0), "DRIP_HANDLER contract already set");
+
+        if (contractAddressToSet == address(0)) {
+            revert RaiseBoxErrorsLib.RaiseBoxCore_setDripHandlerContract_ZeroAddress();
+        }
+
+        if (raiseBoxDripHandler != address(0)) {
+            revert RaiseBoxErrorsLib.RaiseBoxCore_setDripHandlerContract_ContractAlreadySet();
+        }
 
         if (!_isContract(contractAddressToSet)) {
-            revert RaiseBoxErrorsLib.RaiseBoxCore_setDripHandler_InvalidContract();
+            revert RaiseBoxErrorsLib.RaiseBoxCore_isContract_NotAContractAddress(contractAddressToSet);
         }
 
         raiseBoxDripHandler = contractAddressToSet;
@@ -188,10 +202,17 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     }
 
     function setVotingContract(address contractAddressToSet) external onlyOwner {
-        require(address(raiseBoxVoting) == address(0), "voting contract already set");
+
+        if (contractAddressToSet == address(0)) {
+            revert RaiseBoxErrorsLib.RaiseBoxCore_setVotingContract_ZeroAddress();
+        }
+
+        if (raiseBoxVoting != address(0)) {
+            revert RaiseBoxErrorsLib.RaiseBoxCore_setVotingContract_ContractAlreadySet();
+        }
 
         if (!_isContract(contractAddressToSet)) {
-            revert RaiseBoxErrorsLib.RaiseBoxCore_setRaiseCreation_InvalidCA();
+            revert RaiseBoxErrorsLib.RaiseBoxCore_isContract_NotAContractAddress(contractAddressToSet);
         }
 
         raiseBoxVoting = contractAddressToSet;
@@ -237,7 +258,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
             _updateVotingInfo(_raiseId, _yesVotes, _noVotes, proposalId_);
         } 
         
-        else {  revert RaiseBoxErrorsLib.RaiseBoxCore_UnAuthorizedCaller(); // call is not from any raiseBox related contract}
+        else {  revert RaiseBoxErrorsLib.RaiseBoxCore_updateRaiseInfo_UnAuthorizedCaller(); // call is not from any raiseBox related contract}
     }
 
     }
@@ -260,19 +281,21 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
             revert RaiseBoxErrorsLib.RaiseBoxCore_UnauthorizedRaiseEnder(msg.sender);
 
         }
+
+        emit RaiseBoxEventsLib.RaiseBoxCore_endRaise_RaiseEnded();
     }
 
 
-    function _updateContributions(bytes32 raiseId_, uint256 amount) internal {
-        RaiseInfo storage _raiseInfo;
+    function _updateContributions(bytes32 raiseId_, uint256 amount_) internal {
+        RaiseInfo storage raiseInfo_;
 
-        _raiseInfo = raiseInfo[raiseId_];
+        raiseInfo_ = raiseInfo[raiseId_];
 
-        _raiseInfo.raiseContributionInfo.amountRaisedByProject +=amount;
+        raiseInfo_.raiseContributionInfo.amountRaisedByProject += amount_;
 
-        _raiseInfo.raiseState = _updateRaiseState(RaiseState.PROPOSAL, raiseId_);
+        raiseInfo_.raiseState = _updateRaiseState(RaiseState.PROPOSAL, raiseId_);
 
-        emit RaiseBoxEventsLib.RaiseContributionInfoUpdated(raiseId_, amount);
+        emit RaiseBoxEventsLib.RaiseContributionInfoUpdated(raiseId_, amount_);
     }
 
     function _updateRaiseProposalInfo(bytes32 raiseId_) internal {
@@ -313,7 +336,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
                 if (proposalId_ == 1) {
                     raiseInfo_.proposalInfo.conFailedProposals++;
                     raiseInfo_.proposalInfo.lastProposalFailed = true;
-                    return;
+                    // return;
                 }
 
                 // for consecutive proposal failures
@@ -347,11 +370,11 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
             return;
         }
 
-        // reset raise state back to proposal state
-        raiseInfo_.raiseState = RaiseState.PROPOSAL;
+    // reset raise state back to proposal state
+    raiseInfo_.raiseState = RaiseState.PROPOSAL;
 
 
-       emit RaiseBoxEventsLib.RaiseVotingInfoUpdated();
+    emit RaiseBoxEventsLib.RaiseVotingInfoUpdated();
        
 }
 
@@ -398,7 +421,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
             ) {
             state = newRaiseState;
         } else {
-            revert RaiseBoxErrorsLib.UnAuthorizedCaller(msg.sender); 
+            revert RaiseBoxErrorsLib.RaiseBoxCore_UnAuthorizedCallerCannotUpdateRaiseState(msg.sender); 
             }
 
         emit RaiseBoxEventsLib.RaiseBoxCore_updateState_RaiseStateUpdated(oldRaiseState, newRaiseState);

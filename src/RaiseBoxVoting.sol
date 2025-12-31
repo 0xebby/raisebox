@@ -46,7 +46,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         // checks if proposal is live for raise
         
         if (raiseBoxCore.getRaiseState(raiseId) != IRaiseBoxCore.RaiseState.VOTING) {
-            revert RaiseBoxErrorsLib.RaiseBoxVoting_RaiseNotInProposalState();
+            revert RaiseBoxErrorsLib.RaiseBoxVoting_RaiseNotInVotingState();
         }
 
         if (raiseBoxProposal.getProposalState(raiseId, proposalId) != IRaiseBoxProposal.ProposalState.ACTIVE) {
@@ -100,7 +100,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         }
 
         if (!fromIsContributor || !toIsContributor) {
-            revert RaiseBoxErrorsLib.RaiseBoxContribution_NotAContributor(raiseId);
+            revert RaiseBoxErrorsLib.RaiseBoxVoting_canDelegate_NotAContributor(raiseId);
         }
 
         if (block.timestamp >= _voteStartTime(raiseId, proposalId)) {

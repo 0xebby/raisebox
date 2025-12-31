@@ -40,17 +40,19 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         uint256 proposals = raiseInfo.proposalInfo.proposalsHostedByProject;
 
         if (block.timestamp > (projectDuration + raiseCreatedAt)) {
-            revert RaiseBoxErrorsLib.RaiseBox_RaiseEnded(raiseId_);
+            revert RaiseBoxErrorsLib.RaiseBoxProposal_hostProposal_RaiseEnded(raiseId_);
         } else {
 
             // check if raise hasn't already failed
             if (raiseInfo.raiseState == IRaiseBoxCore.RaiseState.FAILED) {
                 revert RaiseBoxErrorsLib.RaiseBox_RaiseFailed(raiseId_);
             }
+
             //check if raiseId paased is a valid one
             if (!raiseInfo.raiseCreationInfo.doesRaiseExist) {
-                revert RaiseBoxErrorsLib.RaiseBoxProposal_hostProposal_InvalidRaiseId(raiseId_);
+                revert RaiseBoxErrorsLib.RaiseBoxProposal_canHostProposal_InvalidRaiseId(raiseId_);
             }
+
             // ascertain owner is host of project and is trying to host proposal
             if (raiseOwner == address(0) || raiseOwner != proposalHost_) {
                 revert raiseBoxProposal_InvalidRaiseOwner();
@@ -91,7 +93,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
             // proposal creation only possible when raise state is in PROPOSAL
             if (raiseBoxCore.getRaiseState(raiseId_) != IRaiseBoxCore.RaiseState.PROPOSAL) {
-                revert RaiseBoxErrorsLib.RaiseBoxProposal_hostProposal_NotInProposalState();
+                revert RaiseBoxErrorsLib.RaiseBoxProposal_RaiseNotInProposalState();
             }
         }
 
@@ -245,15 +247,14 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     function _isValidProposal(bytes32 raiseId_, uint256 proposalId_) internal view returns (bool) {
 
        if (raiseBoxCore.doesRaiseExist(raiseId_)) {
-         // get proposalDetails
-        ProposalInfo memory proposalInfo =  proposalInfo[raiseId_][proposalId_];
+            // get proposalDetails
+            ProposalInfo memory proposalInfo =  proposalInfo[raiseId_][proposalId_];
 
-        if (proposalInfo.doesProposalExist) {
-            return true;
-        } else {
-        revert RaiseBoxErrorsLib.RaiseBoxProposal_isValidProposal_ProposalDoesNotExist(proposalId_);
-
-        }
+            if (proposalInfo.doesProposalExist) {
+                return true;
+            } else {
+                revert RaiseBoxErrorsLib.RaiseBoxProposal_isValidProposal_ProposalDoesNotExist(proposalId_);
+             }
        }
     }
 

@@ -25,7 +25,7 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
 
     // [1 year and 6 months] before same project can create another raise on raisebox
     uint256 public constant PROJECT_LIFESPAN = 60 weeks; // 1 year and 2 months
-    uint256 public constant MIN_PROJECT_DURATION = 52 weeks; // min 1 year
+    uint256 public constant MIN_PROJECT_DURATION = 26 weeks; // min 6 months
 
     mapping(address => uint16) public raisesCreated;
     mapping(address projectOwner => uint256 lastRaiseCreated) public i_lastRaiseCreated;
@@ -44,7 +44,7 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
 
 
         // clean up user input -- projectInfo
-        if (msg.sender == address(0)) { revert RaiseBoxErrorsLib.ZeroAddress(); }
+        if (msg.sender == address(0)) { revert RaiseBoxErrorsLib.RaiseBox_ZeroAddressNotAllowed(); }
 
         if (!(raiseBoxCore.isVerifiedAndWhiteListed(msg.sender))) {
             revert RaiseBoxErrorsLib.RaiseBoxRaiseCreation_OwnerNotWhiteListed();
