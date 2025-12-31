@@ -189,4 +189,152 @@ contract TestsHelpers is Test {
 
         return projectId;
     }
-}
+
+    function hostAndVoteOnProposals(
+        bytes32 raiseId_
+        ) public {
+
+         address[5] memory voters = [
+            ebby, sally, uche, 
+            max, mark
+            ];
+        
+          address[4] memory voters2 = [
+            arbitrum, openseas, carl, 
+            base
+            ];
+
+          address[3] memory voters3 = [
+            tether, magiceden, gowagr
+            ];
+
+        IRaiseBoxProposal.MilestoneInfo[12] memory milestoneInfo = [
+
+            IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the first proposal for raisebox v3",
+            milestone: "testnet website for mvp ready",
+            dripPercent: 10
+            }),
+
+            IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the first proposal for raisebox v3",
+            milestone: "testnet for beta testing is ready and live",
+            dripPercent: 15
+            }),
+
+            IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the second proposal for raisebox v3",
+            milestone: "beta mainnet is live for live testing",
+            dripPercent: 25
+            }),
+
+            IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the third proposal for raisebox v3",
+            milestone: "beta mainnet is live for live testing",
+            dripPercent: 25
+            }),
+
+            IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the 5 proposal for raisebox v3",
+            milestone: "beta mainnet is live for live testing",
+            dripPercent: 25
+            }),
+
+            IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the 6 proposal for raisebox v3",
+            milestone: "beta mainnet is live for live testing",
+            dripPercent: 25
+            }),
+
+            IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the 7 proposal for raisebox v3",
+            milestone: "beta mainnet is live for live testing",
+            dripPercent: 25
+            }),
+
+            IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the 8 proposal for raisebox v3",
+            milestone: "beta mainnet is live for live testing",
+            dripPercent: 25
+            }),
+
+            IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the 9 proposal for raisebox v3",
+            milestone: "beta mainnet is live for live testing",
+            dripPercent: 10
+            }),
+
+            IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the 10 proposal for raisebox v3",
+            milestone: "beta mainnet is live for live testing",
+            dripPercent: 20
+            }),
+
+            IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the 11 proposal for raisebox v3",
+            milestone: "beta mainnet is live for live testing",
+            dripPercent: 10
+            }),
+
+            IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the 12 proposal for raisebox v3",
+            milestone: "beta mainnet is live for live testing",
+            dripPercent: 15
+            })
+
+        ];
+
+            
+        for (uint a = 1; a < milestoneInfo.length; a++) {
+            vm.prank(ben);
+            raiseBoxProposalContract.hostProposal(raiseId_, milestoneInfo[a]);
+
+            // simulate delay before voting begins - 48 hours
+            advanceBlockTime(2 days);
+
+            // proposals in this branch will fail since `againstVotes` > `ForVotes`
+            if ( 
+                a == 2 ||
+                a == 4 ||
+                a == 5 ||
+                a == 6 ||
+                a == 9 ||
+                a == 10
+                 ) {
+                for (uint w = 0; w < voters2.length; w++) {
+                vm.prank(voters2[w]);
+                raiseBoxVoting.vote(raiseId_, a, false);
+            }
+
+                for (uint e = 0; e < voters3.length; e++) {
+                vm.prank(voters3[e]);
+                raiseBoxVoting.vote(raiseId_, a, true);
+            }
+
+            } else { // proposals in this else branch will pass `F > A`
+
+                for (uint j = 0; j < voters.length; j++) {
+                vm.startPrank(voters[j]);
+                if (j == 1 || j % 2 == 0) {
+                    raiseBoxVoting.vote(raiseId_, a, true);
+                } else {
+                    raiseBoxVoting.vote(raiseId_, a, false);
+                }
+                vm.stopPrank();
+                }
+            }
+           
+
+            // simulate delayfor voting to happen, voting duration ==> 7 days
+            advanceBlockTime(7 days);
+            vm.prank(ben);
+            raiseBoxVoting.triggerVoteTally(raiseId_, a);
+
+            // simulate delay before anew proposal can be hosted ==> 4 weeks
+            advanceBlockTime(4 weeks);
+            }
+
+            
+        
+    }
+} //F
