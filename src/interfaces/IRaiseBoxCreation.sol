@@ -58,9 +58,8 @@ interface IRaiseBoxCreation {
     // project related events:
     event FundsWithdrawn(address indexed projectOwner, uint256 funds);
 
-    function getRaiseCreator(bytes32 raiseId) external returns (address);
-    function viewProjectInfo(bytes32 raiseId) external;
-    function getHasCreatedARaise(address creator) external returns (bool);
+    function getRaiseCreator(bytes32 raiseId) external view returns (address);
+    function getHasCreatedARaise(address creator) external view returns (bool);
     function getAllRaisesCreated() external view returns (uint256);
 
 

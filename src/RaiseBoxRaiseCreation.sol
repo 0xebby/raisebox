@@ -77,7 +77,10 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
             0,
             true,
             raiseId,
-            msg.sender
+            msg.sender,
+            0,
+            0,
+            0
         );
         i_lastRaiseCreated[msg.sender] = timeCreated;
         hasCreatedRaise[msg.sender] = true;
@@ -99,7 +102,7 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
 
      }  
 
-     function getHasCreatedARaise(address creator) external returns (bool) {
+     function getHasCreatedARaise(address creator) external view returns (bool) {
         hasCreatedRaise[creator];
      }
 
@@ -107,13 +110,9 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
 
     ////////////////////////////////////////////////////////// GETTERS //////////////////////////////////////////////////////////
 
-    function getRaiseCreator(bytes32 raiseId) external returns (address) {
+    function getRaiseCreator(bytes32 raiseId) external view returns (address) {
         IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
         return raiseInfo.raiseCreationInfo.raiseOwner;
-    }
-
-    function viewProjectInfo(bytes32 raiseId) external {
-        raiseBoxCore.getRaiseInfo(raiseId);
     }
 
     function getAllRaisesCreated() external view returns (uint256) {
