@@ -20,8 +20,6 @@ interface IRaiseBoxProposal {
         uint256 lastProposalTime;
         ProposalState proposalState;
         bool doesProposalExist;
-        uint256 conFailedProposals;
-        uint256 nonConFailedProposals;
     }
 
     // proposal related events:
@@ -52,23 +50,29 @@ interface IRaiseBoxProposal {
         // bool proposalExist;
     }
 
- function getProposalState(bytes32 raiseId, uint256 proposalId) external returns(ProposalState) ;
-   function updateProposalState(bytes32 raiseId, uint256 proposalId) external;
-      // function getLastProposalState(bytes32 raiseId, uint256 proposalId) external returns(ProposalState);
+ function getProposalState(bytes32 raiseId, uint256 proposalId) external view returns(ProposalState) ;
+ 
+    function updateProposalState(bytes32 raiseId_, uint256 proposalId_, ProposalState proposalState_) external;
 
-    function getProposalCount(bytes32 raiseId) external returns (uint256);
+    function updateProposalInfo(
+        bytes32 raiseId_, 
+        uint256 proposalId_
+    ) external;
+
+    function getProposalCount(bytes32 raiseId) external view returns (uint256);
 
     function getProposalInfo(bytes32 raiseId_, uint256 proposalId_)
         external
+        view
         returns (ProposalInfo memory proposalInfo_);
 
-    function getHasHostedProposal(bytes32 raiseId) external returns (bool);
+    function getHasHostedProposal(bytes32 raiseId) external view returns (bool);
 
     function getLastProposalTime(bytes32 raiseId) external view returns (uint256);
 
-    // returns total number of proposals thathave been created on raisebox.
+    // returns total number of proposals that have been created on raisebox.
     function getTotalProposals() external view returns (uint256);
 
     // returns true if a proposal exist within a raise.
-    function isValidProposal(bytes32 rasieId, uint256 proposalId) external returns(bool);
+    function isValidProposal(bytes32 rasieId, uint256 proposalId) external view returns (bool);
 }

@@ -39,9 +39,14 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
         uint256 proposals = raiseInfo.proposalInfo.proposalsHostedByProject;
 
-        if (block.timestamp > (projectDuration + raiseCreatedAt) || raiseInfo.raiseState == IRaiseBoxCore.RaiseState.FAILED) {
+        if (block.timestamp > (projectDuration + raiseCreatedAt)) {
             revert RaiseBoxErrorsLib.RaiseBox_RaiseEnded(raiseId_);
         } else {
+
+            // check if raise hasn't already failed
+            if (raiseInfo.raiseState == IRaiseBoxCore.RaiseState.FAILED) {
+                revert RaiseBoxErrorsLib.RaiseBox_RaiseFailed(raiseId_);
+            }
             //check if raiseId paased is a valid one
             if (!raiseInfo.raiseCreationInfo.doesRaiseExist) {
                 revert RaiseBoxErrorsLib.RaiseBoxProposal_hostProposal_InvalidRaiseId(raiseId_);
@@ -64,9 +69,9 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
             // }
 
-            if (raiseBoxVoting.getFailedProposalsCount(raiseId_) >= MAX_ALLOWED_FAILED_PROPOSALS) {
-                revert RaiseBoxErrorsLib.RaiseBox_RaiseFailed(raiseId_); 
-            }
+            // if (raiseBoxVoting.getFailedProposalsCount(raiseId_) >= MAX_ALLOWED_FAILED_PROPOSALS) {
+            //     revert RaiseBoxErrorsLib.RaiseBox_RaiseFailed(raiseId_); 
+            // }
 
             // if (block.timestamp >= INTERVAL_BETWEEN_PROPOSALS ) {
             //        raiseInfo.raiseState = IRaiseBoxCore.RaiseState.PROPOSAL;
@@ -94,7 +99,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     }
 
     
-    function hostProposal_(bytes32 raiseId_, MilestoneInfo calldata milestoneInfo_) external canHostProposal(msg.sender, raiseId_) returns (uint proposalId_) {
+    function hostProposal(bytes32 raiseId_, MilestoneInfo calldata milestoneInfo_) external canHostProposal(msg.sender, raiseId_) returns (uint proposalId_) {
 
         // get sring input length
         uint desLen = bytes(milestoneInfo_.description).length;
@@ -135,10 +140,13 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         raiseBoxCore.updateRaiseInfo(
             raiseInfo.raiseCreationInfo.projectInfo,
             lastProposalTime[raiseId_],
-            raiseInfo.raiseContributionInfo.amountRaisedByProject,
+            0,
             true,
             raiseId_, // the only used field here
-            msg.sender
+            msg.sender,
+            0,
+            0,
+            0
         );
 
         // update milestone info for proposal in storage
@@ -147,12 +155,13 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
             proposalId: proposalId_,
             lastProposalTime: lastProposalTime[raiseId_],
             proposalState: ProposalState.ACTIVE,
-            doesProposalExist: true,
-            conFailedProposals: 0,
-            nonConFailedProposals: 0
+            doesProposalExist: true
         });
 
-        emit RaiseBoxEventsLib.ProposalStateUpdated(ProposalState.ACTIVE);
+        // emit RaiseBoxEventsLib.ProposalStateUpdated(ProposalState.ACTIVE);
+        emit RaiseBoxEventsLib.RaiseBoxProposal_updateProposalInfo_ProposalInfoUpdated();
+
+        raiseBoxVoting.setVotingStartTime(raiseId_, proposalId_, (lastProposalTime[raiseId_] + 2 days));
 
         emit NewProposalHosted(proposalId_, milestoneInfo_.dripPercent, lastProposalTime[raiseId_]);
 
@@ -161,7 +170,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     }
 
 
-    function updateProposalState(bytes32 raiseId_, uint256 proposalId_) external {
+    function updateProposalState(bytes32 raiseId_, uint256 proposalId_, ProposalState proposalState_) external {
 
         if (msg.sender != address(raiseBoxVoting)) {
             revert RaiseBoxErrorsLib.RaiseBoxProposal_updateProposalInfo_Unauthorized();
@@ -169,85 +178,71 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
         if (_isValidProposal(raiseId_, proposalId_)) {
 
-            proposalInfo[raiseId_][proposalId_].proposalState = ProposalState.ACTIVE;
+            proposalInfo[raiseId_][proposalId_].proposalState = proposalState_;
 
         }
       
-        emit RaiseBoxEventsLib.ProposalStateUpdated(ProposalState.ACTIVE);
+        emit RaiseBoxEventsLib.ProposalStateUpdated(proposalState_);
     }
 
-//     function hostProposal(string memory proposalTitle, string memory proposal, bytes32 raiseId, uint8 _dripPercent)
-//         external
-//         canHostProposal(msg.sender, raiseId)
-//         returns (uint256 _proposalId)
-//     {
-//         // validate dripPercent: must be multiple of 5 between 5 and 25
-//         if (_dripPercent < 5 || _dripPercent > 25 || (_dripPercent % 5 != 0)) {
-//             revert RaiseBoxProposal_InvalidDripPercent();
-//         }
-//         // checks already done in canHostProposal modifier above.
+    // this function updates proposalInfo based on proposalState
+    // when proposalState is INACTIVE, update proposalState to ACTIVE and update proposalHosting info too: milestone, proposalid, lastProposalTime, doesProposalExist
+    // when proposalState is PASSED, update to INACTIVE
+    // when proposalState is FAILED,increment conFailedProposals and nonConFailedProposals by 1
 
-//         // get valid project from storage 
-//         IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
+    function updateProposalInfo(
+        bytes32 raiseId_, 
+        uint256 proposalId_
+    ) external {
+        _updateProposalInfo(raiseId_, proposalId_);
+    }
 
-//         // effects:
+    function _updateProposalInfo(
+        bytes32 raiseId_, 
+        uint256 proposalId_
+        ) internal {
 
-//         hasHostedProposal[raiseId] = true;
-//         proposalCount += 1;
-//         proposalsHostedByProject[raiseId] += 1;
-//         lastProposalTime[raiseId] = block.timestamp;
+        // ensure that the calls to this function are either from the voting contract or this
+        // contract itself.
+        if (
+            msg.sender != address(raiseBoxVoting) 
+            // msg.sender != caller
+        ) {
+            revert RaiseBoxErrorsLib.RaiseBoxProposal_updateProposalInfo_Unauthorized(); 
+        }
 
-//         milestoneProposalInfo[raiseId][proposalsHostedByProject[raiseId]] = MilestoneInfo({
-//             lastProposalTime: lastProposalTime[raiseId],
-//             description: proposalTitle,
-//             milestone: proposal,
-//             proposalId: proposalsHostedByProject[raiseId],
-//             dripPercent: _dripPercent,
-//             proposalExist: true
-//         });
+        // ensure that the user inputs: `raiseId_` and `proposalId_ for this function are valid
+        if (
+            raiseBoxCore.doesRaiseExist(raiseId_)
+        ) {
+                ProposalInfo storage proposalInfo_;
+                proposalInfo_ = proposalInfo[raiseId_][proposalId_];
+            // ensure that the proposalState for `rasieId_` and `proposalId_` is INACTIVE
+            if (_getProposalState(raiseId_, proposalId_) == IRaiseBoxProposal.ProposalState.ACTIVE) {
+                (
+                    uint256 forVotes_, uint256 againstVotes_, 
+                ) = raiseBoxVoting.getProposalVotes(raiseId_, proposalId_);
 
-//         MilestoneInfo memory _milestoneInfo;
-//         _milestoneInfo = 
+                if (forVotes_ > againstVotes_) {
 
-//         // set voting start time in RaiseBoxVoting (48 hours after proposal hosting)
-//         // this gives time for vote delegation and studying of proposals ahead of voting
+                    proposalInfo_.proposalState = IRaiseBoxProposal.ProposalState.PASSED;
+                    emit RaiseBoxEventsLib.ProposalStateUpdated(ProposalState.PASSED);
 
-//         raiseBoxVoting.setVotingStartTime(raiseId, proposalsHostedByProject[raiseId], block.timestamp + 48 hours);
+                } else {
+                    
+                    proposalInfo_.proposalState = IRaiseBoxProposal.ProposalState.FAILED;
+                    emit RaiseBoxEventsLib.ProposalStateUpdated(ProposalState.FAILED);
+                }
+            }
 
-//         // update proposal info in storage
-//         proposalInfo[raiseId][proposalsHostedByProject[raiseId]] = ProposalInfo({
-//             milestoneInfo: milestoneInfo_;
-//             proposalId: proposalsHostedByProject[raiseId],
-//             proposalState: ProposalState.ACTIVE,
-//             exist: true,
-//             conFailedProposals: 0,
-//             nonConFailedProposals: 0
-//         });
-
-//     emit RaiseBoxEventsLib.DebugProposalState(
-//     raiseId,
-//     proposalsHostedByProject[raiseId],
-//     proposalInfo[raiseId][proposalsHostedByProject[raiseId]].proposalState
-// );
-
-
-//         // interactions:
-//         _proposalId = proposalsHostedByProject[raiseId];
-//         // IRaiseBoxCore.RaiseState.VOTING;
-
-//         // updateProposalState(raiseId, proposalId);
-       
-
-//         emit NewProposalHosted(_proposalId, _dripPercent, lastProposalTime[raiseId]);
-
-//         return _proposalId;
-        
-//     }
+            emit RaiseBoxEventsLib.RaiseBoxProposal_updateProposalInfo_ProposalInfoUpdated();
+        }
+    }
 
 
     //internal functions
 
-    function _isValidProposal(bytes32 raiseId_, uint256 proposalId_) internal returns (bool) {
+    function _isValidProposal(bytes32 raiseId_, uint256 proposalId_) internal view returns (bool) {
 
        if (raiseBoxCore.doesRaiseExist(raiseId_)) {
          // get proposalDetails
@@ -256,20 +251,23 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         if (proposalInfo.doesProposalExist) {
             return true;
         } else {
-        revert RaiseBoxErrorsLib.RaiseBoxProposal_isValidProposal_ProposalDoesNotExist();
+        revert RaiseBoxErrorsLib.RaiseBoxProposal_isValidProposal_ProposalDoesNotExist(proposalId_);
 
         }
        }
     }
 
-    function isValidProposal(bytes32 raiseId, uint256 proposalId) external returns(bool) { return _isValidProposal(raiseId, proposalId); }
+    function isValidProposal(bytes32 raiseId, uint256 proposalId) external view returns (bool) { return _isValidProposal(raiseId, proposalId); }
 
     ////                                            ////
     //          EXTERNAL/GETTER FUNCTIONS             //
     ////                                           ////
 
-    function getProposalCount(bytes32 raiseId) external returns (uint256) {
-        return proposalsHostedByProject[raiseId];
+    function getProposalCount(bytes32 raiseId) external view returns (uint256) {
+        if (raiseBoxCore.doesRaiseExist(raiseId)) {
+           return proposalsHostedByProject[raiseId];
+        }
+        
     }
 
     function getTotalProposals() external view returns (uint256) {
@@ -280,12 +278,13 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         return lastProposalTime[raiseId];
     }
 
-    function getHasHostedProposal(bytes32 raiseId) external returns (bool) {
+    function getHasHostedProposal(bytes32 raiseId) external view returns (bool) {
         return hasHostedProposal[raiseId];
     }
 
     function getProposalInfo(bytes32 raiseId_, uint256 proposalId_)
         external
+        view
         returns (ProposalInfo memory proposalInfo_)
     {
 
@@ -323,28 +322,30 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     mapping(bytes32 => ProposalState) public proposalState;
 
 
-    function getProposalState(bytes32 raiseId, uint256 proposalId) external returns(ProposalState) {
-        _getProposalState(raiseId, proposalId);
+    function getProposalState(bytes32 raiseId, uint256 proposalId) external view returns(ProposalState) {
+        return _getProposalState(raiseId, proposalId);
     }
 
-    function _getProposalState(bytes32 raiseId, uint256 proposalId) internal returns(ProposalState) {
+    function _getProposalState(bytes32 raiseId_, uint256 proposalId_) internal view returns(ProposalState) {
+
+        if (_isValidProposal(raiseId_, proposalId_)) {
+
+            ProposalInfo memory proposalInfo_;
+
+            proposalInfo_ = proposalInfo[raiseId_][proposalId_];
+            
+            return proposalInfo_.proposalState;
+        }
        
-           return proposalInfo[raiseId][proposalId].proposalState;
+           
         
     }
 
 
-    // function _getLastProposalState(bytes32 raiseId, uint256 proposalId) internal returns(ProposalState) {
-    //     uint256 lastProposalId = (proposalId - 1);
-    //     return _getProposalState(raiseId, lastProposalId);
-    // }
-
-    // function getLastProposalState(bytes32 raiseId, uint256 proposalId) external returns(ProposalState) {
-    //     return _getLastProposalState(raiseId, proposalId);
-    // }
-
-    /// when no votes > yes votes, mark proposalState of that proposal as failed
-    /// also, check if the last proposal before that failed or passed, if failed, update conFailedProposals in storage, also update nonConFailedProposals, else if passed, go ahead and drip
+    function _getLastProposalState(bytes32 raiseId, uint256 proposalId) internal view returns(ProposalState) {
+        uint256 lastProposalId = (proposalId - 1);
+        return _getProposalState(raiseId, lastProposalId);
+    }
 
 
    
