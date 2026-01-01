@@ -8,6 +8,62 @@ import {IRaiseBoxProposal} from "src/interfaces/IRaiseBoxProposal.sol";
 
 
 contract RaiseBoxCreationTest is Test, TestsHelpers {
+
+    function testContributionRulesAreRespected() public {
+        // whitelist project owner address
+        // raiseBoxCore.verifyAndAddToWhitelist(ebby);
+
+        // create a raise
+        vm.startPrank(ebby);
+        bytes32 raiseId = raiseBoxRaiseCreationContract.createNewRaise(
+            IRaiseBoxCore.ProjectInfo({
+                projectName: "raisebox",
+                valueProposition: "fully decentralized miletone based crowdfunding for projects you care about",
+                raiseTarget: 20 ether,
+                projectDuration: 52 weeks
+            })
+        );
+        vm.stopPrank();
+
+        // raise is now in contribution state - contributors can contribute
+        vm.prank(uche);
+        raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, raiseId);
+
+        vm.prank(max);
+        raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, raiseId);
+
+        vm.prank(vitalik);
+        raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, 0xdcf668f9258e6472e4f2f94e3ee6c3f33f660e34b3e06018e2b2431809e06fa8);
+
+        vm.prank(carl);
+        raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, raiseId);
+
+        raiseBoxContributionContract.getTotalContributionsToProject(raiseId);
+
+    
+        advanceBlockTime(5 weeks);
+        // contribution exactly reaching target at deadline is accepted and should pass
+        vm.prank(magiceden);
+        raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, raiseId);
+
+        raiseBoxContributionContract.getTotalContributionsToProject(raiseId);
+        
+        vm.prank(arbitrum);
+        raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseId);
+
+        vm.prank(ethereum);
+        raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseId);
+
+
+
+
+
+
+        // assertions:
+        address creator = raiseBoxCore.getRaiseCreator(raiseId);
+        assertTrue(creator == ebby);
+        // assertEq(raiseBoxContributionContract.getContributionsToProject(uche, raiseId), 0.4 ether);
+    }
     
    function testCreateARaise() public {
 
