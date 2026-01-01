@@ -8,6 +8,7 @@ import {IRaiseBoxProposal} from "../src/interfaces/IRaiseBoxProposal.sol";
 import "../lib/forge-std/src/Test.sol";
 import {IRaiseBoxDripHandler} from "src/interfaces/IRaiseBoxDripHandler.sol";
 import{RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
+import {RaiseBoxEventsLib} from "src/RaiseBoxLib/RaiseBoxEventsLib.sol";
 
 contract RaiseBoxVoting is IRaiseBoxVoting {
     IRaiseBoxCore public immutable raiseBoxCore; 
@@ -54,7 +55,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         }
 
         // ascertain msg.sender has contributed to project
-        bool hasContributedToProject = raiseBoxContribution.getHasContributed(raiseId, user);
+        bool hasContributedToProject = raiseBoxContribution.hasUserContributed(raiseId, user);
 
         if (!hasContributedToProject) {
             revert RaiseBoxVoting_NotContributor(raiseId, user);
@@ -88,8 +89,8 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     }
 
     modifier canDelegate(bytes32 raiseId, uint256 proposalId, address from, address to) {
-        bool fromIsContributor = raiseBoxContribution.getHasContributed(raiseId, from);
-        bool toIsContributor = raiseBoxContribution.getHasContributed(raiseId, to);
+        bool fromIsContributor = raiseBoxContribution.hasUserContributed(raiseId, from);
+        bool toIsContributor = raiseBoxContribution.hasUserContributed(raiseId, to);
 
         if (to == from) {
             revert RaiseBoxVoting_CannotDelegateToSelf();
@@ -278,13 +279,13 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     }
 
     function getAbsenteeVoters(bytes32 raiseId, uint256 proposalId) external view returns (uint256) {
-        uint256 totalContributors = raiseBoxContribution.getRaiseContributorsCount(raiseId);
+        uint256 totalContributors = raiseBoxContribution.getTotalContributors(raiseId);
         (,, uint256 totalVotes) = _getProposalVotes(raiseId, proposalId);
 
         return (totalContributors - totalVotes);
     }
 
-    function getVoteStartTime(bytes32 raiseId, uint256 proposalId) external view returns (uint256 voteStartTime) {
+    function getVotingStartTime(bytes32 raiseId, uint256 proposalId) external view returns (uint256 voteStartTime) {
         return _voteStartTime(raiseId, proposalId);
     }
 
@@ -306,22 +307,15 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     //                        INTERNAL FUNCTIONS                              //
     //** ------------------------------------------------------------------ **//
 
-
-    // function _isValidProposal(bytes32 raiseId, uint256 proposalId) internal returns (bool) {
-    //     // get proposalCount
-    //     uint256 propCount = raiseBoxProposal.getProposalCount(raiseId);
-
-    //     // get proposalDetails
-    //     IRaiseBoxProposal.MilestoneInfo memory propDetails =
-    //         raiseBoxProposal.getProposalInfo(raiseId, proposalId);
-
-    //     if (propDetails.proposalId <= propCount) {
-    //         return true;
-    //     }
-    // }
-
     function _tallyVotes(bytes32 raiseId, uint256 proposalId) internal returns (uint256, uint256) {
         (uint256 forVotes, uint256 againstVotes, uint256 totalVotes) = _getProposalVotes(raiseId, proposalId);
+
+        bool quorumReached = _isQuorumReached(
+            raiseId,
+            proposalId,
+            forVotes,
+            againstVotes
+        );
 
 
         // if for is greater than against, proposal passed and % of funds will be dripped
@@ -329,11 +323,27 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
             raiseBoxProposal.updateProposalInfo(raiseId, proposalId);
 
+            emit RaiseBoxEventsLib.RaiseBoxVoting_tallyVotes_ProposalPassed(
+                proposalId,
+                forVotes,
+                againstVotes,
+                totalVotes,
+                block.timestamp
+            );
+
             // delegate call to dripHandler since proposal has passed
             raiseBoxDripHandler.dripFundsForProposal(raiseId, proposalId);
         } else {
 
             raiseBoxProposal.updateProposalInfo(raiseId, proposalId);
+
+            emit RaiseBoxEventsLib.RaiseBoxVoting_tallyVotes_ProposalFailed(
+                proposalId,
+                forVotes,
+                againstVotes,
+                totalVotes,
+                block.timestamp
+            );
 
             raiseFailedProposals[raiseId]++;
             // revert RaiseBoxVoting_ProposalFailed();
@@ -343,8 +353,6 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
         return (forVotes, againstVotes);
 
-   
-
     }
 
     function getFailedProposalsCount(bytes32 raiseId) external view returns (uint256) {
@@ -353,13 +361,14 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     /// @dev sets voting ended for a given proposalId
     function _endVoting(bytes32 raiseId_, uint256 proposalId_) internal {
-       votingEnded[raiseId_][proposalId_] = true;
 
-    IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId_);
+        votingEnded[raiseId_][proposalId_] = true;
 
-    (uint forVotes_, uint againstVotes_, ) = _getProposalVotes(raiseId_, proposalId_);
+        IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId_);
 
-    raiseBoxCore.updateRaiseInfo(
+        (uint forVotes_, uint againstVotes_, ) = _getProposalVotes(raiseId_, proposalId_);
+
+        raiseBoxCore.updateRaiseInfo(
         raiseInfo.raiseCreationInfo.projectInfo,
         raiseInfo.raiseCreationInfo.raiseCreatedAt,
         raiseInfo.raiseContributionInfo.amountRaisedByProject,
@@ -377,7 +386,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
             IRaiseBoxProposal.ProposalState.INACTIVE
             );
 
-       emit RaiseBoxVoting_VotingEndedSucessfully();
+       emit RaiseBoxEventsLib.RaiseBoxVoting_endVoting_VotingEndedSucessfully(block.timestamp);
     }
 
 
@@ -422,16 +431,73 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     // 10. cannot vote once either voting duration elapsed, everyone has voted including delegates, or voting has been ended manually by project owner
     // 11. votes can only be delegated before voting duration elapses
     // 12. once votes are tallied, voting is ended for that proposal
-    // 13. only one level of delegation allowed?
+    // 13. only one level of delegation allowed -- ensured
     // i.e A delegates to B, B cannot delegate to C- a delegated vote cannot be re-delegated
     // 14. each contributor gets one vote per proposal regardless of amount contributed
     // 15. voting sides: yes/no (for/against)
     // 16. votes are public, anyone can see how many votes each support has at any time but actual voters(address) are private using zk-SNARKS (to be implemented in future versions)
     // 17. voting power cannot be transferred or sold?
-    // 18. only one proposal can be active at a time per project - this is alreay enforced in RaiseBoxProposal contract
+    // 18. only one proposal can be active at a time per project - this is already enforced in RaiseBoxProposal contract
     // 19. project owner cannot vote on own proposals
     // 20. if a user has delegated their vote, they cannot vote directly on that proposal - obviously, they lose voting rights once they delegate
     // 21. voting cannot commence until proposal is hosted - to be enforced in RaiseBoxProposal contract
     // 22. voting results are final once tallied - no re-votes or re-tallies allowed
     // 23. in case of a tie, proposal is considered rejected
+    // todo: implement quorum - 67% of votes should be casted for a proposal before it's declared successful and quorom is reached, otherwise, proposal fails
+
+    /// if forvotes/totalvotes * 100 >= 67 the quoromhas been achieved and proposal passes
+
+    uint256 immutable QUORUM = 67; // 67%
+
+    uint256 constant PARTICIPATION_QUORUM = 25; // 25% of contributors
+    uint256 constant APPROVAL_THRESHOLD = 67;   // 67% approval
+
+    function _isParticipationQuorumReached(
+    uint256 totalVotes,
+    uint256 totalContributors
+    ) internal pure returns (bool) {
+        if (totalContributors == 0) return false;
+
+        return (100 * totalVotes) >= (PARTICIPATION_QUORUM * totalContributors);
+    }
+
+
+    function _isApprovalThresholdReached(
+    uint256 forVotes,
+    uint256 totalVotes
+    ) internal pure returns (bool) {
+        if (totalVotes == 0) return false;
+
+        return (100 * forVotes) >= (APPROVAL_THRESHOLD * totalVotes);
+    }
+
+    function _isProposalApproved(
+    uint256 forVotes,
+    uint256 againstVotes,
+    uint256 totalContributors
+    ) internal pure returns (bool) {
+    uint256 totalVotes = forVotes + againstVotes;
+
+        return
+        _isParticipationQuorumReached(totalVotes, totalContributors) &&
+        _isApprovalThresholdReached(forVotes, totalVotes);
+    }
+
+
+
+
+
+    function _isQuorumReached(bytes32 raiseId_, uint256 proposalId_, uint256 forVotes_, uint256 againstVotes_) internal returns (bool) {
+
+        // sanitize inputs
+        raiseBoxProposal.isValidProposal(raiseId_, proposalId_);
+
+        // 100f >= 67t
+        if ((100 * forVotes_) >= (QUORUM * (forVotes_ + againstVotes_))) {
+            return true;
+            // quorum is reached
+            // pass proposal
+        } else { return false; }
+
+    }
 }
