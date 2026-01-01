@@ -125,6 +125,10 @@ library RaiseBoxErrorsLib {
         address founder
     );
 
+    /// @notice thrown when drip percent passed for a raise is not a multiple of 5 less than 25
+    /// @dev allowed drip percentages: 5, 10, 15, 20, 25
+    error RaiseBoxProposal_hostProposal_InvalidDripPercent();
+
     /// @notice thrown if raise does not exist in storage
     error RaiseBoxCore_doesRaiseExist_RaiseDoesNotExist();
 

@@ -43,6 +43,16 @@ library RaiseBoxEventsLib {
         IRaiseBoxCore.RaiseState indexed newRaiseState
     );
 
+    /// @notice emitted when anew proposal is created
+    /// @param proposalId id of the proposal hosted
+    /// @param dripPercent percent of the raise funds expected to be dripped for this proposal
+    /// @param lastProposalTime timestamp of the last proposal hosted for a raise
+    event NewProposalHosted(
+        uint256 indexed proposalId, 
+        uint8 dripPercent, 
+        uint256 lastProposalTime
+    );
+
     /// @notice events emitted during voting on a raise proposal
 
     /// @notice emitted when vote is delegated
@@ -98,10 +108,6 @@ library RaiseBoxEventsLib {
         uint256 proposalId, 
         uint256 triggerTime
         );
-
-    /// @notice emitted when voting has successfully ended
-    event RaiseBoxVoting_VotingEndedSucessfully();
-
 
     event RaiseBoxCore_FounderVerifiedAndAddedToWhiteList(
         address indexed founder
@@ -173,4 +179,24 @@ library RaiseBoxEventsLib {
     event RaiseBox_ExceededMaxConFailedProposals(uint maxConFailedProposals);
 
     event RaiseBox_ExceededMaxFailedProposals(uint maxFailedProposals);
+
+    event RaiseBoxVoting_tallyVotes_ProposalPassed(
+        uint256 proposalId,
+        uint256 forVotes,
+        uint256 againstVotes,
+        uint256 totalVotesCasted,
+        uint256 voteTallyTimestamp
+    );
+
+    event RaiseBoxVoting_tallyVotes_ProposalFailed(
+        uint256 proposalId,
+        uint256 forVotes,
+        uint256 againstVotes,
+        uint256 totalVotesCasted,
+        uint256 voteTallyTimestamp
+    );
+
+    event RaiseBoxVoting_endVoting_VotingEndedSucessfully(
+        uint voteEndTimestamp
+    );
 }
