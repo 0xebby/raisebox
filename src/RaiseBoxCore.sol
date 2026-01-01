@@ -20,8 +20,6 @@ import {IRaiseBoxCreation} from "src/interfaces/IRaiseBoxCreation.sol";
 import "../lib/forge-std/src/Test.sol";
 
 
-
-// contract
 /**
  * @title RaiseBoxCore is the central contract of this protocol
  * @author 0xebby
@@ -34,28 +32,27 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     // type declaration
     using SafeERC20 for IERC20;
 
-
-
     // State variables
-    address private immutable iRBT; // raise box token
+    address private immutable iRBT;
 
     IERC20 iRBTInstance;
 
-    address public raiseBoxContribution; // contribution contract
+    address public raiseBoxContribution;
 
-    address public raiseBoxProposal; // proposal contract
+    address public raiseBoxProposal; 
 
-    address public raiseBoxDripHandler; // drip contract
+    address public raiseBoxDripHandler; 
 
-    address public raiseBoxVoting; // voting contract
+    address public raiseBoxVoting; 
 
-    address public raiseBoxRaiseCreation; // raise creation contract
+    address public raiseBoxRaiseCreation; 
 
-    // MINIMUM_CONTRIBUTION = 0.1 ether; // 1e17
+    // MINIMUM_CONTRIBUTION = 0.1 ether; // 1e17 // or dollar eq
     uint256 public constant MINIMUM_CONTRIBUTION = 0.1 ether;
 
     // percent of the amount raised by the project that goes to protocol
     uint256 private constant PROTOCOL_FEE = 15; // 1.5%
+
     uint256 public constant RAISE_DURATION = 5 weeks; // 1month and 1 week
     uint public constant MAX_CON_FAILED_PROPOSALS = 3;
     uint public constant MAX_FAILED_PROPOSALS = 5;
@@ -67,7 +64,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     bytes32 public constant VOTING_CONTRACT = keccak256("RAISEBOX_VOTING");
     bytes32 public constant DRIP_HANDLER = keccak256("RAISEBOX_DRIPPER");
 
-    // protocol address - raisebox
     address payable public protocol;
 
     address private raiseBoxOwner;
@@ -93,9 +89,8 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
     // constructor:
     constructor() Ownable(msg.sender) ERC20("token", "tokenname") {
-        raiseBoxOwner = msg.sender; // this sets proposal as owner/deployer of crowdfund contract
+        raiseBoxOwner = msg.sender; 
 
-        // iRBT = iRBT_;
         iRBTInstance = IERC20(iRBT);
 
         // change before deployment
@@ -107,7 +102,9 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
     function verifyAndAddToWhitelist(address founder) external onlyOwner() {
         require(founder != address(0), "zero address is forbidden");
+
         if (verifiedFounders[founder]) { revert RaiseBoxErrorsLib.RaiseBoxCore_AlreadyWhiteListed(founder); }
+
         whiteListedVerifiedFounders.push(founder);
         verifiedFounders[founder] = true;
 
@@ -227,35 +224,36 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
 
      function updateRaiseInfo(
-        ProjectInfo calldata _projectInfo,
-        uint256 _raiseCreatedAt,
-        uint256 _amountRaisedByProject,
-        bool _requireRaiseExist,
-        bytes32 _raiseId,
-        address _raiseOwner,
-        uint256 _yesVotes,
-        uint256 _noVotes,
+        ProjectInfo calldata projectInfo_,
+        uint256 raiseCreatedAt_,
+        uint256 amountRaisedByProject_,
+        bool requireRaiseExist_,
+        bytes32 raiseId_,
+        address raiseOwner_,
+        uint256 yesVotes_,
+        uint256 noVotes_,
         uint256 proposalId_
     ) external {
 
+        /// @dev this calls must always come from a raisebox related contract
+        /// each of the raisebox contract is allowed access to specific internal functions
+
         if (authorizedCallers[RAISE_CREATION_CONTRACT][msg.sender]) {
             _updateRaiseCreation(
-                _projectInfo,
-                _raiseId,
-                _raiseCreatedAt,
-                _requireRaiseExist,
-                _raiseOwner
+                projectInfo_,
+                raiseId_,
+                raiseCreatedAt_,
+                requireRaiseExist_,
+                raiseOwner_
             );
         } else if (authorizedCallers[CONTRIBUTION_CONTRACT][msg.sender]) {
-            _updateContributions(_raiseId, _amountRaisedByProject);
+            _updateContributions(raiseId_, amountRaisedByProject_);
             
         } else if (authorizedCallers[PROPOSAL_CONTRACT][msg.sender]) {
-            _updateRaiseProposalInfo(_raiseId);
-            // this calls must always come from a raisebox related contract
-            // each of the raisebox contract is allowed access to specific internal functions
+            _updateRaiseProposalInfo(raiseId_);
            
         } else if (authorizedCallers[VOTING_CONTRACT][msg.sender]) {
-            _updateVotingInfo(_raiseId, _yesVotes, _noVotes, proposalId_);
+            _updateVotingInfo(raiseId_, yesVotes_, noVotes_, proposalId_);
         } 
         
         else {  revert RaiseBoxErrorsLib.RaiseBoxCore_updateRaiseInfo_UnAuthorizedCaller(); // call is not from any raiseBox related contract}
@@ -279,10 +277,9 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
         } else {
             revert RaiseBoxErrorsLib.RaiseBoxCore_UnauthorizedRaiseEnder(msg.sender);
-
         }
 
-        emit RaiseBoxEventsLib.RaiseBoxCore_endRaise_RaiseEnded();
+        emit RaiseBoxEventsLib.RaiseBoxCore_endRaise_RaiseEnded(raiseId_, block.timestamp);
     }
 
 
@@ -362,6 +359,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
             emit RaiseBoxEventsLib.RaiseBox_ExceededMaxConFailedProposals(3);
             emit RaiseBoxEventsLib.RaiseBox_RaiseFailed(raiseId);
             return;
+
         } else if (raiseInfo_.proposalInfo.nonConFailedProposals >= MAX_FAILED_PROPOSALS) {
             raiseInfo_.raiseState = _updateRaiseState(RaiseState.FAILED, raiseId);
 
@@ -380,31 +378,31 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
     function _updateRaiseCreation(
         ProjectInfo calldata _projectInfo,
-        bytes32 _raiseId,
+        bytes32 raiseId_,
         uint256 _createdAt,
         bool _requireRaiseExist,
-        address _raiseOwner
+        address raiseOwner_
         
     ) internal {
         RaiseInfo storage _raiseInfo;
 
-        _raiseInfo = raiseInfo[_raiseId];
+        _raiseInfo = raiseInfo[raiseId_];
 
-        // creation info update:
+        /// @dev creation info update:
         _raiseInfo.raiseCreationInfo.projectInfo = _projectInfo;
-        _raiseInfo.raiseCreationInfo.raiseId = _raiseId;
+        _raiseInfo.raiseCreationInfo.raiseId = raiseId_;
         _raiseInfo.raiseCreationInfo.doesRaiseExist = _requireRaiseExist;
         _raiseInfo.raiseCreationInfo.raiseCreatedAt = _createdAt;
-        _raiseInfo.raiseCreationInfo.raiseOwner = _raiseOwner;
+        _raiseInfo.raiseCreationInfo.raiseOwner = raiseOwner_;
 
         // raise deadline update:
         _raiseInfo.raiseDuration = RAISE_DURATION;
 
-        // raise state update: INACTIVE ---> CONTRIBUTION
-        // opens raise to contributions, only then can raisers contribute
-        _raiseInfo.raiseState = _updateRaiseState(RaiseState.CONTRIBUTION, _raiseId);
+        /// @dev raise state update: INACTIVE ---> CONTRIBUTION
+        /// opens raise to contributions, only then can raisers contribute
+        _raiseInfo.raiseState = _updateRaiseState(RaiseState.CONTRIBUTION, raiseId_);
 
-        emit RaiseBoxEventsLib.RaiseCreationInfoUpdated(_raiseId);
+        emit RaiseBoxEventsLib.RaiseCreationInfoUpdated(raiseId_);
     }
 
     function _updateRaiseState(RaiseState newRaiseState, bytes32 raiseId) internal returns(RaiseState) {
@@ -433,14 +431,12 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
      /**
      * @notice method to check if a raise exists, returns true if raise is found in storage
      * @param raiseId id of the raise to check if exist
-     * @dev internal but exposed by it's external counterpart whcih simply calls this
+     * @dev internal but exposed by it's external counterpart `doesRaiseExist` which simply calls this
      */
      function _requireRaiseExist(bytes32 raiseId) internal view {
         if (!raiseInfo[raiseId].raiseCreationInfo.doesRaiseExist) {
             revert RaiseBoxErrorsLib.RaiseBoxCore_doesRaiseExist_RaiseDoesNotExist();
         }
-
-        // return raiseInfo[raiseId].raiseCreationInfo.doesRaiseExist;
     }
 
     /**
@@ -465,18 +461,13 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
      */
     function setAcceptedToken(address newTokenAddress) external onlyOwner {
         require(newTokenAddress != address(0), "invalid address");
+
         if (!_isContract(newTokenAddress)) revert RaiseBoxErrorsLib.RaiseBoxCore_NotSupportedToken();
 
         iRBTInstance = IERC20(newTokenAddress);
 
         emit RaiseBoxEventsLib.RaiseBoxCore_AcceptedTokenSet(newTokenAddress);
     }
-
-    // function incrementConFailedProposals(bytes32 raiseId) external {
-    //     if (_requireRaiseExist(raiseId)) {
-    //         raiseInfo[raiseId].conFailedProposals++;
-    //     }
-    // }
 
 
     function _getRaiseInfo(bytes32 raiseId) internal view returns (RaiseInfo memory) {
@@ -561,18 +552,11 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     function getRaiseDeadline(bytes32 raiseId_) external view returns (uint256) {
         _requireRaiseExist(raiseId_);
         return (RAISE_DURATION + raiseInfo[raiseId_].raiseCreationInfo.raiseCreatedAt);
-        
-       
     }
 
     function getProposalsHosted(bytes32 raiseId_) external view returns(uint256) {
             _requireRaiseExist(raiseId_);
             return raiseInfo[raiseId_].proposalInfo.proposalsHostedByProject;
     }
-
-
-
-
-    // this is raiseboxV2b branch
 }
 
