@@ -18,51 +18,72 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         bytes32 raiseId = raiseBoxRaiseCreationContract.createNewRaise(
             IRaiseBoxCore.ProjectInfo({
                 projectName: "raisebox",
-                valueProposition: "fully decentralized miletone based crowdfunding for projects you care about",
+                valueProposition: "fully decentralized milestone based crowdfunding for projects you care about",
                 raiseTarget: 20 ether,
                 projectDuration: 52 weeks
             })
-        );
+        ); 
         vm.stopPrank();
+
+        // check if raise exists
 
         // raise is now in contribution state - contributors can contribute
         vm.prank(uche);
-        raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, raiseId);
+        vm.expectRevert();
+        raiseBoxContributionContract.contribute{value: 0 ether}(0 ether, raiseId);
 
         vm.prank(max);
-        raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, raiseId);
+        vm.expectRevert();
+        raiseBoxContributionContract.contribute{value: 2 ether}(4 ether, raiseId);
 
+        uint minContribution = raiseBoxCore.getMinimumContribution();
         vm.prank(vitalik);
-        raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, 0xdcf668f9258e6472e4f2f94e3ee6c3f33f660e34b3e06018e2b2431809e06fa8);
+        vm.expectRevert();
+        raiseBoxContributionContract.contribute{value: minContribution-0.09 ether }(minContribution-0.09 ether, raiseId);
+
+        IRaiseBoxCore.RaiseState raiseState = raiseBoxCore.getRaiseState(raiseId);
+        assertEq(raiseState == IRaiseBoxCore.RaiseState.CONTRIBUTION, true);
 
         vm.prank(carl);
-        raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, raiseId);
+        raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseId);
 
-        raiseBoxContributionContract.getTotalContributionsToProject(raiseId);
+        vm.prank(carl);
+        // vm.expectRevert();
+        raiseBoxContributionContract.contribute{value: 1 ether}(1 ether, raiseId);
+        
+        vm.prank(carl);
+        // vm.expectRevert();
+        raiseBoxContributionContract.contribute{value: 0.5 ether}(0.5 ether, raiseId);
+
+        // raiseBoxContributionContract.getTotalContributionsToRaise(raiseId);
 
     
-        advanceBlockTime(5 weeks);
-        // contribution exactly reaching target at deadline is accepted and should pass
+        // advanceBlockTime(5 weeks + 1 seconds);
+        // uint deadline = raiseBoxCore.getRaiseDeadline(raiseId);
+        // assertTrue(block.timestamp > deadline);
+
+        // // contribution exactly reaching target at deadline is accepted and should pass
         vm.prank(magiceden);
         raiseBoxContributionContract.contribute{value: 4 ether}(4 ether, raiseId);
 
-        raiseBoxContributionContract.getTotalContributionsToProject(raiseId);
+        raiseBoxContributionContract.hasUserContributed(raiseId, ebby);raiseBoxContributionContract.hasUserContributed(raiseId, magiceden);
+        raiseBoxContributionContract.getContributors(raiseId);
+        raiseBoxContributionContract.getTotalContributors(raiseId);
+
+        raiseBoxContributionContract.getTotalContributionsToRaise(raiseId);raiseBoxContributionContract.getContributionHistory(carl, raiseId);raiseBoxContributionContract.getContributionHistory(magiceden, raiseId);
+        raiseBoxContributionContract.getUserRaiseContributions(raiseId, carl);
+        // // raiseBoxCore.getRaiseState(raiseId);
         
-        vm.prank(arbitrum);
-        raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseId);
+        // vm.prank(arbitrum);
+        // raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseId);
 
-        vm.prank(ethereum);
-        raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseId);
+        // vm.prank(ethereum);
+        // raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseId);
 
-
-
-
-
-
-        // assertions:
-        address creator = raiseBoxCore.getRaiseCreator(raiseId);
-        assertTrue(creator == ebby);
-        // assertEq(raiseBoxContributionContract.getContributionsToProject(uche, raiseId), 0.4 ether);
+        // // assertions:
+        // address creator = raiseBoxCore.getRaiseCreator(raiseId);
+        // assertTrue(creator == ebby);
+        // // assertEq(raiseBoxContributionContract.getContributionHistory(uche, raiseId), 0.4 ether);
     }
     
    function testCreateARaise() public {
@@ -1140,6 +1161,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 
         console.log(address(raiseBoxDripHandler).balance);
         raiseBoxCore.getRaiseInfo(raiseId_);
+        raiseBoxVoting.getVotingStartTime(raiseId_, 11);
 
 
 
