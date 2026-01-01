@@ -136,6 +136,20 @@ library RaiseBoxErrorsLib {
     error RaiseBoxVoting_ProposalDoesNotExist(uint256 proposalId);
 
     // contribution related errors:
+    /// @notice thrown when contribution above raiseTarget is attempted
+    /// @dev contributions cannot overshoot the project's raise target
+    /// @param errorMsg text explaining why contribution failed
+    error RaiseBoxContribution_contribute_OverContributionIsForbidden(string errorMsg);
+
+    /// @notice thrown when contribution to a raise that does not exist is attempted
+    /// @param raiseId the non-existent raiseId passed
+    error RaiseBoxContribution_contribute_RaiseDoesNotExist(bytes32 raiseId);
+
+    /// @notice error thrown when contribution is attempted and raise is not in `CONTRIBUTION` state
+    /// @dev all raises have to be in this state before they can receive any contribution
+    /// @dev rises achieve this state after successful raise creation
+    error RaiseBoxContribution_contribute_RaiseNotInContributionState();
+
     error RaiseBoxContribution_ValueSentMismatch();
     error RaiseBoxContribution_ContributeMoreEth(uint256);
     error RaiseBoxContribution_ZeroAmount();
