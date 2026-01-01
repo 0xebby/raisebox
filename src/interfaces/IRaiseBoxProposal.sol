@@ -21,13 +21,6 @@ interface IRaiseBoxProposal {
         ProposalState proposalState;
         bool doesProposalExist;
     }
-
-    // proposal related events:
-    event NewProposalHosted(
-        uint256 indexed proposalId, 
-        uint8 dripPercent, 
-        uint256 lastProposalTime
-    );
     
     event ProposalPassed();
 
@@ -35,22 +28,18 @@ interface IRaiseBoxProposal {
     error RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
     error RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
     error RaiseBoxProposal_hostProposal_RaiseNotPassedYet();
-    error RaiseBoxProposal_InvalidDripPercent();
     error RaiseBoxProposal_hostProposal_MaxYearlyProposalsReached();
     error RaiseBoxProposal_getProposalDetails_InvalidProposalId();
     error RaiseBoxProposal_ProposalsExceedsMax(uint256 max);
 
     struct MilestoneInfo {
         // different milestones: mvp ready, testnet ready, distribution site ready,
-        // uint256 lastProposalTime;
         string description;
         string milestone;
-        // uint256 proposalId;
         uint8 dripPercent;
-        // bool proposalExist;
     }
 
- function getProposalState(bytes32 raiseId, uint256 proposalId) external view returns(ProposalState) ;
+    function getProposalState(bytes32 raiseId, uint256 proposalId) external view returns(ProposalState);
  
     function updateProposalState(bytes32 raiseId_, uint256 proposalId_, ProposalState proposalState_) external;
 
@@ -65,8 +54,6 @@ interface IRaiseBoxProposal {
         external
         view
         returns (ProposalInfo memory proposalInfo_);
-
-    function getHasHostedProposal(bytes32 raiseId) external view returns (bool);
 
     function getLastProposalTime(bytes32 raiseId) external view returns (uint256);
 

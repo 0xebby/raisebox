@@ -39,8 +39,6 @@ interface IRaiseBoxVoting {
         uint256 proposalId, 
         uint256 triggerTime
         );
-
-    event RaiseBoxVoting_VotingEndedSucessfully();
     
     error RaiseBoxVoting_NotContributor(
         bytes32 raiseId, 
@@ -80,10 +78,6 @@ interface IRaiseBoxVoting {
 
     function delegateVote(bytes32 raiseId, uint256 proposalId, address from, address to) external;
 
-    // function _tallyVotes(bytes32 raiseId, uint256 proposalId)
-    //     external
-    //     returns (uint256 forVotes, uint256 againstVotes);
-
     function getProposalVotes(bytes32 raiseId, uint256 proposalId)
         external
         view
@@ -108,5 +102,10 @@ interface IRaiseBoxVoting {
     function getAbsenteeVoters(
         bytes32 raiseId, 
         uint256 proposalId
+        ) external view returns (uint256);
+
+        function getVotingStartTime(
+            bytes32 raiseId,
+            uint256 proposalId
         ) external view returns (uint256);
 }
