@@ -214,9 +214,8 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         }
 
         // ensure that the user inputs: `raiseId_` and `proposalId_ for this function are valid
-        if (
-            raiseBoxCore.doesRaiseExist(raiseId_)
-        ) {
+                raiseBoxCore.doesRaiseExist(raiseId_);
+
                 ProposalInfo storage proposalInfo_;
                 proposalInfo_ = proposalInfo[raiseId_][proposalId_];
             // ensure that the proposalState for `rasieId_` and `proposalId_` is INACTIVE
@@ -238,7 +237,6 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
             }
 
             emit RaiseBoxEventsLib.RaiseBoxProposal_updateProposalInfo_ProposalInfoUpdated();
-        }
     }
 
 
@@ -246,7 +244,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
     function _isValidProposal(bytes32 raiseId_, uint256 proposalId_) internal view returns (bool) {
 
-       if (raiseBoxCore.doesRaiseExist(raiseId_)) {
+            raiseBoxCore.doesRaiseExist(raiseId_);
             // get proposalDetails
             ProposalInfo memory proposalInfo =  proposalInfo[raiseId_][proposalId_];
 
@@ -255,7 +253,6 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
             } else {
                 revert RaiseBoxErrorsLib.RaiseBoxProposal_isValidProposal_ProposalDoesNotExist(proposalId_);
              }
-       }
     }
 
     function isValidProposal(bytes32 raiseId, uint256 proposalId) external view returns (bool) { return _isValidProposal(raiseId, proposalId); }
@@ -265,10 +262,8 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     ////                                           ////
 
     function getProposalCount(bytes32 raiseId) external view returns (uint256) {
-        if (raiseBoxCore.doesRaiseExist(raiseId)) {
+            raiseBoxCore.doesRaiseExist(raiseId);
            return proposalsHostedByProject[raiseId];
-        }
-        
     }
 
     function getTotalProposals() external view returns (uint256) {

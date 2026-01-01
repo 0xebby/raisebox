@@ -63,7 +63,7 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
 
         if (msg.sender != address(raiseBoxVoting)) revert DripHandler_NotVotingContract(msg.sender);
 
-        if (!raiseBoxCore.doesRaiseExist(raiseId)) revert Drip_InvalidProject();
+        raiseBoxCore.doesRaiseExist(raiseId);
 
         if (drippedForProposal[raiseId][proposalId]) revert RaiseBoxErrorsLib.RaiseBoxDripHandler_dripFunds_DripAlreadyExecutedForProposal(raiseId, proposalId);
 
