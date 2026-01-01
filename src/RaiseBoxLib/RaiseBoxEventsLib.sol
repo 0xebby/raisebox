@@ -123,7 +123,10 @@ library RaiseBoxEventsLib {
     );
 
     /// @notice emitted when raise ends
-    event RaiseBoxCore_endRaise_RaiseEnded();
+    event RaiseBoxCore_endRaise_RaiseEnded(
+        bytes32 indexed raiseId,
+        uint256 timeEnded
+    );
 
     event RaiseBoxCore_RaiseCreationContractSet(
         address contractAddress
