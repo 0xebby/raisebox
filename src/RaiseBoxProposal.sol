@@ -178,11 +178,9 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         uint256 proposalId_
         ) internal {
 
-        // ensure that the calls to this function are either from the voting contract or this
-        // contract itself.
+        // ensure that the calls to this function is from the voting contract only
         if (
             msg.sender != address(raiseBoxVoting) 
-            // msg.sender != caller
         ) {
             revert RaiseBoxErrorsLib.RaiseBoxProposal_updateProposalInfo_Unauthorized(); 
         }
@@ -270,11 +268,6 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     function getProposalState(bytes32 raiseId, uint256 proposalId) external view returns(ProposalState) {
         return _getProposalState(raiseId, proposalId);
     }
-
-    // this function updates proposalInfo based on proposalState
-    // when proposalState is INACTIVE, update proposalState to ACTIVE and update proposalHosting info too: milestone, proposalid, lastProposalTime, doesProposalExist
-    // when proposalState is PASSED, update to INACTIVE
-    // when proposalState is FAILED,increment conFailedProposals and nonConFailedProposals by 1
 
     function updateProposalInfo(
         bytes32 raiseId_, 
