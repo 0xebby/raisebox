@@ -64,6 +64,8 @@ contract TestsHelpers is Test {
     address arbitrum = makeAddr("arbitrum");
     address carl = makeAddr("carl");
 
+    address zeroAddress = address(0);
+
     // get  would be ca of raisebox - project creation contract
 
     using Strings for uint256;

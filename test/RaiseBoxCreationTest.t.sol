@@ -163,6 +163,8 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     raiseBoxVoting.triggerVoteTally(raiseId1, proposalId);
     vm.stopPrank();
 
+
+
     raiseBoxProposalContract.getProposalState(raiseId1, proposalId);
 
     // // second proposal
@@ -281,7 +283,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     uint proposalId5 = raiseBoxProposalContract.hostProposal(
         raiseId1, 
         IRaiseBoxProposal.MilestoneInfo({
-            description: "this is the fourth proposal for raisebox v3",
+            description: "this is the fifth proposal for raisebox v3",
             milestone: "testnet website for mvp ready",
             dripPercent: 20
         })
@@ -302,19 +304,20 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     raiseBoxVoting.vote(raiseId1, proposalId5, true);
     vm.stopPrank();
 
-    // vm.startPrank(sally);
-    // raiseBoxVoting.vote(raiseId1, proposalId5, false);
-    // vm.stopPrank();
-
     vm.startPrank(vitalik);
     raiseBoxVoting.vote(raiseId1, proposalId5, false);
     vm.stopPrank();
 
+    
+
     advanceBlockTime(7 days);
+   
 
     vm.startPrank(uche);
     raiseBoxVoting.triggerVoteTally(raiseId1, proposalId5);
     vm.stopPrank();
+
+   
 
     
 
@@ -559,7 +562,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 //         // proposal hosted, voting can now commence:
 
 //         // jump to just after scheduled voting start for proposal 1
-//         uint256 _start = raiseBoxVoting.votingStartTime(projectId, 1);
+//         uint256 _start = raiseBoxVoting.s_votingStartTime(projectId, 1);
 //         raiseBoxVoting.delegateVote(projectId, 1, max, uche);
 //         vm.warp(_start + 1);
 
@@ -604,7 +607,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 //         vm.stopPrank();
 
 //         // jump to just after scheduled voting start for proposal 2
-//         uint256 _start2 = raiseBoxVoting.votingStartTime(projectId, proposalId2);
+//         uint256 _start2 = raiseBoxVoting.s_votingStartTime(projectId, proposalId2);
 //         vm.warp(_start2 + 1);
 
 //         vm.startPrank(mark);
@@ -642,7 +645,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 //         vm.stopPrank();
 
 //         // jump to just after scheduled voting start for proposal 2
-//         uint256 _start3 = raiseBoxVoting.votingStartTime(projectId, proposalId3);
+//         uint256 _start3 = raiseBoxVoting.s_votingStartTime(projectId, proposalId3);
 //         vm.warp(_start3 + 1);
 
 //         vm.startPrank(mark);
@@ -683,7 +686,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 //         vm.stopPrank();
 
 //         // jump to just after scheduled voting start for proposal 2
-//         uint256 _start4 = raiseBoxVoting.votingStartTime(projectId, proposalId4);
+//         uint256 _start4 = raiseBoxVoting.s_votingStartTime(projectId, proposalId4);
 //         vm.warp(_start4 + 1);
 
 //         vm.startPrank(mark);
@@ -724,7 +727,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 //         vm.stopPrank();
 
 //         // jump to just after scheduled voting start for proposal 2
-//         uint256 _start5 = raiseBoxVoting.votingStartTime(projectId, proposalId5);
+//         uint256 _start5 = raiseBoxVoting.s_votingStartTime(projectId, proposalId5);
         
 //         vm.startPrank(max);
 //         raiseBoxVoting.delegateVote(
