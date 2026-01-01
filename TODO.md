@@ -2,7 +2,6 @@
 
 # all interactions uses the protocol token::
 ## contributions
-## voting
 ## protocol fees
 ## withdraw of funds to project
 
@@ -14,14 +13,14 @@ raiseboxtokens can be obtained from the raiseboxfaucet ui or by calling the clai
 
 - CONTRIUBUTE FUNCTION STRUTURE:
 1. user must have faucet tokens
-2. sepolia for fees since this is going to be deployed on sepolia blockchain
-3. the faucet drips sepolia for first time claimers -- use for fees when interacting with this. (see 2 above)
+2. base sepolia for fees since this is going to be deployed on base blockchain
+3. the faucet drips  base sepolia for first time claimers -- use for fees when interacting with this. (see 2 above)
 4. for now only this faucet token can be used to interact here
 
 # MAIN FUNCTIONS:
-1. CREATE PROJECT(campaign)
+1. CREATE RAISE(campaign)
 
-2. CONTRIBUTE TO PROJECT
+2. CONTRIBUTE TO RAISE
 
 3. CREATE PROPOSAL
 
