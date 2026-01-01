@@ -228,9 +228,13 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
             ProposalInfo memory proposalInfo =  proposalInfo[raiseId_][proposalId_];
 
             if (proposalInfo.doesProposalExist) {
+                
                 return true;
+
             } else {
+
                 revert RaiseBoxErrorsLib.RaiseBoxProposal_isValidProposal_ProposalDoesNotExist(proposalId_);
+
              }
     }
 
