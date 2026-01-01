@@ -303,7 +303,7 @@ contract TestsHelpers is Test {
                  ) {
                 for (uint w = 0; w < voters2.length; w++) {
                 vm.prank(voters2[w]);
-                raiseBoxVoting.vote(raiseId_, a, false);
+                raiseBoxVoting.vote(raiseId_, a, true);
             }
 
                 for (uint e = 0; e < voters3.length; e++) {
