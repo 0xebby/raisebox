@@ -253,9 +253,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     mapping(bytes32 => uint256) public s_raiseFailedProposals;
 
 
-    //** ------------------------------------------------------------------ **//
-    //                        GETTER FUNCTIONS                                //
-    //** ------------------------------------------------------------------ **//
+
 
     function getProposalVotes(bytes32 raiseId_, uint256 proposalId_) external view returns (uint256, uint256, uint256) {
         return _getProposalVotes(raiseId_, proposalId_);
@@ -308,10 +306,6 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     }
 
 
-
-    //** ------------------------------------------------------------------ **//
-    //                        INTERNAL FUNCTIONS                              //
-    //** ------------------------------------------------------------------ **//
 
     function _tallyVotes(bytes32 raiseId, uint256 proposalId) internal returns (uint256, uint256) {
         (uint256 forVotes, uint256 againstVotes, uint256 totalVotes) = _getProposalVotes(raiseId, proposalId);
@@ -395,62 +389,6 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
        emit RaiseBoxEventsLib.RaiseBoxVoting_endVoting_VotingEndedSucessfully(block.timestamp);
     }
 
-
-
-
-    // get number of votes casted by individual voter
-    // function getVotesCasted(address user, bytes32 raiseId, uint256 proposalId) external returns (uint256 votesCasted) {
-
-    //     return votesCasted;
-    // }
-
-    // to get funding drips from contributions, projects have to host proposals after every milestone achieved
-
-    // max funds drip at anytime should be 25%
-    // funds drip on very first proposal after raise is capped at 10%
-    // 25% funds drip can only be dripped twice throughout project lifecycle
-    // 25% fund drip cannot happen consecutively:
-    // i.e after receiving a 25% fund drip, project cannot receive another 25%
-    // in the very next drip
-    // after first 25% fund drip, drips are capped at 15% untill a drip after the last 25% drip
-    // drips %: in multiples of 5 up to 100
-    // only 10% of overall funds contributed at time of hosting proposal is released per time
-
-    // // 5, 10, 15, 20, 25 % fund drips only allowed
-    // // fund drip logic to be implemented in RaiseBoxCore contract
-    // // if proposalCount <= 1 => 10% fund drip
-    // // if proposalCount == 2 => 25% fund drip
-    // // if proposalCount > 2 && last fund drip != 25% => 25% fund drip
-    // // if proposalCount > 2 && last fund drip == 25% => 15% fund drip
-    // // else => 10% fund drip
-
-    // criterias for voting:
-    // 1. has contributed to project
-    // 2. voting duration not exceeded
-    // 3. has not voted before on proposal
-    // 4. cannot delegate to self
-    // 5. can only delegate once per proposal
-    // 6. delegate must have contributed to project
-    // 7. votes can only be tallied after voting duration has ended
-    // 8. only project owner can tally votes
-    // 9. can tally votes once voting duration + 5 minutes buffer(not for voting) elapsed
-    // 10. cannot vote once either voting duration elapsed, everyone has voted including delegates, or voting has been ended manually by project owner
-    // 11. votes can only be delegated before voting duration elapses
-    // 12. once votes are tallied, voting is ended for that proposal
-    // 13. only one level of delegation allowed -- ensured
-    // i.e A delegates to B, B cannot delegate to C- a delegated vote cannot be re-delegated
-    // 14. each contributor gets one vote per proposal regardless of amount contributed
-    // 15. voting sides: yes/no (for/against)
-    // 16. votes are public, anyone can see how many votes each support has at any time but actual voters(address) are private using zk-SNARKS (to be implemented in future versions)
-    // 17. voting power cannot be transferred or sold?
-    // 18. only one proposal can be active at a time per project - this is already enforced in RaiseBoxProposal contract
-    // 19. project owner cannot vote on own proposals
-    // 20. if a user has delegated their vote, they cannot vote directly on that proposal - obviously, they lose voting rights once they delegate
-    // 21. voting cannot commence until proposal is hosted - to be enforced in RaiseBoxProposal contract
-    // 22. voting results are final once tallied - no re-votes or re-tallies allowed
-    // 23. in case of a tie, proposal is considered rejected
-    // todo: implement quorum - 67% of votes should be casted for a proposal before it's declared successful and quorom is reached, otherwise, proposal fails
-
     /// if forvotes/totalvotes * 100 >= 67 the quoromhas been achieved and proposal passes
 
     uint256 immutable QUORUM = 67; // 67%
@@ -488,9 +426,6 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         _isParticipationQuorumReached(totalVotes, totalContributors) &&
         _isApprovalThresholdReached(forVotes, totalVotes);
     }
-
-
-
 
 
     function _isQuorumReached(bytes32 raiseId_, uint256 proposalId_, uint256 forVotes_, uint256 againstVotes_) internal returns (bool) {
