@@ -230,7 +230,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         ProjectInfo calldata _projectInfo,
         uint256 _raiseCreatedAt,
         uint256 _amountRaisedByProject,
-        bool _doesRaiseExist,
+        bool _requireRaiseExist,
         bytes32 _raiseId,
         address _raiseOwner,
         uint256 _yesVotes,
@@ -243,7 +243,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
                 _projectInfo,
                 _raiseId,
                 _raiseCreatedAt,
-                _doesRaiseExist,
+                _requireRaiseExist,
                 _raiseOwner
             );
         } else if (authorizedCallers[CONTRIBUTION_CONTRACT][msg.sender]) {
@@ -382,7 +382,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         ProjectInfo calldata _projectInfo,
         bytes32 _raiseId,
         uint256 _createdAt,
-        bool _doesRaiseExist,
+        bool _requireRaiseExist,
         address _raiseOwner
         
     ) internal {
@@ -393,7 +393,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         // creation info update:
         _raiseInfo.raiseCreationInfo.projectInfo = _projectInfo;
         _raiseInfo.raiseCreationInfo.raiseId = _raiseId;
-        _raiseInfo.raiseCreationInfo.doesRaiseExist = _doesRaiseExist;
+        _raiseInfo.raiseCreationInfo.doesRaiseExist = _requireRaiseExist;
         _raiseInfo.raiseCreationInfo.raiseCreatedAt = _createdAt;
         _raiseInfo.raiseCreationInfo.raiseOwner = _raiseOwner;
 
@@ -435,14 +435,12 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
      * @param raiseId id of the raise to check if exist
      * @dev internal but exposed by it's external counterpart whcih simply calls this
      */
-     function _doesRaiseExist(bytes32 raiseId) internal view returns(bool) {
-         RaiseInfo memory raiseInfo = raiseInfo[raiseId];
-
-        if (raiseInfo.raiseCreationInfo.doesRaiseExist) {
-            return true;
-        } else {
+     function _requireRaiseExist(bytes32 raiseId) internal view {
+        if (!raiseInfo[raiseId].raiseCreationInfo.doesRaiseExist) {
             revert RaiseBoxErrorsLib.RaiseBoxCore_doesRaiseExist_RaiseDoesNotExist();
         }
+
+        // return raiseInfo[raiseId].raiseCreationInfo.doesRaiseExist;
     }
 
     /**
@@ -475,22 +473,22 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     }
 
     // function incrementConFailedProposals(bytes32 raiseId) external {
-    //     if (_doesRaiseExist(raiseId)) {
+    //     if (_requireRaiseExist(raiseId)) {
     //         raiseInfo[raiseId].conFailedProposals++;
     //     }
     // }
 
 
     function _getRaiseInfo(bytes32 raiseId) internal view returns (RaiseInfo memory) {
-         if (_doesRaiseExist(raiseId)) {
+            _requireRaiseExist(raiseId);
             return raiseInfo[raiseId];
-        }
     }
 
     // getters:
 
     function getRaiseState(bytes32 raiseId) external view returns (RaiseState) {
-        if (_doesRaiseExist(raiseId)) { return raiseInfo[raiseId].raiseState; }
+        _requireRaiseExist(raiseId); 
+        return raiseInfo[raiseId].raiseState; 
     }
 
     function isVerifiedAndWhiteListed(address founder) external view returns(bool verified) {
@@ -514,15 +512,15 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     }
 
     function getAmountToRaise(bytes32 raiseId) external view returns (uint256) {
-        if (_doesRaiseExist(raiseId)) {
+            _requireRaiseExist(raiseId);
             return raiseInfo[raiseId].raiseCreationInfo.projectInfo.raiseTarget;
-        }
+        
     }
 
     function getAmtRaisedByProject(bytes32 raiseId) external view returns (uint256) {
-         if (_doesRaiseExist(raiseId)) {
+            _requireRaiseExist(raiseId);
             return raiseInfo[raiseId].raiseContributionInfo.amountRaisedByProject;
-        }
+        
     }
 
     function getProtocolFeeAddress() external view returns (address) {
@@ -533,30 +531,27 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         return iRBT;
     }
 
-    function doesRaiseExist(bytes32 raiseId) external view returns (bool) {
-       return _doesRaiseExist(raiseId);
+    function doesRaiseExist(bytes32 raiseId_) external view {
+       _requireRaiseExist(raiseId_);
     }
 
     function getRaiseCreatedAt(bytes32 raiseId_) external view returns (uint256) {
-        if (_doesRaiseExist(raiseId_)) {
+            _requireRaiseExist(raiseId_);
             raiseInfo[raiseId_].raiseCreationInfo.raiseCreatedAt;
-        }
     }
 
-    function getRaiseCreator(bytes32 raiseId) external view returns (address) {
-        if (_doesRaiseExist(raiseId)) {
-            return raiseInfo[raiseId].raiseCreationInfo.raiseOwner;
-        }
+    function getRaiseCreator(bytes32 raiseId_) external view returns (address) {
+            _requireRaiseExist(raiseId_);
+            return raiseInfo[raiseId_].raiseCreationInfo.raiseOwner;
     }
 
     function getRaiseBoxOwner() external view returns (address) {
         return raiseBoxOwner;
     }
 
-    function isRaiseCreator(address raiseCreator, bytes32 raiseId) external view returns (bool) {
-       if (_doesRaiseExist(raiseId)) {
-         if (raiseInfo[raiseId].raiseCreationInfo.raiseOwner == raiseCreator) { return true ;}
-      }
+    function isRaiseCreator(address raiseCreator, bytes32 raiseId_) external view returns (bool) {
+            _requireRaiseExist(raiseId_);
+         if (raiseInfo[raiseId_].raiseCreationInfo.raiseOwner == raiseCreator) { return true ;}
     }
 
     function isAuthorizedCaller(bytes32 role, address caller) external view returns (bool) {
@@ -564,23 +559,15 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     }
 
     function getRaiseDeadline(bytes32 raiseId_) external view returns (uint256) {
-        RaiseInfo memory raiseInfo_;
-
-        if (_doesRaiseExist(raiseId_)) {
-
-        raiseInfo_ = raiseInfo[raiseId_];
-
-        return (RAISE_DURATION + raiseInfo_.raiseCreationInfo.raiseCreatedAt);
-
-        }
+        _requireRaiseExist(raiseId_);
+        return (RAISE_DURATION + raiseInfo[raiseId_].raiseCreationInfo.raiseCreatedAt);
         
        
     }
 
-    function getProposalsHosted(bytes32 raiseId) external view returns(uint256) {
-        if (_doesRaiseExist(raiseId)) {
-            return raiseInfo[raiseId].proposalInfo.proposalsHostedByProject;
-        }
+    function getProposalsHosted(bytes32 raiseId_) external view returns(uint256) {
+            _requireRaiseExist(raiseId_);
+            return raiseInfo[raiseId_].proposalInfo.proposalsHostedByProject;
     }
 
 
