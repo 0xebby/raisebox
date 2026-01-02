@@ -101,7 +101,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
             // end the raise and mark as failed
             // target wasn't met within the raiseDuration
-            // triggers refunds**
+            /// @dev moves raise state to failed and triggers refund mechanism
             raiseBoxCore.endRaise(raiseId);
             revert RaiseBoxErrorsLib.RaiseBoxContribution_RaiseEnded(raiseId);
         }
@@ -171,7 +171,8 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         );
     }
 
-    receive() external payable {}
+    receive() external payable { revert("eth not accepted"); } 
+    // should not be able to receive eth directly except via contribute above
 
     // INTERNAL FUNCTIONS
 
