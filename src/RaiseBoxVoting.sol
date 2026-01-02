@@ -44,6 +44,8 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     modifier canVote(bytes32 raiseId_, address user_, uint256 proposalId_) {
 
+        raiseBoxProposal.isValidProposal(raiseId_, proposalId_);
+
         uint256 _start = _voteStartTime(raiseId_, proposalId_);
         // voting must have been scheduled (start set) before voting commences
         if (_start == 0 || block.timestamp < _start) {
@@ -54,8 +56,6 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         if (s_votingEnded[raiseId_][proposalId_] || block.timestamp > (_start + VOTING_DURATION)) {
             revert RaiseBoxVoting_VotingAlreadyEnded(raiseId_, proposalId_);
         }
-
-        raiseBoxProposal.isValidProposal(raiseId_, proposalId_);
 
         // checks if proposal is live for raise
         
@@ -86,6 +86,8 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     }
 
     modifier canDelegate(bytes32 raiseId_, uint256 proposalId_, address from_, address to_) {
+        raiseBoxProposal.isValidProposal(raiseId_, proposalId_);
+
         bool fromIsContributor = raiseBoxContribution.hasUserContributed(raiseId_, from_);
         bool toIsContributor = raiseBoxContribution.hasUserContributed(raiseId_, to_);
 
@@ -125,28 +127,6 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     //** ------------------------------------------------------------------ **//
     //                        EXTERNAL FUNCTIONS                              //
     //** ------------------------------------------------------------------ **//
-
-    /// @notice special ownerOnly function that triggers vote end incase no voting    attempt is made after voting duration elapsed
-    /// @notice this has to happen to trigger vote tallying and eventual funds drip
-    /// @notice any attempt to end just after voting duration exceeds will fail
-    /// @dev ends voting if voting hasn't already been ended by another call
-    /// @dev can only end if voting duration has been exceeded by atleast 12 hours
-    function triggerVoteTally(bytes32 raiseId_, uint256 proposalId_) external onlyRaiseCreator(raiseId_) {
-
-        uint256 _start = s_votingStartTime[raiseId_][proposalId_];
-
-        if (s_votingEnded[raiseId_][proposalId_]) revert RaiseBoxVoting_VotingAlreadyEnded(raiseId_, proposalId_);
-
-        // if voting duration elapsed, mark ended and emit events:
-        if (block.timestamp >= (_start + VOTING_DURATION)) {
-            _tallyVotes(raiseId_, proposalId_);
-            _endVoting(raiseId_, proposalId_);
-            emit RaiseBoxVoting_VoteTallyTriggered(msg.sender, proposalId_, block.timestamp);
-        } else {
-            revert RaiseBoxVoting_VotingNotEnded();
-        }
-
-    }
 
     /// @notice function to cast votes on an hosted proposal
     /// @dev only raise contributors can call `vote` successfully
@@ -305,7 +285,31 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         return s_hasVotedOnProposal[raiseId][proposalId][contributor];
     }
 
+    /// @notice special ownerOnly function that triggers vote end incase no voting attempt is made after voting duration elapsed
+    /// @notice this has to happen to trigger vote tallying and eventual funds drip
+    /// @notice any attempt to end just after voting duration exceeds will fail
+    /// @dev ends voting if voting hasn't already been ended by another call
+    /// @dev can only end if voting duration has been exceeded by atleast 12 hours
+    function triggerVoteTally(bytes32 raiseId_, uint256 proposalId_) external onlyRaiseCreator(raiseId_) {
 
+        uint256 _start = s_votingStartTime[raiseId_][proposalId_];
+
+        if (s_votingEnded[raiseId_][proposalId_]) revert RaiseBoxVoting_VotingAlreadyEnded(raiseId_, proposalId_);
+
+        // if voting duration elapsed, mark ended and emit events:
+        if (block.timestamp >= (_start + VOTING_DURATION)) {
+            _tallyVotes(raiseId_, proposalId_);
+            _endVoting(raiseId_, proposalId_);
+            emit RaiseBoxVoting_VoteTallyTriggered(
+                msg.sender, 
+                proposalId_, 
+                block.timestamp
+                );
+        } else {
+            revert RaiseBoxVoting_VotingNotEnded();
+        }
+
+    }
 
     function _tallyVotes(bytes32 raiseId, uint256 proposalId) internal returns (uint256, uint256) {
         (uint256 forVotes, uint256 againstVotes, uint256 totalVotes) = _getProposalVotes(raiseId, proposalId);
