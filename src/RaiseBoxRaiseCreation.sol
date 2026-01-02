@@ -50,12 +50,26 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
             revert RaiseBoxErrorsLib.RaiseBoxRaiseCreation_OwnerNotWhiteListed();
         }
 
-        if (projectInfo.projectDuration > PROJECT_LIFESPAN || projectInfo.projectDuration < MIN_PROJECT_DURATION ) {
+        if (
+            bytes(projectInfo.projectName).length <= 0 || 
+            bytes(projectInfo.projectName).length > type(uint8).max
+            ) {revert("invalid project name length");}
+
+        if (
+            bytes(projectInfo.valueProposition).length <= 0 || 
+            bytes(projectInfo.valueProposition).length > type(uint256).max
+            ) {revert("invalid valueProposition length");}
+
+        if (
+            projectInfo.projectDuration > PROJECT_LIFESPAN || 
+            projectInfo.projectDuration < MIN_PROJECT_DURATION 
+            ) {
             revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_InvalidProjectDuration();
 
         }
 
-        if (projectInfo.raiseTarget == 0) { revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_CannotRaiseZeroFunds();}
+        if (projectInfo.raiseTarget == 0) 
+        { revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_CannotRaiseZeroFunds();}
 
         uint256 timeCreated = block.timestamp;
         
