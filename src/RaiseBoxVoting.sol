@@ -118,6 +118,10 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         if (s_hasDelegatedForProposal[from_][raiseId_][proposalId_]) {
             revert RaiseBoxVoting_CannotDelegateTwice();
         } 
+
+        if (s_hasDelegatedForProposal[to_][raiseId_][proposalId_]) {
+            revert RaiseBoxErrorsLib.RaiseBoxVoting_ToAlreadyInDelegationGraph(to_);
+        }
         _;
     }
 
