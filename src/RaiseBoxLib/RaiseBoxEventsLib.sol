@@ -183,6 +183,14 @@ library RaiseBoxEventsLib {
 
     event RaiseBox_ExceededMaxFailedProposals(uint maxFailedProposals);
 
+    /// @notice emitted when contributor casts votes on a proposal
+    event RaiseBoxVoting_vote_Voted(
+        address indexed voter, 
+        bytes32 indexed raiseId, 
+        uint256 indexed proposalId, 
+        bool support
+        );
+
     event RaiseBoxVoting_tallyVotes_ProposalPassed(
         uint256 proposalId,
         uint256 forVotes,
