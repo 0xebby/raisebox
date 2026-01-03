@@ -99,6 +99,10 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
             revert RaiseBoxVoting_CannotDelegateToSelf();
         }
 
+        if (from_ != msg.sender) {
+            revert RaiseBoxErrorsLib.RaiseBoxVoting_CanOnlyDelegateOwnVote();
+        }
+
         if (s_hasVotedOnProposal[raiseId_][proposalId_][from_] || s_hasVotedOnProposal[raiseId_][proposalId_][to_]) {
             revert RaiseBoxVoting_CannotDelegateAfterVoting(proposalId_, from_);
         }
@@ -249,16 +253,14 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
      *
      */
     function _getProposalVotes(bytes32 raiseId, uint256 proposalId) internal view returns (uint256, uint256, uint256) {
-        // checks:
-        bool validProposal = raiseBoxProposal.isValidProposal(raiseId, proposalId);
+        // checks: Will revert if proposal is an invalid one
+        raiseBoxProposal.isValidProposal(raiseId, proposalId);
 
         uint256 forVotes = s_votesForProposal[raiseId][proposalId];
         uint256 againstVotes = votesAgainstProposal[raiseId][proposalId];
         uint256 totalVotes = (forVotes + againstVotes);
 
-        if (validProposal) {
-            return (forVotes, againstVotes, totalVotes);
-        } 
+        return (forVotes, againstVotes, totalVotes);
     }
 
     function getAbsenteeVoters(bytes32 raiseId, uint256 proposalId) external view returns (uint256) {
