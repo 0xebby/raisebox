@@ -10,11 +10,9 @@ import {IRaiseBoxProposal} from "src/interfaces/IRaiseBoxProposal.sol";
 contract RaiseBoxCreationTest is Test, TestsHelpers {
 
     function testContributionRulesAreRespected() public {
-        // whitelist project owner address
-        // raiseBoxCore.verifyAndAddToWhitelist(ebby);
 
         // create a raise
-        vm.startPrank(ebby);
+        vm.startPrank(arbitrum);
         bytes32 raiseId = raiseBoxRaiseCreationContract.createNewRaise(
             IRaiseBoxCore.ProjectInfo({
                 projectName: "raisebox",
@@ -73,17 +71,6 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         raiseBoxContributionContract.getTotalContributionsToRaise(raiseId);raiseBoxContributionContract.getContributionHistory(carl, raiseId);raiseBoxContributionContract.getContributionHistory(magiceden, raiseId);
         raiseBoxContributionContract.getUserRaiseContributions(raiseId, carl);
         // // raiseBoxCore.getRaiseState(raiseId);
-        
-        // vm.prank(arbitrum);
-        // raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseId);
-
-        // vm.prank(ethereum);
-        // raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseId);
-
-        // // assertions:
-        // address creator = raiseBoxCore.getRaiseCreator(raiseId);
-        // assertTrue(creator == ebby);
-        // // assertEq(raiseBoxContributionContract.getContributionHistory(uche, raiseId), 0.4 ether);
     }
 
     function testCreate5ConcurrentRaises() public {
@@ -1247,9 +1234,6 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     // 2. a contributor that has delegated their vote can still receive delegation which leads to vote loss since he cannot vote as he initially delagted beforehand
 
     function testVulInCurrentVotingContractImpl() public {
-        // whitelist raise creator:
-        address raiseCreator = makeAddr("raiseCreator");
-        raiseBoxCore.verifyAndAddToWhitelist(raiseCreator);
 
         // raiseCreator creates a new raise:
         vm.startPrank(raiseCreator);
@@ -1328,7 +1312,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         vm.stopPrank();
 
         vm.startPrank(contributor3);
-        // vm.expectRevert();
+        vm.expectRevert();
         raiseBoxVoting.delegateVote(raiseId, proposalId1, contributor3, attacker);
         vm.stopPrank();
 

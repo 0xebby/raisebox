@@ -14,6 +14,7 @@ import {RaiseBoxDripHandler} from "src/RaiseBoxDripHandler.sol";
 import {IRaiseBoxCore} from "src/interfaces/IRaiseBoxCore.sol";
 import {IRaiseBoxProposal} from "src/interfaces/IRaiseBoxProposal.sol";
 import {RaiseBoxEventsLib} from "src/RaiseBoxLib/RaiseBoxEventsLib.sol";
+import {RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
 
 contract TestsHelpers is Test {
     // main contract that holds general storage
@@ -63,8 +64,26 @@ contract TestsHelpers is Test {
     address ethereum = makeAddr("ethereum");
     address arbitrum = makeAddr("arbitrum");
     address carl = makeAddr("carl");
-
     address zeroAddress = address(0);
+    address whale = makeAddr("whale");
+    address latecomer;
+    address raiseCreator = makeAddr("raiseCreator");
+
+    
+    /// @notice raise targets for small, medium and large:
+    uint256 RAISE_TARGET_SMALL = 10 ether;
+    uint256 RAISE_TARGET_MEDIUM = 100 ether;
+    uint256 RAISE_TARGET_LARGE = 1000 ether;
+
+    /// @notice raise duration for small, medium and large:
+    uint256 RAISE_DURATION_SMALL = 30 weeks;
+    uint256 RAISE_DURATION_MEDIUM = 50 weeks;
+    uint256 RAISE_DURATION_LARGE = 60 weeks;
+
+    // raise ids:
+    bytes32 raiseIdSmall;
+    bytes32 raiseIdMedium;
+    bytes32 raiseIdLarge;
 
     // get  would be ca of raisebox - project creation contract
 
@@ -139,6 +158,9 @@ contract TestsHelpers is Test {
         vm.deal(trump, 100 ether);
         vm.deal(gowagr, 100 ether);
         vm.deal(polymarket, 100 ether);
+        vm.deal(whale, 50_000 ether);
+        vm.deal(latecomer, 300 ether);
+
 
 
 
@@ -146,11 +168,58 @@ contract TestsHelpers is Test {
         raiseBoxCore.verifyAndAddToWhitelist(ebby);
         raiseBoxCore.verifyAndAddToWhitelist(vitalik);
         raiseBoxCore.verifyAndAddToWhitelist(ben);
+        raiseBoxCore.verifyAndAddToWhitelist(arbitrum);
+        // whitelist raiseCreator:
+        raiseBoxCore.verifyAndAddToWhitelist(raiseCreator);
 
         // warp time
         advanceBlockTime(10 days);
 
-    }
+    /// @notice project info for small, mediumand large project:
+    /// small:
+    IRaiseBoxCore.ProjectInfo memory projectInfoSmall = IRaiseBoxCore.ProjectInfo({
+        projectName: "small project",
+        valueProposition: "small project value proposition",
+        raiseTarget: RAISE_TARGET_SMALL,
+        projectDuration: RAISE_DURATION_SMALL
+    });
+
+    /// medium:
+    IRaiseBoxCore.ProjectInfo memory projectInfoMedium = IRaiseBoxCore.ProjectInfo({
+        projectName: "medium project",
+        valueProposition: "medium project value proposition",
+        raiseTarget: RAISE_TARGET_MEDIUM,
+        projectDuration: RAISE_DURATION_MEDIUM    
+        });
+
+    /// large:
+    IRaiseBoxCore.ProjectInfo memory projectInfoLarge = IRaiseBoxCore.ProjectInfo({
+        projectName: "large project",
+        valueProposition: "large project value proposition",
+        raiseTarget: RAISE_TARGET_LARGE,
+        projectDuration: RAISE_DURATION_LARGE
+    });
+
+    /// @notice create raises with the targets above:
+    /// @notice ebby, vitalik and ben have been whitelisted in setup
+    vm.startPrank(ebby);
+        raiseIdSmall = raiseBoxRaiseCreationContract.createNewRaise(
+        projectInfoSmall
+        );
+    vm.stopPrank();
+
+    vm.startPrank(vitalik);
+    raiseIdMedium = raiseBoxRaiseCreationContract.createNewRaise(
+        projectInfoMedium
+    );
+    vm.stopPrank();
+
+    vm.startPrank(ben);
+    raiseIdLarge = raiseBoxRaiseCreationContract.createNewRaise(
+        projectInfoLarge
+    );
+
+ }
 
     /**
      * @dev Helper function to simulate time passing since testing environment doesn't work as expected
