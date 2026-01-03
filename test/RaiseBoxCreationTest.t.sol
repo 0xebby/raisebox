@@ -85,6 +85,66 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         // assertTrue(creator == ebby);
         // // assertEq(raiseBoxContributionContract.getContributionHistory(uche, raiseId), 0.4 ether);
     }
+
+    function testCreate5ConcurrentRaises() public {
+    // whitelist raise creator first
+    // raise creators
+    raiseBoxCore.verifyAndAddToWhitelist(uche);
+    raiseBoxCore.verifyAndAddToWhitelist(arbitrum);
+    raiseBoxCore.verifyAndAddToWhitelist(max);
+    raiseBoxCore.verifyAndAddToWhitelist(sally);
+    raiseBoxCore.verifyAndAddToWhitelist(carl);
+
+    // uche creates a raise
+    vm.startPrank(uche);
+        bytes32 raiseId1 = raiseBoxRaiseCreationContract.createNewRaise(
+        IRaiseBoxCore.ProjectInfo({
+            projectName:"uche's raise",
+            valueProposition:"agi",
+            raiseTarget:200 ether,
+            projectDuration:52 weeks
+        })
+    );
+    vm.stopPrank();
+
+    // arbitrum creates a raise
+    vm.startPrank(arbitrum);
+        bytes32 raiseId2 = raiseBoxRaiseCreationContract.createNewRaise(
+        IRaiseBoxCore.ProjectInfo({
+            projectName:"arbitrum's raise",
+            valueProposition:"agi",
+            raiseTarget:2000 ether,
+            projectDuration:60 weeks
+        })
+    );
+    vm.stopPrank();
+
+    // max creates a raise
+    vm.startPrank(max);
+        bytes32 raiseId3 = raiseBoxRaiseCreationContract.createNewRaise(
+        IRaiseBoxCore.ProjectInfo({
+            projectName:"max's raise",
+            valueProposition:"agi",
+            raiseTarget:500 ether,
+            projectDuration:50 weeks
+        })
+    );
+    vm.stopPrank();
+
+    
+    vm.startPrank(sally);
+        bytes32 raiseId4 = raiseBoxRaiseCreationContract.createNewRaise(
+        IRaiseBoxCore.ProjectInfo({
+            projectName:"hhhhhhhhhhh",
+            valueProposition:"agi",
+            raiseTarget:50000 ether,
+            projectDuration:50 weeks
+        })
+    );
+    vm.stopPrank();
+
+
+    }
     
    function testCreateARaise() public {
 
@@ -190,7 +250,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     vm.stopPrank();
 
     vm.startPrank(sally);
-    raiseBoxVoting.vote(raiseId1, proposalId2, true);
+    raiseBoxVoting.vote(raiseId1, proposalId2, false);
     vm.stopPrank();
 
     vm.startPrank(vitalik);
@@ -230,7 +290,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     vm.stopPrank();
 
     vm.startPrank(vitalik);
-    raiseBoxVoting.vote(raiseId1, proposalId3, true);
+    raiseBoxVoting.vote(raiseId1, proposalId3, false);
     vm.stopPrank();
 
     advanceBlockTime(7 days);
@@ -294,6 +354,8 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     raiseBoxVoting.delegateVote(raiseId1, proposalId5, sally, vitalik );
     vm.stopPrank();
 
+    
+
     // vm.startPrank(vitalik);
     // raiseBoxVoting.delegateVote(raiseId1, proposalId5, vitalik, ebby );
     // vm.stopPrank();
@@ -317,19 +379,29 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     raiseBoxVoting.triggerVoteTally(raiseId1, proposalId5);
     vm.stopPrank();
 
+     // // sixth proposal
+
+    advanceBlockTime(5 weeks);
+
+    vm.prank(uche);
+    vm.expectRevert();
+    uint proposalId6 = raiseBoxProposalContract.hostProposal(
+        raiseId1, 
+        IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the sixth proposal for raisebox v3",
+            milestone: "v3.5 is live",
+            dripPercent: 25
+        })
+        );
+
    
-
-    
-
-
-    // raiseBoxProposalContract.getProposalState(raiseId1, proposalId4);
-    // // raiseBoxProposalContract.getProposalState(raiseId2, proposalIdForRaiseId2);
-
-    // // raise raise state for each raise hosted above at whatever stage there currently are
-
-    // raiseBoxCore.getRaiseState(raiseId1);
-    // raiseBoxProposalContract.getProposalInfo(raiseId1, proposalId3);
     raiseBoxCore.getRaiseInfo(raiseId1);
+    console.log(address(raiseBoxContributionContract).balance);
+    console.log(address(raiseBoxDripHandler).balance);
+    raiseBoxContributionContract.getContributors(raiseId1);
+    raiseBoxContributionContract.getTotalContributors(raiseId1);
+    IRaiseBoxCore.RaiseState raiseState = raiseBoxCore.getRaiseState(raiseId1);
+    
     // raiseBoxCore.getRaiseState(raiseId2);
 
 
@@ -1168,6 +1240,104 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 
 
 
+    }
+
+    // test 2 critical bugs in voting contract current implementation before fixing:
+    // 1. any contirbutor(attacker) can force deleagte another contributor's vote by colluding with another contributor via delegation
+    // 2. a contributor that has delegated their vote can still receive delegation which leads to vote loss since he cannot vote as he initially delagted beforehand
+
+    function testVulInCurrentVotingContractImpl() public {
+        // whitelist raise creator:
+        address raiseCreator = makeAddr("raiseCreator");
+        raiseBoxCore.verifyAndAddToWhitelist(raiseCreator);
+
+        // raiseCreator creates a new raise:
+        vm.startPrank(raiseCreator);
+        bytes32 raiseId = raiseBoxRaiseCreationContract.createNewRaise(
+            IRaiseBoxCore.ProjectInfo({
+                projectName: "new project",
+                valueProposition: "to test vulnerability in voting contract",
+                raiseTarget: 10 ether,
+                projectDuration: 60 weeks
+            })
+        );
+        vm.stopPrank();
+
+        // create and fund users that will contribute to the raise:
+        address contributor1 = makeAddr("contributor1");
+        vm.deal(contributor1, 1000 ether);
+
+        address contributor2 = makeAddr("contributor2");
+        vm.deal(contributor2, 1000 ether);
+
+        address colluder = makeAddr("colluder");
+        vm.deal(colluder, 500 ether);
+
+        address attacker = makeAddr("attacker");
+        vm.deal(attacker, 20 ether);
+
+        address contributor3 = makeAddr("contributor3");
+        vm.deal(contributor3, 400 ether);
+
+        // contributors contribute to raise:
+        address[5] memory contributors = [contributor1, contributor2, colluder, attacker, contributor3];
+        for (uint256 i = 0; i < contributors.length; i++) {
+            vm.startPrank(contributors[i]);
+            raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseId);
+            vm.stopPrank();
+        }
+        
+
+        // raiseCreator hosts a proposal since raise passed, 10 ether successfully raised:
+        vm.startPrank(raiseCreator);
+        uint256 proposalId1 = raiseBoxProposalContract.hostProposal(
+            raiseId, 
+            IRaiseBoxProposal.MilestoneInfo({
+                description: "completed mvp for new project",
+                milestone: "mvp",
+                dripPercent: 25
+            })
+        );
+
+        // attack happens here for the first proposal:
+        // attack force delegate other contributors votes:
+        // for (uint256 a = 0; a < contributors.length; a++) {
+        //     vm.startPrank(attacker);
+        //     if (a == 0 || a == 1 || a == 4 || a == 3) {
+        //         raiseBoxVoting.delegateVote(raiseId, proposalId1, contributors[a], colluder);
+        //     }
+        //     vm.stopPrank();
+        // }
+
+        // vul 1: fixed by ensuring caller is in-fact the owner of the vote to delegate
+        vm.startPrank(attacker);
+        vm.expectRevert();
+        raiseBoxVoting.delegateVote(raiseId, proposalId1, contributor1, colluder);
+        vm.stopPrank();
+
+        // advance time so voting can begin
+        advanceBlockTime(2 days);
+
+        // legit contributors tries to vote but cannot since their votes have been stolen from them by `attacker` during forced delegation
+        vm.startPrank(contributor1);
+        // vm.expectRevert();
+        raiseBoxVoting.vote(raiseId, proposalId1, true);
+        vm.stopPrank();
+
+        // colluder can vote now with 5 votes, his and those granted him by the attacker and he is going to vote `false`
+        // @notice contributor1 voted true but it won't count, only what the colluder wants counts, attacker won
+        vm.startPrank(colluder);
+        raiseBoxVoting.vote(raiseId, proposalId1, false);
+        vm.stopPrank();
+        // after fix, colluder can vote with just 1 now since deleagtion of stolen votes to him is no longer possible
+
+        // adavance block time so votes can be tallied
+        advanceBlockTime(7 days);
+
+        vm.prank(raiseCreator);
+        raiseBoxVoting.triggerVoteTally(raiseId, proposalId1);
+
+        raiseBoxCore.getRaiseInfo(raiseId);
     }
 
 }
