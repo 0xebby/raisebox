@@ -272,6 +272,181 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
 
     /// TEST SUITE 3: STATE TRANSITIONS
 
+    /// COMPREHENSIVE END-TO-END RAISE CYCLE TEST
+    function test_Integration_50_EndToEndRaiseCycle() public {
+        console.log("\n=== TEST 50: Comprehensive end-to-end raise cycle ===");
+
+        /// use raiseCreator
+
+        // get intial raise state
+        IRaiseBoxCore.RaiseState initialRaiseState = IRaiseBoxCore.RaiseState.INACTIVE;
+
+        /// construct projectInfo struct
+        IRaiseBoxCore.ProjectInfo memory projectInfoMEDIUM = IRaiseBoxCore.ProjectInfo({
+        projectName: "medium project",
+        valueProposition: "medium project value proposition",
+        raiseTarget: RAISE_TARGET_MEDIUM,
+        projectDuration: RAISE_DURATION_MEDIUM    
+        });
+
+        /// create a raise
+        vm.startPrank(raiseCreator);
+        bytes32 endToEndRaiseId = raiseBoxRaiseCreationContract.createNewRaise(
+            projectInfoMEDIUM
+        );
+        vm.stopPrank();
+
+        /// get latest raise state:
+        IRaiseBoxCore.RaiseState raiseStateAfterRaiseCreation = raiseBoxCore.getRaiseState(endToEndRaiseId);
+
+        /// assert raise state change INACTIVE -> CONTRIBUTION
+        assertEq(
+            uint256(raiseStateAfterRaiseCreation), 
+            uint256(IRaiseBoxCore.RaiseState.CONTRIBUTION),
+            "raise state has to change from 0 (inactive) to 1 (contribution)"
+            );
+
+        /// contribution to raise:
+        /// 5 contributors will contribute 20 eth each to reach raise target of 100
+        /// eth
+
+        /// each now contributes 20 ether to raise in any other and frequency:
+
+        /// 1:
+        vm.startPrank(contributor1);
+        raiseBoxContributionContract.contribute{value: 20 ether}(20 ether, endToEndRaiseId);
+        vm.stopPrank();
+
+        /// 2: 10 first and 10 later
+        uint256 contributionFrequency = 10 ether;
+        vm.startPrank(contributor2);
+        raiseBoxContributionContract.contribute{value: contributionFrequency}(contributionFrequency, endToEndRaiseId);
+
+        /// assert first contribution is recorded
+        assertTrue(raiseBoxContributionContract.hasUserContributed(endToEndRaiseId, contributor2));
+
+        /// make second contribution
+        raiseBoxContributionContract.contribute{value: contributionFrequency}(contributionFrequency, endToEndRaiseId);
+
+        /// assert second contribution is also recorded
+        assertEq(
+            raiseBoxContributionContract.getUserRaiseContributions(endToEndRaiseId, contributor2), 
+            20 ether,
+            "total contributions by contributor2 should be 20 ether, (10 + 10) ether"
+            );
+        vm.stopPrank();
+
+        /// 3: 
+        /// contributor3 tries to over contribute at first and then corrects it
+        /// make first over contribution attempt
+        vm.startPrank(contributor3);
+        uint maxCon = 20 ether;
+
+        /// revert reason:
+        string memory reason = string(
+            abi.encodePacked(
+                "Cannot over contribute: you can contribute only: ",
+                ((maxCon) / 1e18).toString(),
+                " ether more to this project"
+            )
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+            RaiseBoxErrorsLib.RaiseBoxContribution_contribute_AboveMaxAllowed.selector,
+            20 ether,
+            reason
+            )
+        );
+           
+        raiseBoxContributionContract.contribute{value: maxCon + 1 /*just above max allowed */}(maxCon + 1, endToEndRaiseId);
+
+        // assert first failed contribution
+        /// should be false since contribution reverted
+        assertFalse(raiseBoxContributionContract.hasUserContributed(endToEndRaiseId, contributor3));
+
+        /// make the accepted contribution
+        raiseBoxContributionContract.contribute{value: 20 ether}(20 ether, endToEndRaiseId);
+
+        /// Assert the second contribution was recorded
+        assertTrue(raiseBoxContributionContract.hasUserContributed(endToEndRaiseId, contributor3));
+
+        vm.stopPrank();
+
+        /// 4:
+        /// contributor4 will first try to contribute 0, then split contributions into 4 parts (5 ether each)
+
+        /// first contribution with zero amount
+        vm.startPrank(contributor4);
+        vm.expectRevert(RaiseBoxErrorsLib.RaiseBoxContribution_ZeroAmount.selector);
+        raiseBoxContributionContract.contribute{value: 0 ether}(0 ether, endToEndRaiseId);
+
+        /// assert contribution was not recorded
+        assertFalse(raiseBoxContributionContract.hasUserContributed(endToEndRaiseId, contributor4));
+
+        /// variable to store total contributions made by contributor4
+        uint totContributions4 = 0 ether; // initialy 0
+
+        /// make the split contributions, 5 ether each
+        for (uint i = 0; i <= 3; i++ ) {
+            raiseBoxContributionContract.contribute{value: 5 ether}(5 ether, endToEndRaiseId);
+            /// update each contribution made by contributor4
+            totContributions4 += 5 ether;
+        }
+
+        /// assert contributions are correctly recorded:
+        /// get contributions history for contributor4 
+        uint256[] memory contributor4History = raiseBoxContributionContract.getContributionHistory(contributor4, endToEndRaiseId);
+
+        /// assert each entry
+        assertEq(contributor4History[0], 5 ether, "first contribution was 5 ether");
+        assertEq(contributor4History[1], 5 ether, "second contribution was 5 ether");
+        assertEq(contributor4History[2], 5 ether, "third contribution was 5 ether");
+        assertEq(contributor4History[3], 5 ether, "fourth contribution was 5 ether");
+
+        /// assert total contributions for contributor4 is recorded correctly:
+        assertEq(totContributions4, 20 ether, "total contributions made by contributor4 is 20 ether");
+
+        vm.stopPrank();
+
+        /// 5:
+        vm.startPrank(contributor5);
+        raiseBoxContributionContract.contribute{value: 20 ether}(20 ether, endToEndRaiseId);
+        vm.stopPrank();
+
+        /// assert contributions for contributor5 is recorded
+        assertTrue(raiseBoxContributionContract.hasUserContributed(endToEndRaiseId, contributor5));
+
+        /// assert all contributions form 1-5 have been recorded
+        assertTrue(raiseBoxContributionContract.getTotalContributionsToRaise(endToEndRaiseId) == 100 ether);
+
+        /// raise passed, see last assert above:
+        /// assert raise state change from CONTRIBUTION -> PROPOSAL
+        /// get state after raise passes
+        IRaiseBoxCore.RaiseState raiseStateAfterRaisePasses = raiseBoxCore.getRaiseState(endToEndRaiseId);
+        assertEq(
+            uint256(raiseStateAfterRaisePasses), 
+            uint256(IRaiseBoxCore.RaiseState.PROPOSAL),
+            "raise state has to change from 1 (CONTRIBUTION) to 2 (PROPOSAL)"
+        );
+
+    /// HOSTING OF PROPOSALS:
+    
+
+
+
+
+
+
+
+
+
+
+    }
+
+
+
+
 
 
 
