@@ -160,13 +160,45 @@ library RaiseBoxErrorsLib {
     /// @dev rises achieve this state after successful raise creation
     error RaiseBoxContribution_contribute_RaiseNotInContributionState();
 
+    /// @notice thrown when contributor tries to delegate vote again after initial delegation
+    error RaiseBoxVoting_CannotDelegateTwice();
+
+    /// @notice thrown when contributor tries to delegate vote to self
+    error RaiseBoxVoting_CannotDelegateToSelf();
+
+    /// @notice thrown when contributor tries to vote before voting start time
+    error RaiseBoxVoting_VotingNotStarted(bytes32 raiseId, uint256 proposalId);
+
+    /// @notice thrown when contributor tries to vote after delegating votes, even if voting is live
+    error RaiseBoxVoting_AlreadyDelegatedVote(address user);
+
+    /// @notice when contributor tries to vote on an already ended proposal
+    error RaiseBoxVoting_VotingAlreadyEnded(
+        bytes32 raiseId, 
+        uint256 proposalId
+        );
+    /// @notice thrown when contribution `amount` sent does not match `msg.value`
     error RaiseBoxContribution_ValueSentMismatch();
+
+    /// @notice thrown when contribution `amount` is more than allowed per user per project
     error RaiseBoxContribution_ContributeMoreEth(uint256);
+
+    /// @notice thrown when contribution `amount` is zero
     error RaiseBoxContribution_ZeroAmount();
+
+    /// @notice thrown when contribution transaction fails
     error RaiseBoxContribution_contribute_ContributionFailed();
+
+    /// @notice thrown when contribution is made to an invalid project
     error RaiseBoxContribution_InvalidProject();
+
+    /// @notice thrown when raiseBox protocol address has not been set
     error RaiseBoxContribution_RaiseBoxProtocolUnset();
+
+    /// @notice thrown when contribution is made to a raise that has already ended
     error RaiseContribution_ContributionEnded(uint256);
+
+    /// @notice thrown when contribution exceeds maximum allowed per user per project
     error RaiseBoxContribution_contribute_AboveMaxAllowed(uint256, string);
 
     /// @notice thrown when raise creator tries to contribute to self
