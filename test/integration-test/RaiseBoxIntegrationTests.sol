@@ -278,8 +278,6 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
 
         /// use raiseCreator
 
-        // get intial raise state
-        IRaiseBoxCore.RaiseState initialRaiseState = IRaiseBoxCore.RaiseState.INACTIVE;
 
         /// construct projectInfo struct
         IRaiseBoxCore.ProjectInfo memory projectInfoMEDIUM = IRaiseBoxCore.ProjectInfo({
@@ -318,15 +316,14 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
         vm.stopPrank();
 
         /// 2: 10 first and 10 later
-        uint256 contributionFrequency = 10 ether;
         vm.startPrank(contributor2);
-        raiseBoxContributionContract.contribute{value: contributionFrequency}(contributionFrequency, endToEndRaiseId);
+        raiseBoxContributionContract.contribute{value: 10 ether}(10 ether, endToEndRaiseId);
 
         /// assert first contribution is recorded
         assertTrue(raiseBoxContributionContract.hasUserContributed(endToEndRaiseId, contributor2));
 
         /// make second contribution
-        raiseBoxContributionContract.contribute{value: contributionFrequency}(contributionFrequency, endToEndRaiseId);
+        raiseBoxContributionContract.contribute{value: 10 ether}(10 ether, endToEndRaiseId);
 
         /// assert second contribution is also recorded
         assertEq(
@@ -432,6 +429,228 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
 
     /// HOSTING OF PROPOSALS:
     
+    /// raiseCreator can now host proposals that contributors will then vote on:
+    /// host first proposal:
+    vm.startPrank(raiseCreator);
+    uint proposalId1 = raiseBoxProposalContract.hostProposal(
+        endToEndRaiseId,
+        IRaiseBoxProposal.MilestoneInfo({
+        description: "First proposal for end to end raise",
+        milestone:"This is the first proposal for the comprehensive end to end raise cycle test",
+        dripPercent: 10
+        })
+    );
+    vm.stopPrank();
+
+    /// assert raise state change from PROPOSAL -> VOTING
+    assertEq(
+        uint256(raiseBoxCore.getRaiseState(endToEndRaiseId)), 
+        uint256(IRaiseBoxCore.RaiseState.VOTING),
+        "raise state has to change from 2 (PROPOSAL) to 3 (VOTING)"
+    );
+
+    /// assert proposal state is ACTIVE:
+    assertEq(
+        uint256(raiseBoxProposalContract.getProposalState(endToEndRaiseId, proposalId1)), 
+        uint256(IRaiseBoxProposal.ProposalState.ACTIVE),
+        "proposal state should be ACTIVE (1) after hosting"
+    );
+
+    /// Assert proposal details are correct:
+    IRaiseBoxProposal.ProposalInfo memory proposalInfo1 = raiseBoxProposalContract.getProposalInfo(endToEndRaiseId, proposalId1);
+    assertEq(
+        proposalInfo1.milestoneInfo.description,
+        "First proposal for end to end raise",
+        "proposal description incorrect"
+    );
+    assertEq(
+        proposalInfo1.milestoneInfo.milestone,
+        "This is the first proposal for the comprehensive end to end raise cycle test",
+        "proposal milestone incorrect"
+    );
+    assertEq(
+        proposalInfo1.milestoneInfo.dripPercent,
+        10,
+        "proposal drip percent incorrect"
+    );
+
+    /// assert proposal count for raise is 1
+    assertEq(
+        raiseBoxProposalContract.getProposalCount(endToEndRaiseId),
+        1,
+        "proposal count for raise should be 1 after hosting first proposal"
+    );
+
+    /// assert last proposal time is recent (within last 5 minutes)
+    uint256 lastProposalTime = raiseBoxProposalContract.getLastProposalTime(endToEndRaiseId);
+    assertTrue(
+        lastProposalTime >= block.timestamp - 5 minutes,
+        "last proposal time should be recent"
+    );
+
+    /// vote on proposal 1:
+    /// contributors 1-5 will vote:
+
+    //// contributors 1 and 2 will delegate to contributor 5
+    //// contributors 3 and 4 will vote directly and will side true;
+    //// contributor 5 will vote directly and will side false;
+
+    /// contributor 1 delegates to contributor 5
+    vm.expectEmit(true, true, false, false);
+    emit RaiseBoxEventsLib.VoteDelegated( contributor1, contributor5 );
+    vm.startPrank(contributor1);
+    raiseBoxVoting.delegateVote(endToEndRaiseId, proposalId1, contributor1, contributor5);
+    vm.stopPrank();
+
+    /// contributor 2 delegates to contributor 5
+    vm.expectEmit(true, true, false, false);
+    emit RaiseBoxEventsLib.VoteDelegated( contributor2, contributor5 );
+    vm.startPrank(contributor2);
+    raiseBoxVoting.delegateVote(endToEndRaiseId, proposalId1, contributor2, contributor5);
+    vm.stopPrank();
+
+    // [
+    /// contributor 1 tries to delegate again and fails
+    vm.startPrank(contributor1);
+    vm.expectRevert(RaiseBoxErrorsLib.RaiseBoxVoting_CannotDelegateTwice.selector);
+    raiseBoxVoting.delegateVote(endToEndRaiseId, proposalId1, contributor1, contributor5);
+    vm.stopPrank();
+
+    /// contributor 1 tries to delegate to self and fails
+    vm.startPrank(contributor1);
+    vm.expectRevert(RaiseBoxErrorsLib.RaiseBoxVoting_CannotDelegateToSelf.selector);
+    raiseBoxVoting.delegateVote(endToEndRaiseId, proposalId1, contributor1, contributor1);
+    vm.stopPrank();
+
+    /// contributor 1 tries to delegate votes of contributor 2 and fails
+    vm.startPrank(contributor1);
+    vm.expectRevert(RaiseBoxErrorsLib.RaiseBoxVoting_CanOnlyDelegateOwnVote.selector);
+    raiseBoxVoting.delegateVote(endToEndRaiseId, proposalId1, contributor2, contributor5);
+    vm.stopPrank();
+
+    /// contributor 5 tries to delegate votes to contributor 1 and fails since contributor 5 has already been delegated votes
+    vm.startPrank(contributor5);
+    vm.expectRevert(RaiseBoxErrorsLib.RaiseBoxVoting_CannotReDelegate.selector);
+    raiseBoxVoting.delegateVote(endToEndRaiseId, proposalId1, contributor5, contributor1);
+    vm.stopPrank();
+
+    /// contributor 3 tries to delegate to contributor1 and fails since contributor1 has already deleagted and is now part of the delegation graph
+    vm.startPrank(contributor3);
+    vm.expectRevert();
+    raiseBoxVoting.delegateVote(endToEndRaiseId, proposalId1, contributor3, contributor1);
+    vm.stopPrank();
+
+    /// contributor 1 tries to vote before voting begins and fails:
+    vm.startPrank(contributor1);
+    vm.expectRevert(
+        abi.encodeWithSelector(
+            RaiseBoxErrorsLib.RaiseBoxVoting_VotingNotStarted.selector,
+            endToEndRaiseId,
+            proposalId1
+        )
+    );
+    raiseBoxVoting.vote(endToEndRaiseId, proposalId1, true);
+    vm.stopPrank();
+
+    // ]
+
+    /// adavance time so voting can begin
+    /// voting starts after 2 days of proposal hosting, allows for delegation and confirming milestone completion claims
+    advanceBlockTime(2 days); 
+
+    /// voters: contributor 5: 3 votes, contributor 3: 1 vote, contributor 4: 1 vote
+
+    /// contributor 5 votes false
+    vm.expectEmit(true, true, true, false);
+    emit RaiseBoxEventsLib.RaiseBoxVoting_vote_Voted(contributor5, endToEndRaiseId, proposalId1, false);
+    vm.startPrank(contributor5);
+    raiseBoxVoting.vote(endToEndRaiseId, proposalId1, false);
+    vm.stopPrank();
+
+    /// contributor 3 votes true
+    vm.expectEmit(true, true, true, false);
+    emit RaiseBoxEventsLib.RaiseBoxVoting_vote_Voted(contributor3, endToEndRaiseId, proposalId1, true);
+    vm.startPrank(contributor3);
+    raiseBoxVoting.vote(endToEndRaiseId, proposalId1, true);
+    vm.stopPrank();
+
+    /// contributor 4 votes true
+    vm.expectEmit(true, true, true, false);
+    emit RaiseBoxEventsLib.RaiseBoxVoting_vote_Voted(contributor4, endToEndRaiseId, proposalId1, true);
+    vm.startPrank(contributor4);
+    raiseBoxVoting.vote(endToEndRaiseId, proposalId1, true);
+    vm.stopPrank();
+
+    /// assertions:
+    /// assert total proposal votes = 5
+    (uint256 forVotes, uint256 againstVotes, uint256 totalVotes) = raiseBoxVoting.getProposalVotes(endToEndRaiseId, proposalId1);
+    /// assert total votes casted
+    assertEq(
+        totalVotes, 
+        5,
+        "total votes for proposal should be 5 (3 + 1 + 1)"
+    );
+
+    /// assert for votes = 2
+    assertEq(
+        forVotes, 
+        2,
+        "for votes should be 2 (1 from contributor3 and 1 from contributor4)"
+    );
+
+    /// assert against votes = 3
+    assertEq(
+        againstVotes,
+        3,
+        "against votes should be 3 (3 from contributor5, self + 2 delegated from contributor1 and contributor2)"
+    );
+
+    /// contributor1 tries to vote even when voting is live but fails, already delegated to contributor5
+    vm.startPrank(contributor1);
+    vm.expectRevert(
+        abi.encodeWithSelector(
+            RaiseBoxErrorsLib.RaiseBoxVoting_AlreadyDelegatedVote.selector, 
+            contributor1
+        )
+    );
+    raiseBoxVoting.vote(endToEndRaiseId, proposalId1, true);
+    vm.stopPrank();
+
+    /// end voting period, advance time by 7 days:
+    advanceBlockTime(7 days);
+
+    /// trigger vote tallying since voting has ended
+    vm.expectEmit(true, true, false, false);
+    emit RaiseBoxEventsLib.RaiseBoxVoting_VoteTallyTriggered( raiseCreator, proposalId1, block.timestamp );
+    vm.startPrank(raiseCreator);
+    raiseBoxVoting.triggerVoteTally(endToEndRaiseId, proposalId1);
+    vm.stopPrank();
+
+    /// assert raise state has been updated back to PROPOSAL to allow creator host more proposals
+    assertEq(
+        uint256(raiseBoxCore.getRaiseState(endToEndRaiseId)), 
+        uint256(IRaiseBoxCore.RaiseState.PROPOSAL),
+        "raise state has to change from 3 (VOTING) back to 2 (PROPOSAL) after vote tally"
+    );
+
+    /// asser proposal state for proposalId1 is now FAILED since againstVotes > forVotes
+    assertEq(
+        uint256(raiseBoxProposalContract.getProposalState(endToEndRaiseId, proposalId1)), 
+        uint256(IRaiseBoxProposal.ProposalState.FAILED),
+        "proposal state should be FAILED (3) since againstVotes > forVotes"
+    );
+
+    /// contributor5 tries to vote again after voting ended and fails
+    vm.startPrank(contributor5);
+    vm.expectRevert(
+        abi.encodeWithSelector(
+            RaiseBoxErrorsLib.RaiseBoxVoting_VotingAlreadyEnded.selector,
+            endToEndRaiseId,
+            proposalId1
+        )
+    );
+    raiseBoxVoting.vote(endToEndRaiseId, proposalId1, false);
+    vm.stopPrank();    
 
 
 
