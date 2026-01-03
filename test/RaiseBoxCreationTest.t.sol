@@ -1315,8 +1315,32 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         raiseBoxVoting.delegateVote(raiseId, proposalId1, contributor1, colluder);
         vm.stopPrank();
 
+        // vul2: fixed by ensuring a contributor that has delegated votes can no longer receive vote delagation, preventing loss of votes delegated to himafter his own delegation
+
+        vm.startPrank(attacker);
+        // vm.expectRevert();
+        raiseBoxVoting.delegateVote(raiseId, proposalId1, attacker, colluder);
+        vm.stopPrank();
+
+        vm.startPrank(contributor2);
+        vm.expectRevert();
+        raiseBoxVoting.delegateVote(raiseId, proposalId1, contributor2, attacker);
+        vm.stopPrank();
+
+        vm.startPrank(contributor3);
+        // vm.expectRevert();
+        raiseBoxVoting.delegateVote(raiseId, proposalId1, contributor3, attacker);
+        vm.stopPrank();
+
+
         // advance time so voting can begin
         advanceBlockTime(2 days);
+
+        // attacker tries to vote but cannot since he's been marked above has a delegatee and delegatees cannot vote as it's assumed that they lost voting rights on delegation, since contributor2 losses vote
+        vm.startPrank(attacker);
+        vm.expectRevert();
+        raiseBoxVoting.vote(raiseId, proposalId1, true);
+        vm.stopPrank();
 
         // legit contributors tries to vote but cannot since their votes have been stolen from them by `attacker` during forced delegation
         vm.startPrank(contributor1);
