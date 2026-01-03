@@ -5,7 +5,6 @@ import "../lib/forge-std/src/Test.sol";
 import {RaiseBoxCreation} from "../src/RaiseBoxRaiseCreation.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {RaiseBoxContribution} from "../src/RaiseBoxContribution.sol";
 import {RaiseBoxProposal} from "../src/RaiseBoxProposal.sol";
 import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
@@ -15,6 +14,8 @@ import {IRaiseBoxCore} from "src/interfaces/IRaiseBoxCore.sol";
 import {IRaiseBoxProposal} from "src/interfaces/IRaiseBoxProposal.sol";
 import {RaiseBoxEventsLib} from "src/RaiseBoxLib/RaiseBoxEventsLib.sol";
 import {RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+
 
 contract TestsHelpers is Test {
     // main contract that holds general storage
