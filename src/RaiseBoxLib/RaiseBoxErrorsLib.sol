@@ -4,62 +4,182 @@ pragma solidity ^0.8.19;
 /// @title RaiseBoxErrorsLib
 /// @author 0xebby
 /// @custom:contact tech.codemojo@gmail.com
-/// @notice Library exposing error messages.
+/// @notice Library exposing custom errors.
 
 library RaiseBoxErrorsLib {
 
-    /// @notice error thrown when zero address is passed or used as caller
-    error ZeroAddress();
+    /// @notice thrown when zero address is passed or used as caller
+    error RaiseBox_ZeroAddressNotAllowed();
 
-    /// @notice error thrown when adding new owner to whitelist
+    /// @notice thrown when an unwhitelisted `address` tries to create a raise on raisebox
     error RaiseBoxRaiseCreation_OwnerNotWhiteListed();
 
-    /// @notice error thrown when unauthorized caller makes a function call
-    /// @param caller the unauthorized caller
-    error UnAuthorizedCaller(address caller);
+    /// @notice thrown when unauthorized `caller` calls `updateRaiseState`
+    /// @param caller address of the unauthorized `caller`
+    error RaiseBoxCore_UnAuthorizedCallerCannotUpdateRaiseState(address caller);
 
+    /// @notice thrown when an invalid `proposalId` is passed
+    /// @param proposalId the invalid proposalId passed
+    error RaiseBoxProposal_isValidProposal_ProposalDoesNotExist(uint256 proposalId);
 
+    /// @notice thrown when an invalid `raiseId` is passed to `canHostProposal` modifier
+    /// @param raiseId the invalid `id` passed
+    error RaiseBoxProposal_canHostProposal_InvalidRaiseId(bytes32 raiseId);
 
-    /// @notice errors thrown during raise creation on raisebox
-    error RaiseCreation_createRaise_RaiseAlreadyExist();
-    error RaiseBoxCreation_createRaise_InvalidRaiseDuration();
+    /// @notice thrown when unauthorized caller tries to call the endRaise function
+    /// @param caller `address` of the unauthorized caller
+    error RaiseBoxCore_UnauthorizedRaiseEnder(address caller);
+
+    /// @notice thrown when the legth of project description text is `0` less or greater than allowed length
+    error RaiseBoxProposal_hostProposal_InvalidDescLength();
+
+    /// @notice thrown when the legth of project milestone text is `0` less or greater than allowed length
+    error RaiseBoxProposal_hostProposal_InvalidMilestoneLength();
+
+    /// @notice thrown when an unauthorized caller tries to update proposalInfo
+    error RaiseBoxProposal_updateProposalInfo_Unauthorized();
+
+    /// @notice thrown when voting is attempted for a raise not in PROPOSAL state
+    error RaiseBoxVoting_RaiseNotInVotingState();
+    
+    /// @notice thrown if duration for project during raise creation is less than or above allowed
+    error RaiseBoxCreation_createRaise_InvalidProjectDuration();
+
+    /// @notice thrwon if project tries to raise `$0`
     error RaiseBoxCreation_createRaise_CannotRaiseZeroFunds();
+
+    /// @notice thrwon if raise creator tries to create another raise while there's one already live for same creator
     error RaiseBoxCreation_createRaise_RaiseCreationCooldown();
-    error RaiseBoxCreation_createRaise_HasAlreadyCreatedRaise(address creator);
 
-    error RaiseBoxContribution_RaiseFailed();
-    error RaiseBoxCore_getProject_InvalidProjectId();
-    error RaiseBoxCore_NotAuthorized();
-    error RaiseBox_RaiseEnded(bytes32 raiseId);
-    error RaiseBoxCore_UnAuthorizedCaller();
-    error RaiseBox_RaiseAlreadyPassed(bytes32 raiseId, uint256 amtToRaise, uint256 totContributions);
+    /// @notice thrwon when raise is not in proposalState during proposal hosting
+    error RaiseBoxProposal_RaiseNotInProposalState();
 
-    error RaiseBoxCore_setRaiseCreation_InvalidCA();
+    /// @notice thrown when contribution to a failed raise is attempted
+    /// @param raiseId attempted raiseId
+    error RaiseBoxContribution_RaiseFailed(bytes32 raiseId);
+
+    /// @notice thrown when contribution to an ended raise is attempted
+    /// @param raiseId attempted raiseId
+    error RaiseBoxContribution_RaiseEnded(bytes32 raiseId);
+
+    /// @notice thrown when trying to host a proposal for a failed raise
+    /// @param raiseId id of the failed raise
+    error RaiseBox_RaiseFailed(bytes32 raiseId);
+
+    /// @notice thrown creator attempts to host a proposal for a raise that has ended
+    /// @param raiseId `raiseId` of the ended raise
+    error RaiseBoxProposal_hostProposal_RaiseEnded(bytes32 raiseId);
+
+    /// @notice thrown when an authorized `address` calls `updateRaiseInfo`
+    error RaiseBoxCore_updateRaiseInfo_UnAuthorizedCaller();
+
+    /// @notice thrown when attempting to contribute to a passed raise
+    /// @param raiseId `id` of the passed raise
+    /// @param raiseTarget raise target of the raise
+    /// @param totContributions total amount contributed to the passed raise
+    error RaiseBoxContribution_contribute_RaiseAlreadyPassed(
+        bytes32 raiseId, 
+        uint256 raiseTarget, 
+        uint256 totContributions
+        );
+
+    /// @notice thrown when zero address is set for raiseCreation contract
+    error RaiseBoxCore_setRaiseCreationContract_ZeroAddress();
+
+    /// @notice thrown when raiseCreationContract has already been set
     error RaiseBoxCore_setRaiseCreation_ContractAlreadySet();
-    error RaiseBoxCore_setRaiseContribution_ContractAlreadySet();
-    error RaiseBoxCore_setRaiseContribution_InvalidContract();
+
+    /// @notice thrown when a non contract address is passed to `_isContract` function
+    error RaiseBoxCore_isContract_NotAContractAddress(address CA);
+
+    /// @notice thrown when zero address is set for raiseContribution contract
+    error RaiseBoxCore_setContributionContract_ZeroAddress();
+
+    /// @notice thrown when raiseContributionContract has already been set
+    error RaiseBoxCore_setRaiseContributionContract_ContractAlreadySet();
+
+    /// @notice thrown when zero address is set for raiseProposal contract
+     error RaiseBoxCore_setProposalContract_ZeroAddress();
+
+    /// @notice thrown when raiseProposalContract has already been set
+    error RaiseBoxCore_setProposalContract_ContractAlreadySet();
+
+    /// @notice thrown when zero address is set for dripHandler contract
+     error RaiseBoxCore_setDripHandlerContract_ZeroAddress();
+
+    /// @notice thrown when dripHandlerContract has already been set
+    error RaiseBoxCore_setDripHandlerContract_ContractAlreadySet();
+
+    /// @notice thrown when zero address is set for voting contract
+    error RaiseBoxCore_setVotingContract_ZeroAddress();
+
+    /// @notice thrown when voting has already been set
+    error RaiseBoxCore_setVotingContract_ContractAlreadySet();
+    
+    /// @notice thrown when contributions are made with unsupoorted token(s)
     error RaiseBoxCore_NotSupportedToken();
-    error RaiseBoxCore_setDripHandler_InvalidContract();
+
+    /// @notice thrown if `address` passed is already on whitelist
+    /// @param founder `address` already whitelisted
     error RaiseBoxCore_AlreadyWhiteListed(
         address founder
     );
 
+    /// @notice thrown when delegation of votes not owned by a caller is attempted
+    error RaiseBoxVoting_CanOnlyDelegateOwnVote();
+
+    /// @notice thrown when trying to delegate votes to a user that has already delegated for same proposal
+    error RaiseBoxVoting_ToAlreadyInDelegationGraph(address to);
+
+    /// @notice thrown when drip percent passed for a raise is not a multiple of 5 less than 25
+    /// @dev allowed drip percentages: 5, 10, 15, 20, 25
+    error RaiseBoxProposal_hostProposal_InvalidDripPercent();
+
+    /// @notice thrown if raise does not exist in storage
+    error RaiseBoxCore_doesRaiseExist_RaiseDoesNotExist();
+
+    /// @notice thrown on vote redelegation attempt
+    error RaiseBoxVoting_CannotReDelegate();
+    
+    error RaiseBoxVoting_CannotDelegateAfterVotingBegins();
+    error RaiseBoxDripHandler_dripFunds_DripAlreadyExecutedForProposal(bytes32 raiseId, uint256 proposalId);
+    error RaiseBoxVoting_ProposalDoesNotExist(uint256 proposalId);
+
     // contribution related errors:
+    /// @notice thrown when contribution above raiseTarget is attempted
+    /// @dev contributions cannot overshoot the project's raise target
+    /// @param errorMsg text explaining why contribution failed
+    error RaiseBoxContribution_contribute_OverContributionIsForbidden(string errorMsg);
+
+    /// @notice thrown when contribution to a raise that does not exist is attempted
+    /// @param raiseId the non-existent raiseId passed
+    error RaiseBoxContribution_contribute_RaiseDoesNotExist(bytes32 raiseId);
+
+    /// @notice error thrown when contribution is attempted and raise is not in `CONTRIBUTION` state
+    /// @dev all raises have to be in this state before they can receive any contribution
+    /// @dev rises achieve this state after successful raise creation
+    error RaiseBoxContribution_contribute_RaiseNotInContributionState();
+
     error RaiseBoxContribution_ValueSentMismatch();
     error RaiseBoxContribution_ContributeMoreEth(uint256);
     error RaiseBoxContribution_ZeroAmount();
-    error RaiseBoxContribution_ContributionFailed();
+    error RaiseBoxContribution_contribute_ContributionFailed();
     error RaiseBoxContribution_InvalidProject();
     error RaiseBoxContribution_RaiseBoxProtocolUnset();
     error RaiseContribution_ContributionEnded(uint256);
     error RaiseBoxContribution_contribute_AboveMaxAllowed(uint256, string);
-    error RaiseBoxContribution_getMaxContributionAllowedForProject_CannotBeZero();
-    error RaiseBoxContribution_SelfContribution();
-    error RaiseBoxContribution_NotAContributor(bytes32 raiseId);
+
+    /// @notice thrown when raise creator tries to contribute to self
+    error RaiseBoxContribution_SelfContributionForbidden();
+
+    /// @notice thrown when `address` tries to delegate vote in a raise they've not contributed to
+    /// @param raiseId `id` of raise
+    error RaiseBoxVoting_canDelegate_NotAContributor(bytes32 raiseId);
+
+    /// @notice thrown when contribution is made to a non-exitent raise, either `0` not raisebox issued
     error RaiseBoxContribution_InvalidRaiseId();
-
-
     
+    /// @notice thrown if protocol address has not been set
     error RaiseBoxCore_getProtocol_RaiseBoxProtocolUnset();
 
 }

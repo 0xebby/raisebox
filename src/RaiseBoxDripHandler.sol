@@ -7,6 +7,7 @@ import {IRaiseBoxDripHandler} from "src/interfaces/IRaiseBoxDripHandler.sol";
 import {IRaiseBoxCore} from "./interfaces/IRaiseBoxCore.sol";
 import {IRaiseBoxVoting} from "./interfaces/IRaiseBoxVoting.sol";
 import {IRaiseBoxProposal} from "./interfaces/IRaiseBoxProposal.sol";
+import {RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
 
 /**
  * @title RaiseBoxDripHandler
@@ -51,7 +52,7 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     mapping(bytes32 => uint8) public _25DripsUsed;
 
     // maximum allowed 25% drips per project lifecycle
-    uint8 public constant MAX_25P_DRIPS = 2;
+    uint8 public constant ALLOWED_MAX_DRIP = 2;
 
     function dripFundsForProposal(bytes32 raiseId, uint256 proposalId) external 
     /**
@@ -62,9 +63,9 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
 
         if (msg.sender != address(raiseBoxVoting)) revert DripHandler_NotVotingContract(msg.sender);
 
-        if (!raiseBoxCore.doesRaiseExist(raiseId)) revert Drip_InvalidProject();
+        raiseBoxCore.doesRaiseExist(raiseId);
 
-        if (drippedForProposal[raiseId][proposalId]) revert Drip_AlreadyExecuted(raiseId, proposalId);
+        if (drippedForProposal[raiseId][proposalId]) revert RaiseBoxErrorsLib.RaiseBoxDripHandler_dripFunds_DripAlreadyExecutedForProposal(raiseId, proposalId);
 
         // determine percentage to drip using proposal count and last drip data
         uint256 propCount = raiseBoxProposal.getProposalCount(raiseId);
@@ -103,7 +104,7 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     /// @dev Rules implemented:
     /// - if proposalCount <= 1 => 10%
     /// - if proposalCount == 2 => 25%
-    /// - if proposalCount > 2 && lastDripPercent != 25 && _25DripsUsed < MAX_25P_DRIPS => 25%
+    /// - if proposalCount > 2 && lastDripPercent != 25 && _25DripsUsed < ALLOWED_MAX_DRIP => 25%
     /// - if proposalCount > 2 && lastDripPercent == 25 => 15%
     /// - else => 10%
     function _determineDripPercent(bytes32 raiseId, uint256 propCount) internal view returns (uint8) {
@@ -112,7 +113,7 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
         }
 
         if (propCount == 2) {
-            if (_25DripsUsed[raiseId] < MAX_25P_DRIPS && lastDripPercent[raiseId] != 25) {
+            if (_25DripsUsed[raiseId] < ALLOWED_MAX_DRIP && lastDripPercent[raiseId] != 25) {
                 return 25;
             }
             return 15;
@@ -125,7 +126,7 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
         }
 
         // attempt to give 25% if the project hasn't exhausted its two 25% drips
-        if (_25DripsUsed[raiseId] < MAX_25P_DRIPS) {
+        if (_25DripsUsed[raiseId] < ALLOWED_MAX_DRIP) {
             return 25;
         }
 
@@ -190,7 +191,7 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
      *     - only 10% of overall funds contributed at time of hosting proposal is released per time?
      *     - if proposalCount <= 1 => 10% fund drip
      *     - if proposalCount == 2 => 25% fund drip
-     *     - if proposalCount > 2 && lastDripPercent != 25 && _25DripsUsed < MAX_25P_DRIPS => 25%
+     *     - if proposalCount > 2 && lastDripPercent != 25 && _25DripsUsed < ALLOWED_MAX_DRIP => 25%
      *     - if proposalCount > 2 && lastDripPercent == 25 => 15%
      *     - else => 10%
      *

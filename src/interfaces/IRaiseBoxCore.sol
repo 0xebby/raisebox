@@ -4,54 +4,65 @@ pragma solidity ^0.8.19;
 interface IRaiseBoxCore {
 
     struct ProjectInfo {
-        address projectOwner;
         string projectName;
         string valueProposition;
         uint256 raiseTarget;
         uint256 projectDuration;
     }
 
-    struct _RaiseInfo {
-        ProjectInfo projectInfo;
-        uint256 raiseDuration;
-        uint256 raiseCreationTime;
+    struct RaiseProposalInfo {
+        uint256 proposalsHostedByProject;
+        uint256 conFailedProposals;
+        uint256 currentConFailed;
+        uint256 nonConFailedProposals;
+        uint256 lastProposalId;
+        bool lastProposalFailed;
+    }
+
+    struct RaiseContributionInfo {
         uint256 amountRaisedByProject;
-        uint256 projectRaiseCount;
-        uint256 proposalsHosted;
-        RaiseState raiseState;
-        bool raiseExists;
+    }
+
+    struct RaiseCreationInfo {
+        ProjectInfo projectInfo;
         bytes32 raiseId;
+        uint256 raiseCreatedAt;
+        bool doesRaiseExist;
+        address raiseOwner;
+    }
+
+    struct RaiseInfo {
+        RaiseCreationInfo raiseCreationInfo;
+        RaiseContributionInfo raiseContributionInfo;
+        RaiseProposalInfo proposalInfo;
+        uint256 raiseDuration; // this is a constant, consider removing
+        RaiseState raiseState;
     }
 
     enum RaiseState{
         INACTIVE, // raise not created yet, default state
         CONTRIBUTION, // raise has been created
         PROPOSAL, // raise passed but still active
+        VOTING, // raise in proposal hosting state, active, passed, in_proposal
         FAILED, // raise failed and becomes inactive again
-        VOTING // raise in proposal hosting state, active, passed, in_proposal
-    } //[0,1,2,3,4]
-
-    enum ProposalState{
         PASSED,
-        FAILED
-    } //[0,1]
+        REFUNDING, // raise failed either by 3 consecutive failed proposals or 5 non consecutive failed proposals, raise failed by amtToRaise > amtRaised after raiseDuration
+        ENDED // raise started and then was ended successfully, either: all proposals passed and drips were successful or 60 weeks elapsed
+    } //[0,1,2,3,4, 5]
+
+
+    // function incrementConFailedProposals(bytes32 raiseId) external;
 
 
     function isVerifiedAndWhiteListed(address founder) external view returns(bool verified);
-
-    // raiseBoxCore methods:
-
-    function getRaiseCount() external returns (uint256);
 
     function getProtocol() external returns (address payable);
 
     function getMinimumContribution() external view returns (uint256);
 
-    function getAmtRaisedByProject(bytes32 projectId_) external returns (uint256);
+    function getAmtRaisedByProject(bytes32 projectId_) external view returns (uint256);
 
     function getProtocolFeeAddress() external view returns (address);
-
-    function getProject(bytes32 raiseId) external view returns (_RaiseInfo memory);
 
     function getRaiseCreator(bytes32 raiseId) external view returns (address);
 
@@ -59,36 +70,37 @@ interface IRaiseBoxCore {
 
     function getRaiseState(bytes32 raiseId) external view returns(RaiseState) ;
 
-    function doesRaiseExist(bytes32 raiseId) external view returns (bool);
+    function doesRaiseExist(bytes32 raiseId) external view;
 
     function getRaiseBoxOwner() external view returns (address);
 
     function getAcceptedToken() external view returns (address);
 
-    // contribution methods:
+    function isRaiseCreator(address raiseCreator, bytes32 raiseId) external view returns (bool);
 
-    // proposal methods;
+    function getRaiseCreatedAt(bytes32 raiseId_) external view returns (uint256);
 
-    // voting methods:
+    function getRaiseInfo(bytes32 raiseId) external view returns (RaiseInfo memory);
 
-    // expose all the contract addresses using the getters;
+    function getRaiseDeadline(bytes32 raiseId_) external view returns (uint256);
+    
+    function getProposalsHosted(bytes32 raiseId) external view returns(uint256);
 
+    // function getRaiseProposalsInfo(bytes32 raiseId) external returns (RaiseProposalInfo memory);
 
-  function updateRaiseInfo(
+    function updateRaiseInfo(
         ProjectInfo calldata _projectInfo,
-        uint256 _raiseDuration,
-        uint256 _raiseCreationTime,
+        uint256 _raiseCreatedAt,
         uint256 _amountRaisedByProject,
-        uint256 _numOfProposalsHosted,
-        uint256 _projectRaiseCount,
-        bool _raiseExists,
+        bool _requireRaiseExist,
         bytes32 _raiseId,
-        RaiseState _raiseState
+        address _raiseOwner,
+        uint256 _forVotes,
+        uint256 _againstVotes,
+        uint256 _proposalId
     ) external;
 
-    function isRaiseCreator(address raiseCreator) external view returns (bool);
+    function endRaise(bytes32 raiseId_) external;
 
-    function getRaiseInfo(bytes32 raiseId) external view returns (_RaiseInfo memory);
-
-    function getRaiseDuration() external view returns (uint256);
+  
 }
