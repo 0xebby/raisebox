@@ -128,6 +128,9 @@ library RaiseBoxErrorsLib {
     /// @notice thrown when delegation of votes not owned by a caller is attempted
     error RaiseBoxVoting_CanOnlyDelegateOwnVote();
 
+    /// @notice thrown when trying to delegate votes to a user that has already delegated for same proposal
+    error RaiseBoxVoting_ToAlreadyInDelegationGraph(address to);
+
     /// @notice thrown when drip percent passed for a raise is not a multiple of 5 less than 25
     /// @dev allowed drip percentages: 5, 10, 15, 20, 25
     error RaiseBoxProposal_hostProposal_InvalidDripPercent();
