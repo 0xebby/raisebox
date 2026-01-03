@@ -14,12 +14,7 @@ interface IRaiseBoxVoting {
         address indexed to
         );
 
-    event Voted(
-        address indexed voter, 
-        bytes32 indexed raiseId, 
-        uint256 indexed proposalId, 
-        bool support
-        );
+  
 
     event VotesTallied(
         bytes32 indexed raiseId,
@@ -44,14 +39,6 @@ interface IRaiseBoxVoting {
         bytes32 raiseId, 
         address user
         );
-
-    error RaiseBoxVoting_CannotDelegateToSelf();
-
-    error RaiseBoxVoting_VotingAlreadyEnded(
-        bytes32 raiseId, 
-        uint256 proposalId
-        );
-
     error RaiseBoxVoting_AlreadyVoted(
         uint256 proposalId, 
         address user
@@ -64,8 +51,7 @@ interface IRaiseBoxVoting {
         uint256 proposalId
         );
 
-    error RaiseBoxVoting_AlreadyDelegatedVote(address user);
-    error RaiseBoxVoting_CannotDelegateTwice();
+    
     error RaiseBoxVoting_CannotDelegateAfterVoting(uint256 proposalId, address voter);
     error RaiseBoxVoting_DelegationToZeroAddress(address zeroAddress);
     error RaiseBoxVoting_RaiseCreator(address raiseCreator);
