@@ -74,13 +74,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     }
 
     function testCreate5ConcurrentRaises() public {
-    // whitelist raise creator first
-    // raise creators
-    raiseBoxCore.verifyAndAddToWhitelist(uche);
-    raiseBoxCore.verifyAndAddToWhitelist(arbitrum);
-    raiseBoxCore.verifyAndAddToWhitelist(max);
-    raiseBoxCore.verifyAndAddToWhitelist(sally);
-    raiseBoxCore.verifyAndAddToWhitelist(carl);
+   
 
     // uche creates a raise
     vm.startPrank(uche);
@@ -135,12 +129,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     
    function testCreateARaise() public {
 
-    // whitelist raise creator first
-    // raise creators
-    raiseBoxCore.verifyAndAddToWhitelist(uche);
-    // raiseBoxCore.verifyAndAddToWhitelist(ebby);
-    raiseBoxCore.verifyAndAddToWhitelist(max);
-    raiseBoxCore.verifyAndAddToWhitelist(sally);
+    /// @note whitelisting of raise creators already done in helper setup
 
     vm.startPrank(uche);
    bytes32 raiseId1 = raiseBoxRaiseCreationContract.createNewRaise(
@@ -466,7 +455,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 
    function testEndRaiseFailsWhenUnauthorizedCallerCalls() public {
 
-        vm.startPrank(ebby);
+        vm.startPrank(arbitrum);
    bytes32 raiseId = raiseBoxRaiseCreationContract.createNewRaise(
         IRaiseBoxCore.ProjectInfo({
             projectName:"sentient",
@@ -477,7 +466,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
     );
     vm.stopPrank();
 
-    vm.prank(ebby);
+    vm.prank(arbitrum);
     vm.expectRevert();
     raiseBoxCore.endRaise(raiseId);
     
@@ -1193,7 +1182,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 
     function testRaiseBoxCompleteFlow() public {
         // from creation of raise -> contribution -> hosting of proposals -> voting -> drips -> end of raise
-        vm.startPrank(ben);
+        vm.startPrank(arbitrum);
         bytes32 raiseId_ = raiseBoxRaiseCreationContract.createNewRaise(
             IRaiseBoxCore.ProjectInfo({
             projectName:"sentient",
@@ -1208,7 +1197,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 
         address[12] memory contributors = [
             ebby, sally, uche, 
-            max, mark, arbitrum,
+            max, mark, ben,
             openseas, carl, base,
             tether, magiceden, gowagr
             ];

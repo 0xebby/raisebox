@@ -137,7 +137,7 @@ contract TestsHelpers is Test {
         vm.deal(testOwner, 500 ether);
         vm.deal(alice, 100 ether);
         vm.deal(joe, 100 ether);
-        // vm.deal(ben, 100 ether);
+        vm.deal(ben, 100 ether);
         vm.deal(max, 100 ether);
         vm.deal(uche, 100 ether);
         vm.deal(sam, 100 ether);
@@ -171,6 +171,11 @@ contract TestsHelpers is Test {
         raiseBoxCore.verifyAndAddToWhitelist(arbitrum);
         // whitelist raiseCreator:
         raiseBoxCore.verifyAndAddToWhitelist(raiseCreator);
+
+        raiseBoxCore.verifyAndAddToWhitelist(uche);
+        raiseBoxCore.verifyAndAddToWhitelist(max);
+        raiseBoxCore.verifyAndAddToWhitelist(sally);
+        raiseBoxCore.verifyAndAddToWhitelist(carl);
 
         // warp time
         advanceBlockTime(10 days);
@@ -271,7 +276,7 @@ contract TestsHelpers is Test {
             ];
         
           address[4] memory voters2 = [
-            arbitrum, openseas, carl, 
+            ben, openseas, carl, 
             base
             ];
 
@@ -357,7 +362,7 @@ contract TestsHelpers is Test {
 
             
         for (uint a = 1; a < milestoneInfo.length; a++) {
-            vm.prank(ben);
+            vm.prank(arbitrum);
             raiseBoxProposalContract.hostProposal(raiseId_, milestoneInfo[a]);
 
             // simulate delay before voting begins - 48 hours
@@ -398,7 +403,7 @@ contract TestsHelpers is Test {
 
             // simulate delayfor voting to happen, voting duration ==> 7 days
             advanceBlockTime(7 days);
-            vm.prank(ben);
+            vm.prank(arbitrum);
             raiseBoxVoting.triggerVoteTally(raiseId_, a);
 
             // simulate delay before anew proposal can be hosted ==> 4 weeks
