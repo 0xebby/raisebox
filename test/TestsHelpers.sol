@@ -70,6 +70,17 @@ contract TestsHelpers is Test {
     address latecomer;
     address raiseCreator = makeAddr("raiseCreator");
 
+    /// contributors for endToEndRaiseTest
+    address contributor1 = makeAddr("contributor 1");
+
+    address contributor2 = makeAddr("contributor 2");
+
+    address contributor3 = makeAddr("contributor 3");
+
+    address contributor4 = makeAddr("contributor 4");
+
+    address contributor5 = makeAddr("contributor 5");
+
     
     /// @notice raise targets for small, medium and large:
     uint256 RAISE_TARGET_SMALL = 10 ether;
@@ -161,6 +172,18 @@ contract TestsHelpers is Test {
         vm.deal(polymarket, 100 ether);
         vm.deal(whale, 50_000 ether);
         vm.deal(latecomer, 300 ether);
+
+        /// fund contributors for endToEndRaise
+        vm.deal(contributor1, 100 ether);
+
+        vm.deal(contributor2, 100 ether);
+
+        vm.deal(contributor3, 100 ether);
+
+        vm.deal(contributor4, 100 ether);
+
+        vm.deal(contributor5, 100 ether);
+
 
 
 
