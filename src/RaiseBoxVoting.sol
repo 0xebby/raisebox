@@ -49,12 +49,12 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         uint256 _start = _voteStartTime(raiseId_, proposalId_);
         // voting must have been scheduled (start set) before voting commences
         if (_start == 0 || block.timestamp < _start) {
-            revert RaiseBoxVoting_VotingNotStarted(raiseId_, proposalId_);
+            revert RaiseBoxErrorsLib.RaiseBoxVoting_VotingNotStarted(raiseId_, proposalId_);
         }
 
         // this allows any attempt to vote after voting deadline to trigger funds dripper
         if (s_votingEnded[raiseId_][proposalId_] || block.timestamp > (_start + VOTING_DURATION)) {
-            revert RaiseBoxVoting_VotingAlreadyEnded(raiseId_, proposalId_);
+            revert RaiseBoxErrorsLib.RaiseBoxVoting_VotingAlreadyEnded(raiseId_, proposalId_);
         }
 
         // checks if proposal is live for raise
@@ -75,7 +75,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         }
 
         if (s_hasDelegatedForProposal[user_][raiseId_][proposalId_]) {
-            revert RaiseBoxVoting_AlreadyDelegatedVote(user_);
+            revert RaiseBoxErrorsLib.RaiseBoxVoting_AlreadyDelegatedVote(user_);
         }
 
         if (s_hasVotedOnProposal[raiseId_][proposalId_][user_]) {
@@ -96,7 +96,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         }
 
         if (to_ == from_) {
-            revert RaiseBoxVoting_CannotDelegateToSelf();
+            revert RaiseBoxErrorsLib.RaiseBoxVoting_CannotDelegateToSelf();
         }
 
         if (from_ != msg.sender) {
@@ -116,7 +116,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         } // fixed redelegation after being delegated votes -- ebby
 
         if (s_hasDelegatedForProposal[from_][raiseId_][proposalId_]) {
-            revert RaiseBoxVoting_CannotDelegateTwice();
+            revert RaiseBoxErrorsLib.RaiseBoxVoting_CannotDelegateTwice();
         } 
 
         if (s_hasDelegatedForProposal[to_][raiseId_][proposalId_]) {
@@ -171,7 +171,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
         s_hasVotedOnProposal[raiseId_][proposalId_][msg.sender] = true;
 
-        emit Voted(msg.sender, raiseId_, proposalId_, support_);
+        emit RaiseBoxEventsLib.RaiseBoxVoting_vote_Voted(msg.sender, raiseId_, proposalId_, support_);
     }
 
     /**
@@ -300,7 +300,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
         uint256 _start = s_votingStartTime[raiseId_][proposalId_];
 
-        if (s_votingEnded[raiseId_][proposalId_]) revert RaiseBoxVoting_VotingAlreadyEnded(raiseId_, proposalId_);
+        if (s_votingEnded[raiseId_][proposalId_]) revert RaiseBoxErrorsLib.RaiseBoxVoting_VotingAlreadyEnded(raiseId_, proposalId_);
 
         // if voting duration elapsed, mark ended and emit events:
         if (block.timestamp >= (_start + VOTING_DURATION)) {
@@ -390,11 +390,11 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         proposalId_
         );
 
-        raiseBoxProposal.updateProposalState(
-            raiseId_, 
-            proposalId_, 
-            IRaiseBoxProposal.ProposalState.INACTIVE
-            );
+        // raiseBoxProposal.updateProposalState(
+        //     raiseId_, 
+        //     proposalId_, 
+        //     IRaiseBoxProposal.ProposalState.INACTIVE
+        //     );
 
        emit RaiseBoxEventsLib.RaiseBoxVoting_endVoting_VotingEndedSucessfully(block.timestamp);
     }
