@@ -71,7 +71,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         bool hasContributedToProject = raiseBoxContribution.hasUserContributed(raiseId_, user_);
 
         if (!hasContributedToProject) {
-            revert RaiseBoxVoting_NotContributor(raiseId_, user_);
+            revert RaiseBoxErrorsLib.RaiseBoxVoting_NotContributor(raiseId_, user_);
         }
 
         if (s_hasDelegatedForProposal[user_][raiseId_][proposalId_]) {

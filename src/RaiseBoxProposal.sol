@@ -46,7 +46,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
             // ascertain owner is host of project and is trying to host proposal
             if (raiseInfo.raiseCreationInfo.raiseOwner != proposalHost_) {
-                revert raiseBoxProposal_InvalidRaiseOwner();
+                revert RaiseBoxErrorsLib.RaiseBoxProposal_hostProposal_NotRaiseOwner();
             }
 
             // ascertain that project has not hosted proposal in the last 4 weeks
