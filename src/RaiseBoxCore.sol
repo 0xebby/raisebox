@@ -227,7 +227,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         ProjectInfo calldata projectInfo_,
         uint256 raiseCreatedAt_,
         uint256 amountRaisedByProject_,
-        bool requireRaiseExist_,
+        bool doesRaiseExist_,
         bytes32 raiseId_,
         address raiseOwner_,
         uint256 yesVotes_,
@@ -238,21 +238,29 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         /// @dev this calls must always come from a raisebox related contract
         /// each of the raisebox contract is allowed access to specific internal functions
 
-        if (authorizedCallers[RAISE_CREATION_CONTRACT][msg.sender]) {
+        if (
+            authorizedCallers[RAISE_CREATION_CONTRACT][msg.sender] && proposalId_ == 0
+            ) {
             _updateRaiseCreation(
                 projectInfo_,
                 raiseId_,
                 raiseCreatedAt_,
-                requireRaiseExist_,
+                doesRaiseExist_,
                 raiseOwner_
             );
-        } else if (authorizedCallers[CONTRIBUTION_CONTRACT][msg.sender]) {
+        } else if (
+            authorizedCallers[CONTRIBUTION_CONTRACT][msg.sender] && amountRaisedByProject_ > 0
+            ) {
             _updateContributions(raiseId_, amountRaisedByProject_);
             
-        } else if (authorizedCallers[PROPOSAL_CONTRACT][msg.sender]) {
+        } else if (
+            authorizedCallers[PROPOSAL_CONTRACT][msg.sender] && yesVotes_ == 0
+            ) {
             _updateRaiseProposalInfo(raiseId_);
            
-        } else if (authorizedCallers[VOTING_CONTRACT][msg.sender]) {
+        } else if (
+            authorizedCallers[VOTING_CONTRACT][msg.sender] && amountRaisedByProject_ > 0 
+            ) {
             _updateVotingInfo(raiseId_, yesVotes_, noVotes_, proposalId_);
         } 
         
@@ -541,8 +549,8 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     }
 
     function isRaiseCreator(address raiseCreator, bytes32 raiseId_) external view returns (bool) {
-            _requireRaiseExist(raiseId_);
-         if (raiseInfo[raiseId_].raiseCreationInfo.raiseOwner == raiseCreator) { return true ;}
+        _requireRaiseExist(raiseId_);
+         return raiseInfo[raiseId_].raiseCreationInfo.raiseOwner == raiseCreator;
     }
 
     function isAuthorizedCaller(bytes32 role, address caller) external view returns (bool) {
