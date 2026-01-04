@@ -23,8 +23,6 @@ interface IRaiseBoxProposal {
     }
     
     event ProposalPassed();
-
-    error raiseBoxProposal_InvalidRaiseOwner();
     error RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
     error RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
     error RaiseBoxProposal_hostProposal_RaiseNotPassedYet();
