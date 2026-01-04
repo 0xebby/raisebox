@@ -696,6 +696,18 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
     raiseBoxVoting.triggerVoteTally(endToEndRaiseId, proposalId1);
     vm.stopPrank();
 
+    // raiseCreator tries to trigger vote tallying of same proposal twice and fails:
+    vm.startPrank(raiseCreator);
+    vm.expectRevert(
+        abi.encodeWithSelector(
+            RaiseBoxErrorsLib.RaiseBoxVoting_VotingAlreadyEnded.selector,
+            endToEndRaiseId,
+            proposalId1
+        )
+    );
+    raiseBoxVoting.triggerVoteTally(endToEndRaiseId, proposalId1);
+    vm.stopPrank();
+
     /// assert raise state has been updated back to PROPOSAL to allow creator host more proposals
     assertEq(
         uint256(raiseBoxCore.getRaiseState(endToEndRaiseId)), 
