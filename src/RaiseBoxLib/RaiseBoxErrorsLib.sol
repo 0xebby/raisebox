@@ -22,6 +22,12 @@ library RaiseBoxErrorsLib {
     /// @param proposalId the invalid proposalId passed
     error RaiseBoxProposal_isValidProposal_ProposalDoesNotExist(uint256 proposalId);
 
+    /// @notice
+    error RaiseBoxVoting_NotContributor(
+        bytes32 raiseId, 
+        address user
+        );
+
     /// @notice thrown when an invalid `raiseId` is passed to `canHostProposal` modifier
     /// @param raiseId the invalid `id` passed
     error RaiseBoxProposal_canHostProposal_InvalidRaiseId(bytes32 raiseId);
@@ -35,6 +41,9 @@ library RaiseBoxErrorsLib {
 
     /// @notice thrown when the legth of project milestone text is `0` less or greater than allowed length
     error RaiseBoxProposal_hostProposal_InvalidMilestoneLength();
+
+    /// @notice thrown when a non-raise creator tries to host a proposal for the raise
+    error RaiseBoxProposal_hostProposal_NotRaiseOwner();
 
     /// @notice thrown when an unauthorized caller tries to update proposalInfo
     error RaiseBoxProposal_updateProposalInfo_Unauthorized();
