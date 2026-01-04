@@ -254,12 +254,12 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
             _updateContributions(raiseId_, amountRaisedByProject_);
             
         } else if (
-            authorizedCallers[PROPOSAL_CONTRACT][msg.sender] && yesVotes_ == 0
+            authorizedCallers[PROPOSAL_CONTRACT][msg.sender] && proposalId_ >= 0
             ) {
             _updateRaiseProposalInfo(raiseId_);
            
         } else if (
-            authorizedCallers[VOTING_CONTRACT][msg.sender] && amountRaisedByProject_ > 0 
+            authorizedCallers[VOTING_CONTRACT][msg.sender] && yesVotes_ >= 0 && noVotes_ >= 0
             ) {
             _updateVotingInfo(raiseId_, yesVotes_, noVotes_, proposalId_);
         } 
