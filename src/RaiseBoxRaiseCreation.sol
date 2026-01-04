@@ -85,7 +85,8 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
         }
 
         raisesCreated[msg.sender] += 1;
-        raiseBoxCore.updateRaiseInfo( // updates storage with raiseCreation info
+        raiseBoxCore.updateRaiseInfo( 
+            // updates storage with raiseCreation info
             projectInfo,
             timeCreated,
             0,
