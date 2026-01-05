@@ -5,6 +5,8 @@ import "../lib/forge-std/src/Test.sol";
 import {TestsHelpers} from "./TestsHelpers.sol";
 import {IRaiseBoxCore} from "src/interfaces/IRaiseBoxCore.sol";
 import {IRaiseBoxProposal} from "src/interfaces/IRaiseBoxProposal.sol";
+import {RaiseBoxEventsLib} from "src/RaiseBoxLib/RaiseBoxEventsLib.sol";
+
 
 
 contract RaiseBoxCreationTest is Test, TestsHelpers {
@@ -78,6 +80,15 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 
     // uche creates a raise
     vm.startPrank(uche);
+    // vm.expectEmit(false, false, false, false);
+    //  emit RaiseBoxEventsLib.RaiseCreation_RaiseCreated(
+    //         "uche's raise",
+    //         uche,
+    //         "agi",
+    //         200 ether,
+    //         0xc87cf6d4cd106bec6731916c571e068d0804a85e96d7e837a6575136f0e942f1,
+    //         block.timestamp
+    //     );
         bytes32 raiseId1 = raiseBoxRaiseCreationContract.createNewRaise(
         IRaiseBoxCore.ProjectInfo({
             projectName:"uche's raise",
