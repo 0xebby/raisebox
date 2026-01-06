@@ -30,7 +30,8 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
     mapping(address => mapping(bytes32 => uint256[])) public contributionsToProjectArray; // array of contributions per user per project
 
-    uint256 public constant MAX_CONTRIBUTION_PERCENTAGE = 20; // 2% OF AMOUNT TO RAISE
+    uint256 public constant MAX_CONTRIBUTION_PERCENTAGE = 200; 
+    // 20.0% OF AMOUNT TO RAISE, tentative for testing, should 20 - 2.0% in production
 
     // tracks total amount contributed to project
 
@@ -187,7 +188,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     {
         uint256 amountToRaise = raiseBoxCore.getAmountToRaise(raiseId);
 
-        maxContributionPerUser = ((MAX_CONTRIBUTION_PERCENTAGE * amountToRaise) / 100);
+        maxContributionPerUser = ((MAX_CONTRIBUTION_PERCENTAGE * amountToRaise) / 1000);
 
         return maxContributionPerUser;
     }

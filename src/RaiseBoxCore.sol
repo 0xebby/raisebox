@@ -220,6 +220,10 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         emit RaiseBoxEventsLib.VotingContractSet(contractAddressToSet);
     }
 
+    // function updateRaiseInfoWithCreationHash(bytes32 creationHash) {
+
+    // }
+
 
 
 
