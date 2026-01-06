@@ -316,10 +316,11 @@ contract TestsHelpers is Test {
             dripPercent: 10
             }),
 
+            // first proposal drip cannot be greater than 10%, now enabled -- ebby
             IRaiseBoxProposal.MilestoneInfo({
             description: "this is the first proposal for raisebox v3",
             milestone: "testnet for beta testing is ready and live",
-            dripPercent: 15
+            dripPercent: 10
             }),
 
             IRaiseBoxProposal.MilestoneInfo({
@@ -331,13 +332,13 @@ contract TestsHelpers is Test {
             IRaiseBoxProposal.MilestoneInfo({
             description: "this is the third proposal for raisebox v3",
             milestone: "beta mainnet is live for live testing",
-            dripPercent: 25
+            dripPercent: 20
             }),
 
             IRaiseBoxProposal.MilestoneInfo({
             description: "this is the 5 proposal for raisebox v3",
             milestone: "beta mainnet is live for live testing",
-            dripPercent: 25
+            dripPercent: 20
             }),
 
             IRaiseBoxProposal.MilestoneInfo({
@@ -349,13 +350,13 @@ contract TestsHelpers is Test {
             IRaiseBoxProposal.MilestoneInfo({
             description: "this is the 7 proposal for raisebox v3",
             milestone: "beta mainnet is live for live testing",
-            dripPercent: 25
+            dripPercent: 15
             }),
 
             IRaiseBoxProposal.MilestoneInfo({
             description: "this is the 8 proposal for raisebox v3",
             milestone: "beta mainnet is live for live testing",
-            dripPercent: 25
+            dripPercent: 10
             }),
 
             IRaiseBoxProposal.MilestoneInfo({
