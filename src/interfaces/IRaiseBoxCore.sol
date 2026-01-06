@@ -102,5 +102,17 @@ interface IRaiseBoxCore {
 
     function endRaise(bytes32 raiseId_) external;
 
+
+    // tasks:
+    // ensure drip percent passed by raise creator during hosting of proposal is used in the internal _determineDripPercent function in RaiseBoxDripHandler contract
+    // setup raisebox to work with the raisebox faucet ERC20 token
+    // contributions, refunds and drips should be done with the token
+    // ensure token swap is 1 token : $1 for simplicity and swap mechanism uses uniswap
+    // ensure all errors/events across raisebox are form the errors/events libraries
+    // set up raise creator prior verification using polygon privadoId -- ensure the creator has the zk proof from thrid party verifier before adding to raisebox whitelist for raise creation
+    // setup protocol fee calculation and withdrawal mechanism 
+    // protocol fee is 1.5% of total amount raised by project on successful completion of raise
+    // implement erc-4337 gassless contribution via account abstraction using a paymaster
+
   
 }
