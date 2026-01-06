@@ -210,4 +210,6 @@ library RaiseBoxEventsLib {
     event RaiseBoxVoting_endVoting_VotingEndedSucessfully(
         uint voteEndTimestamp
     );
+
+    event RaiseBoxProposal_verifyDripPercent_lastDripPercent(uint256 dripPercent);
 }

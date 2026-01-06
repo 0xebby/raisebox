@@ -223,4 +223,10 @@ library RaiseBoxErrorsLib {
     /// @notice thrown if protocol address has not been set
     error RaiseBoxCore_getProtocol_RaiseBoxProtocolUnset();
 
+    error RaiseBoxProposal_hostProposal_MaxDripsAlreadyUsed(uint256);
+
+    error RaiseBoxProposal_hostProposal_FirstDripGreaterThan10(uint256);
+
+    error RaiseBoxProposal_hostProposal_CannotDrip25Con(uint8);
+
 }
