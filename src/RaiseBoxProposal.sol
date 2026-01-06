@@ -124,11 +124,6 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         
         proposalId_ = proposalsHostedByProject[raiseId_];
 
-        // uint8 percent = _verifyDripPercent(
-        //     raiseId_, 
-        //     milestoneInfo_.dripPercent
-        //     );
-
         // update core here:
         IRaiseBoxCore.ProjectInfo memory projectInfo;
         raiseBoxCore.updateRaiseInfo(
@@ -342,45 +337,17 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     }
 
     function _getLastProposalDripPercent(bytes32 raiseId_) internal returns (uint8) {
-        return lastDripPercent[raiseId_];
-    }
-
-
-
-    function _verifyDripPercent(
-        bytes32 raiseId_, 
-        uint8 dripPercent_
-        ) internal returns (uint8) {
-
         raiseBoxCore.doesRaiseExist(raiseId_);
-        uint256 propCount = proposalsHostedByProject[raiseId_];
-
-        if (propCount == 0 && dripPercent_ > 10) {
-            revert RaiseBoxErrorsLib.RaiseBoxProposal_hostProposal_FirstDripGreaterThan10(dripPercent_);
-        } else {
-            return dripPercent_;
-        }
-
-        if (propCount >= 1) {
-            // what was the last drip percent?
-            uint8 last = _getLastProposalDripPercent(raiseId_);
-
-           if (dripPercent_ == 25) {
-            _25DripsUsed[raiseId_] += 1;
-           }
-
-        }
-
-        // emit RaiseBoxEventsLib.RaiseBoxProposal_verifyDripPercent_lastDripPercent(lastDripPercent[raiseId_]);
-        //revert RaiseBoxErrorsLib.RaiseBoxProposal_hostProposal_MaxDripsAlreadyUsed(dripPercent_);
-
-
-
-
+        return lastDripPercent[raiseId_];
     }
 
     function get25DripsCount(bytes32 raiseId_ ) external returns (uint8) {
         return _25DripsUsed[raiseId_];
+    }
+
+    function getDripPercent(bytes32 raiseId_, uint256 proposalId_) external returns (uint8) {
+        _isValidProposal(raiseId_, proposalId_);
+        return proposalInfo[raiseId_][proposalId_].milestoneInfo.dripPercent;
     }
 
 

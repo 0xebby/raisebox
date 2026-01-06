@@ -63,5 +63,7 @@ interface IRaiseBoxProposal {
 
     function get25DripsCount(bytes32 raiseId_ ) external returns (uint8);
 
-     function getLastProposalDripPercent(bytes32 raiseId) external returns (uint8);
+    function getLastProposalDripPercent(bytes32 raiseId) external returns (uint8);
+
+    function getDripPercent(bytes32 raiseId_, uint256 proposalId_) external returns (uint8);
 }
