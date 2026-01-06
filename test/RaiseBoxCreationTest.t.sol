@@ -1379,7 +1379,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
         // colluder can vote now with 5 votes, his and those granted him by the attacker and he is going to vote `false`
         // @notice contributor1 voted true but it won't count, only what the colluder wants counts, attacker won
         vm.startPrank(colluder);
-        raiseBoxVoting.vote(raiseId, proposalId1, false);
+        raiseBoxVoting.vote(raiseId, proposalId1, true);
         vm.stopPrank();
         // after fix, colluder can vote with just 1 now since deleagtion of stolen votes to him is no longer possible
 
@@ -1389,7 +1389,9 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
         vm.prank(raiseCreator);
         raiseBoxVoting.triggerVoteTally(raiseId, proposalId1);
 
-        raiseBoxCore.getRaiseInfo(raiseId);
+        // raiseBoxCore.getRaiseInfo(raiseId);
+
+        // raiseBoxProposalContract.getDripPercent(raiseId, proposalId1);
     }
 
 }
