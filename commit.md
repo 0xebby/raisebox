@@ -39,3 +39,5 @@ error RaiseBoxCreation_createRaise_ERC20TokenNotSet();
 ```solidity
 error Drip_InsufficientBalanceECR20(uint256 dripBalance, uint256 required);
 ```
+
+todo: write tests using the erc20 token implementation and refactor the error messages that uses strings
