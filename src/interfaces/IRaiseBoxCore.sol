@@ -2,12 +2,17 @@
 pragma solidity ^0.8.19;
 
 interface IRaiseBoxCore {
+    enum PaymentMethod {
+        ETH,
+        ERC20
+    }
 
     struct ProjectInfo {
         string projectName;
         string valueProposition;
         uint256 raiseTarget;
         uint256 projectDuration;
+        PaymentMethod paymentMethod;
     }
 
     struct RaiseProposalInfo {

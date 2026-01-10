@@ -50,6 +50,12 @@ library RaiseBoxErrorsLib {
 
     /// @notice thrown when voting is attempted for a raise not in PROPOSAL state
     error RaiseBoxVoting_RaiseNotInVotingState();
+
+    /// @notice thrown when ETH is sent for ERC20 raise
+    error RaiseBoxContribution_ETHERSentForERC20Raise();
+
+    /// @notice thrown when user does not have enough token balance to contribute
+    error RaiseBoxContribution_InsufficientTokenBalance();
     
     /// @notice thrown if duration for project during raise creation is less than or above allowed
     error RaiseBoxCreation_createRaise_InvalidProjectDuration();
@@ -133,6 +139,9 @@ library RaiseBoxErrorsLib {
     error RaiseBoxCore_AlreadyWhiteListed(
         address founder
     );
+
+    /// @notice thrown when ERC20 token is not set
+    error RaiseBoxCreation_createRaise_ERC20TokenNotSet();
 
     /// @notice thrown when delegation of votes not owned by a caller is attempted
     error RaiseBoxVoting_CanOnlyDelegateOwnVote();

@@ -5,6 +5,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {IRaiseBoxContribution} from "../src/interfaces/IRaiseBoxContribution.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
@@ -20,6 +22,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
     using Strings for uint256;
     using Address for address;
+    using SafeERC20 for IERC20;
 
     /// @notice state variables
     mapping(address contributor => mapping(bytes32 raiseId => uint256 amtContributed)) public amountContributedToRaise;
@@ -52,10 +55,6 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_ZeroAmount();
         }
 
-        if (msg.value != amount) {
-            revert RaiseBoxErrorsLib.RaiseBoxContribution_ValueSentMismatch();
-        }
-
         uint256 minContribution = raiseBoxCore.getMinimumContribution();
         if (amount < minContribution) {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_ContributeMoreEth(minContribution);
@@ -71,6 +70,15 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
         address raiseOwner = raiseInfo.raiseCreationInfo.raiseOwner;
         if (msg.sender == raiseOwner) revert RaiseBoxErrorsLib.RaiseBoxContribution_SelfContributionForbidden();
+
+        // Verify which currency the Project/Raise Info uses and validate accordingly
+        IRaiseBoxCore.PaymentMethod paymentMethod = raiseInfo.raiseCreationInfo.projectInfo.paymentMethod;
+
+        if (paymentMethod == IRaiseBoxCore.PaymentMethod.ETH) {
+            _validateEthContribution(raiseId, amount);
+        } else {
+            _validateTokenContribution(raiseId, amount);
+        }
 
         uint256 raiseTarget = raiseInfo.raiseCreationInfo.projectInfo.raiseTarget;
 
@@ -89,7 +97,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
                     abi.encodePacked(
                         "Cannot over contribute: you can contribute only: ",
                         ((maxContribution - userPrevContribution) / 1e18).toString(),
-                        " ether more to this project"
+                        " more to this project"
                     )
                 )
             );
@@ -111,7 +119,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_contribute_OverContributionIsForbidden(
                  string(
                 abi.encodePacked(
-                    ((raiseTarget - totalContributions) / 1e18).toString(), "eth more to raiseTarget"
+                    ((raiseTarget - totalContributions) / 1e18).toString(), " more to raiseTarget"
                 )
                 )
             ); 
@@ -120,11 +128,10 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
         // Effects
         userPrevContribution += amount;
-
         contributionsToProjectArray[msg.sender][raiseId].push(amount);
-
+        
+        // Update total contributions consistently
         totalContributions += amount;
-
         amountContributedToRaise[msg.sender][raiseId] = userPrevContribution;
         totalContributionsToProject[raiseId] = totalContributions;
         
@@ -158,10 +165,19 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         // Interactions
 
         // funds sent to protocol for safekeeping pending release to project
-        (bool successfullyContributed,) = address(raiseBoxDripHandler).call{value: amount}(""); 
-
-        if (!successfullyContributed) {
-            revert RaiseBoxErrorsLib.RaiseBoxContribution_contribute_ContributionFailed();
+        if (paymentMethod == IRaiseBoxCore.PaymentMethod.ETH) {
+            (bool successfullyContributed,) = address(raiseBoxDripHandler).call{value: amount}(""); 
+            if (!successfullyContributed) {
+                revert RaiseBoxErrorsLib.RaiseBoxContribution_contribute_ContributionFailed();
+            }
+        } else {
+            // Handle ERC20 token transfer
+            address acceptedToken = raiseBoxCore.getAcceptedToken();
+            IERC20(acceptedToken).safeTransferFrom(
+                msg.sender,
+                address(raiseBoxDripHandler),
+                amount
+            );
         }
 
         emit RaiseBoxEventsLib.Contributed(
@@ -176,6 +192,28 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     // should not be able to receive eth directly except via contribute above
 
     // INTERNAL FUNCTIONS
+
+    function _validateEthContribution(bytes32 raiseId, uint256 amount) internal view {
+        if (msg.value != amount) {
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_ValueSentMismatch();
+        }
+    }
+
+    function _validateTokenContribution(bytes32 raiseId, uint256 amount) internal view {
+        if (msg.value != 0) {
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_ETHERSentForERC20Raise();
+        }
+       
+        address acceptedToken = raiseBoxCore.getAcceptedToken();
+        if (acceptedToken == address(0)) {
+            revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_ERC20TokenNotSet();
+        }
+
+        IERC20 token = IERC20(acceptedToken);
+        if (token.balanceOf(msg.sender) < amount) {
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_InsufficientTokenBalance();
+        }
+    }
 
     /**
      * @dev calculates the maximum contribution allowed per user per project

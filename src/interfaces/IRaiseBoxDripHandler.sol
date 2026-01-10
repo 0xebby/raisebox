@@ -15,6 +15,7 @@ interface IRaiseBoxDripHandler {
     error Drip_AlreadyExecuted(bytes32 raiseId, uint256 proposalId);
     error Drip_VotingNotPassed(bytes32 raiseId, uint256 proposalId);
     error Drip_InsufficientBalance(uint256 dripBalance, uint256 required);
+    error Drip_InsufficientBalanceECR20(uint256 dripBalance, uint256 required);
     error Drip_InvalidPercent();
     error DripHandler_NotVotingContract(address caller);
     error DripHandler_NotProposalContract();

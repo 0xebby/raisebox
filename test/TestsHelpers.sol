@@ -210,7 +210,8 @@ contract TestsHelpers is Test {
         projectName: "small project",
         valueProposition: "small project value proposition",
         raiseTarget: RAISE_TARGET_SMALL,
-        projectDuration: RAISE_DURATION_SMALL
+        projectDuration: RAISE_DURATION_SMALL,
+        paymentMethod: IRaiseBoxCore.PaymentMethod.ETH
     });
 
     /// medium:
@@ -218,7 +219,8 @@ contract TestsHelpers is Test {
         projectName: "medium project",
         valueProposition: "medium project value proposition",
         raiseTarget: RAISE_TARGET_MEDIUM,
-        projectDuration: RAISE_DURATION_MEDIUM    
+        projectDuration: RAISE_DURATION_MEDIUM,
+        paymentMethod: IRaiseBoxCore.PaymentMethod.ETH
         });
 
     /// large:
@@ -226,7 +228,8 @@ contract TestsHelpers is Test {
         projectName: "large project",
         valueProposition: "large project value proposition",
         raiseTarget: RAISE_TARGET_LARGE,
-        projectDuration: RAISE_DURATION_LARGE
+        projectDuration: RAISE_DURATION_LARGE,
+        paymentMethod: IRaiseBoxCore.PaymentMethod.ETH
     });
 
     /// @notice create raises with the targets above:
@@ -266,7 +269,8 @@ contract TestsHelpers is Test {
             projectName:"sentient",
             valueProposition:"agi",
             raiseTarget:20 ether,
-            projectDuration:60 weeks
+            projectDuration:60 weeks,
+            paymentMethod: IRaiseBoxCore.PaymentMethod.ETH
         })
         );
         vm.stopPrank();

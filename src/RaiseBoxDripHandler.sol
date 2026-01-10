@@ -8,6 +8,7 @@ import {IRaiseBoxCore} from "./interfaces/IRaiseBoxCore.sol";
 import {IRaiseBoxVoting} from "./interfaces/IRaiseBoxVoting.sol";
 import {IRaiseBoxProposal} from "./interfaces/IRaiseBoxProposal.sol";
 import {RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title RaiseBoxDripHandler
@@ -72,6 +73,10 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
 
         if (drippedForProposal[raiseId][proposalId]) revert RaiseBoxErrorsLib.RaiseBoxDripHandler_dripFunds_DripAlreadyExecutedForProposal(raiseId, proposalId);
 
+        // Fetch the payment method
+        IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
+        IRaiseBoxCore.PaymentMethod paymentMethod = raiseInfo.raiseCreationInfo.projectInfo.paymentMethod;
+
         // determine percentage to drip using proposal count and last drip data
         uint256 propCount = raiseBoxProposal.getProposalCount(raiseId);
         uint8 dripPercent = raiseBoxProposal.getDripPercent(raiseId, proposalId);
@@ -90,10 +95,20 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
         lastDripPercent[raiseId] = dripPercent;
 
         // interactions - send funds to project owner
+        // drip based on currency/Payment type
         address payable projectOwner = payable(raiseBoxCore.getRaiseCreator(raiseId));
-        (bool sent,) = projectOwner.call{value: amountToDrip}("");
 
-        if (!sent) revert Drip_InsufficientBalance(address(this).balance, amountToDrip);
+        if (paymentMethod == IRaiseBoxCore.PaymentMethod.ETH) {
+            (bool sent,) = projectOwner.call{value: amountToDrip}("");
+            if (!sent) revert Drip_InsufficientBalance(address(this).balance, amountToDrip);
+        } else {
+            address acceptedToken = raiseBoxCore.getAcceptedToken();
+            IERC20 token = IERC20(acceptedToken);
+
+            uint256 balance = token.balanceOf(address(this));
+            if (balance < amountToDrip) revert Drip_InsufficientBalanceECR20(balance, amountToDrip);
+            token.transfer(projectOwner, amountToDrip);
+        }
 
         emit FundsDripped(raiseId, proposalId, dripPercent, amountToDrip);
     }
