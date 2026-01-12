@@ -39,5 +39,10 @@ error RaiseBoxCreation_createRaise_ERC20TokenNotSet();
 ```solidity
 error Drip_InsufficientBalanceECR20(uint256 dripBalance, uint256 required);
 ```
+# Test
+All test passing with erc20 contribution (raisebox/test/TokenTest.t.sol)
+There was an Issue: the `getAcceptedToken()` was returning immutable iRBT (zero address) instead of iRBTInstance which is the address and 
+since the logic depends on getting the address of token it would always return 0x00 even when set so this has been fixed to return the 
+`address(iRBTInstance)` instead of `iRBT`.
 
-todo: write tests using the erc20 token implementation and refactor the error messages that uses strings
+todo: refactor the error messages that uses strings
