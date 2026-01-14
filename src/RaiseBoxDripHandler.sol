@@ -42,15 +42,6 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     // total amount dripped for a project
     mapping(bytes32 => uint256) public totalDrippedForProject;
 
-    // last drip percent for a project (5..100 in multiples of 5)
-    // least drip is 5% and max allowed drip is 25%
-    // only two 25% drips allowed and cannot be consecutive nor the first drip
-    // first drip is max 10%
-    mapping(bytes32 => uint8) public lastDripPercent;
-
-    // number of times 25% drip used for a project
-    mapping(bytes32 => uint8) public _25DripsUsed;
-
     // maximum allowed 25% drips per project lifecycle
     uint8 public constant ALLOWED_MAX_DRIP = 2;
 
@@ -87,7 +78,6 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
         // effects
         drippedForProposal[raiseId][proposalId] = true;
         totalDrippedForProject[raiseId] += amountToDrip;
-        lastDripPercent[raiseId] = dripPercent;
 
         // interactions - send funds to project owner
         address payable projectOwner = payable(raiseBoxCore.getRaiseCreator(raiseId));
@@ -102,14 +92,6 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
 
     function hasDripped(bytes32 raiseId, uint256 proposalId) external view returns (bool) {
         return drippedForProposal[raiseId][proposalId];
-    }
-
-    function getLastDripPercent(bytes32 raiseId) external view returns (uint8) {
-        return lastDripPercent[raiseId];
-    }
-
-    function get25DripUsed(bytes32 raiseId) external view returns (uint8) {
-        return _25DripsUsed[raiseId];
     }
 
     function drip(bytes32 raiseId, uint256 proposalId) external {
