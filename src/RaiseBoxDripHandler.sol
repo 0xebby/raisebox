@@ -13,9 +13,10 @@ import {RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
  * @title RaiseBoxDripHandler
  * @notice Handles releasing (dripping) funds to project owners when milestone proposals pass.
  * @dev Assumes voting contract provides a tally that can be used to decide if proposal passed.
- *      Designed to be set as the `protocol` address in `RaiseBoxCore` so contributions are
- *      held here and released by this contract. Owner should set core/proposal/voting addresses.
+ * @dev Designed to be set as the `protocol` address in `RaiseBoxCore` so contributions are
+ * @dev held here and released by this contract. Owner should set core/proposal/voting addresses.
  */
+
 contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     IRaiseBoxCore public raiseBoxCore;
     IRaiseBoxVoting public raiseBoxVoting;
@@ -32,31 +33,19 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
         emit VotingSet(votingContract);
     }
 
-    // get needed raiseBox contracts from the core using the getters instead of doing it from constructor:
-    // address public raiseBoxVoting = raiseBoxCore.getVotingContract();
-    // address public raiseBoxProposal = raiseBoxCore.getProposalContract();
-
     // track if a proposal has already had its drip executed
     mapping(bytes32 => mapping(uint256 => bool)) public drippedForProposal;
 
     // total amount dripped for a project
     mapping(bytes32 => uint256) public totalDrippedForProject;
 
-    // maximum allowed 25% drips per project lifecycle
-    uint8 public constant ALLOWED_MAX_DRIP = 2;
-
-    function dripFundsForProposal(bytes32 raiseId, uint256 proposalId) external 
-    /**
-     * nonReentrant
-     */
+    function dripFundsForProposal(bytes32 raiseId, uint256 proposalId) external nonReentrant
     {
         if (address(raiseBoxProposal) == address(0)) revert DripHandler_NotProposalContract();
 
         if (msg.sender != address(raiseBoxVoting)) revert DripHandler_NotVotingContract(msg.sender);
 
-        // raiseBoxCore.doesRaiseExist(raiseId);
-
-        /// @notice checks if proposal requesting drip is valid and from a valid raise
+        /// @notice checks if proposal requesting drip is valid with a valid raiseId
         raiseBoxProposal.isValidProposal(raiseId, proposalId);
 
         /// raise state should be in VOTING
