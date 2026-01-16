@@ -6,13 +6,21 @@ pragma solidity ^0.8.19;
 /// @dev max number of failed proposls is exceeded
 import {RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
 import {RaiseBoxEventsLib} from "src/RaiseBoxLib/RaiseBoxEventsLib.sol";
+import {IRaiseBoxCore} from "src/interfaces/IRaiseBoxCore.sol";
+import {IRaiseBoxDripHandler} from "src/interfaces/IRaiseBoxDripHandler.sol";
 
 
 contract RaiseBoxRefunds {
-    // mapping to track if a raise has been refunded
-    mapping(bytes32 => bool) public refundedRaises;
+    IRaiseBoxCore public immutable raiseBoxCore;
+    IRaiseBoxDripHandler public immutable raiseBoxDripHandler;
 
-    // event to log refunds
+    constructor(address raiseBoxCoreAddress, address raiseBoxDripHandlerAddress) {
+        raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
+        raiseBoxDripHandler = IRaiseBoxDripHandler(raiseBoxDripHandlerAddress);
+    }
+
+    // mapping to track if a raise has been refunded
+    mapping(bytes32 => mapping(address =>bool)) public refundedContributions;
    
 
     /// @dev function to process refunds for a failed raise
@@ -20,7 +28,7 @@ contract RaiseBoxRefunds {
     /// @dev and handle the actual transfer of funds back to contributors
     function refundContribution(bytes32 raiseId) external {
         // check if the raise has already been refunded
-        if (refundedRaises[raiseId]) {
+        if (refundedContributions[raiseId][msg.sender]) {
             revert("Raise has already been refunded");
         }
 
@@ -31,7 +39,7 @@ contract RaiseBoxRefunds {
         // ...
 
         // mark the raise as refunded
-        refundedRaises[raiseId] = true;
+        refundedContributions[raiseId][msg.sender] = true;
 
         // emit event
         emit RaiseBoxEventsLib.rb_refundContribution_ContributionRefunded(raiseId, totalRefundAmount);
