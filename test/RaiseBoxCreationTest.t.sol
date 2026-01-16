@@ -11,6 +11,47 @@ import {RaiseBoxEventsLib} from "src/RaiseBoxLib/RaiseBoxEventsLib.sol";
 
 contract RaiseBoxCreationTest is Test, TestsHelpers {
 
+    function testEndRaiseWorksAsExpected() public {
+        // create a raise
+        vm.startPrank(arbitrum);
+        bytes32 raiseId = raiseBoxRaiseCreationContract.createNewRaise(
+            IRaiseBoxCore.ProjectInfo({
+                projectName: "raisebox",
+                valueProposition: "fully decentralized milestone based crowdfunding for projects you care about",
+                raiseTarget: 20 ether,
+                projectDuration: 52 weeks
+            })
+        ); 
+        vm.stopPrank();
+
+        // get raise state at this instance
+       raiseBoxCore.getRaiseState(raiseId);
+
+        // get raise duration
+       uint256 deadline = raiseBoxCore.getRaiseDeadline(raiseId);
+
+       // warp time to after the deadline
+       advanceBlockTime(deadline + 1 seconds);
+
+       // get raise state at this instance
+       raiseBoxCore.getRaiseState(raiseId);
+
+       // try to contribute
+        vm.prank(uche);
+        // vm.expectRevert();
+        raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseId);
+
+        // try to contribute and raise has failed as a result of above
+        // should revert since raise is already marked as failed by the operation above
+        vm.prank(uche);
+        vm.expectRevert();
+        raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseId);
+
+        // get raise state at this instance
+       raiseBoxCore.getRaiseState(raiseId);
+       
+    }
+
     function testContributionRulesAreRespected() public {
 
         // create a raise
