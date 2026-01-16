@@ -79,8 +79,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_contribute_RaiseNotInContributionState();
         }
 
-        address raiseOwner = raiseInfo.raiseCreationInfo.raiseOwner;
-        if (msg.sender == raiseOwner) revert RaiseBoxErrorsLib.RaiseBoxContribution_SelfContributionForbidden();
+        if (msg.sender == raiseInfo.raiseCreationInfo.raiseOwner) revert RaiseBoxErrorsLib.RaiseBoxContribution_SelfContributionForbidden();
 
         uint256 raiseTarget = raiseInfo.raiseCreationInfo.projectInfo.raiseTarget;
 
@@ -156,7 +155,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
                 totalContributionsToProject[raiseId],
                 raiseInfo.raiseCreationInfo.doesRaiseExist,
                 raiseId,
-                raiseOwner,
+                raiseInfo.raiseCreationInfo.raiseOwner,
                 0,
                 0,
                 0
