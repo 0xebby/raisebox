@@ -50,7 +50,7 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
 
         /// raise state should be in VOTING
 
-        if (drippedForProposal[raiseId][proposalId]) revert RaiseBoxErrorsLib.RaiseBoxDripHandler_dripFunds_DripAlreadyExecutedForProposal(raiseId, proposalId);
+        if (drippedForProposal[raiseId][proposalId]) revert RaiseBoxErrorsLib.RaiseBoxDripHandler_dripFunds_DripAlreadyExecuted(raiseId, proposalId);
 
         // determine percentage to drip using proposal count and last drip data
         uint256 propCount = raiseBoxProposal.getProposalCount(raiseId);
