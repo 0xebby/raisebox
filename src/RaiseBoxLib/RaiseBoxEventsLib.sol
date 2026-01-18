@@ -213,7 +213,21 @@ library RaiseBoxEventsLib {
 
     event RaiseBoxProposal_verifyDripPercent_lastDripPercent(uint256 dripPercent);
 
-     event rb_refundContribution_ContributionRefunded(bytes32 indexed raiseId, uint256 totalRefunded);
+    event rb_refundContribution_ContributionRefunded(bytes32 indexed raiseId, uint256 totalRefunded);
+
+    /// @notice emitted when refunds are successfully sent to raise contributors
+    /// @dev only happens for a failed raise
+    event RaiseBoxRefunds_refundContribution_Refunded(
+        uint256 indexed refundedAt,
+        address refundedTo,
+        uint256 indexed amountRefunded,
+        bytes32 indexed raiseId
+    );
+
+    /// @notice emitted when contribution contract address is set in drip handler
+    event ContributionContractSetByDripHandler(
+        address indexed contractAddress
+        );
 
    
 }

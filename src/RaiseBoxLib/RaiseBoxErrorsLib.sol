@@ -6,6 +6,8 @@ pragma solidity ^0.8.19;
 /// @custom:contact tech.codemojo@gmail.com
 /// @notice Library exposing custom errors.
 
+import {IRaiseBoxCore} from "src/interfaces/IRaiseBoxCore.sol";
+
 library RaiseBoxErrorsLib {
 
     /// @notice thrown when zero address is passed or used as caller
@@ -232,5 +234,26 @@ library RaiseBoxErrorsLib {
     error RaiseBoxProposal_hostProposal_FirstDripGreaterThan10(uint256);
 
     error RaiseBoxProposal_hostProposal_CannotDrip25Con(uint8);
+
+    /// @notice thrown when a non-contributor calls refundContribution
+    error RaiseBoxRefunds_refundContribution_NotAContributor(bytes32 raiseId, address caller);
+
+    /// @notice thrown when refund fails
+    error RaiseBoxRefunds_refundContribution_RefundFailed(bytes32 raiseId, address refundedTo);
+
+    /// @notice thrown when a non-contributor calls functions that are only for contributors
+    error RaiseBoxContribution_NotAContributor(address user);
+
+    /// @notice thrown when dripFunds is called but raise is not in DRIPPING state
+    error RaiseBoxDripHandler_dripFunds_NotInDrippingState(bytes32 raiseId, IRaiseBoxCore.RaiseState currentState);
+
+    /// @notice thrown when refund is called but raise is not in FAILED state
+    error RaiseBoxDripHandler_refund_NotFailedRaise(bytes32 raiseId, IRaiseBoxCore.RaiseState currentState);
+
+    /// @notice thrown when unauthorized caller tries to call addRaiseId
+    error RaiseBoxCore_addRaiseId_UnauthorizedCaller(address caller);
+
+    /// @notice thrown when trying to fail a raise that has already ended
+    error RaiseBoxCore_RaiseAlreadyEnded(bytes32 raiseId_);
 
 }
