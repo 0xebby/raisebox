@@ -129,6 +129,10 @@ interface IRaiseBoxCore {
 
     function endRaise(bytes32 raiseId_) external;
 
+    function addRaiseId(bytes32 id_) external;
+
+    function getRaiseIds() external view returns (bytes32[] memory);
+
 
     // tasks:
     // ensure drip percent passed by raise creator during hosting of proposal is used in the internal _determineDripPercent function in RaiseBoxDripHandler contract
