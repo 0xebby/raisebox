@@ -233,4 +233,10 @@ library RaiseBoxErrorsLib {
 
     error RaiseBoxProposal_hostProposal_CannotDrip25Con(uint8);
 
+    /// @notice thrown when trying to end a raise that has already been ended
+    error RaiseBoxCore_RaiseAlreadyEnded(bytes32 raiseId);
+
+    /// @notice thrown when unauthorized caller tries to add raiseId to storage
+    error RaiseBoxCore_addRaiseId_UnauthorizedCaller(address caller);
+
 }
