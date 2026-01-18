@@ -56,7 +56,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
     // percent of the amount raised by the project that goes to protocol
     uint256 private constant PROTOCOL_FEE = 15; // 1.5%
 
-    uint256 public constant RAISE_DURATION = 2 minutes; // 1month and 1 week // 2 minutes for chainlink automation testing
+    uint256 public constant RAISE_DURATION = 20 minutes; // 1month and 1 week // 2 minutes for chainlink automation testing
 
     uint public constant MAX_CON_FAILED_PROPOSALS = 3;
 
