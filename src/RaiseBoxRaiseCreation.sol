@@ -61,11 +61,14 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
             bytes(projectInfo.valueProposition).length > type(uint256).max
             ) {revert("invalid valueProposition length");}
 
-        if (
-            projectInfo.projectDuration > PROJECT_LIFESPAN || 
+        if (projectInfo.projectDuration > PROJECT_LIFESPAN) {
+            revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_GreaterThanAllowedDuration();
+        }
+
+        if ( 
             projectInfo.projectDuration < MIN_PROJECT_DURATION 
             ) {
-            revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_InvalidProjectDuration();
+            revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_LessThanAllowedDuration();
 
         }
 

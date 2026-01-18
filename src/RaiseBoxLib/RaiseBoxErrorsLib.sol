@@ -10,6 +10,12 @@ import {IRaiseBoxCore} from "src/interfaces/IRaiseBoxCore.sol";
 
 library RaiseBoxErrorsLib {
 
+    /// @notice thrown if project duration passed during raise creation is more than allowed
+    error RaiseBoxCreation_createRaise_GreaterThanAllowedDuration();
+
+    /// @notice thrown if project duration passed during raise creation is less than allowed
+    error RaiseBoxCreation_createRaise_LessThanAllowedDuration();
+
     /// @notice thrown when zero address is passed or used as caller
     error RaiseBox_ZeroAddressNotAllowed();
 
