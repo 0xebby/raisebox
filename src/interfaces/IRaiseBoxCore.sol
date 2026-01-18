@@ -80,6 +80,10 @@ interface IRaiseBoxCore {
 
     // function incrementConFailedProposals(bytes32 raiseId) external;
 
+    function addRaiseId(bytes32 id_) external ;
+
+    function getRaiseIds() external view returns (bytes32[] memory);
+
 
     function isVerifiedAndWhiteListed(address founder) external view returns(bool verified);
 
@@ -121,7 +125,7 @@ interface IRaiseBoxCore {
         uint256 _amountRaisedByProject,
         bool _requireRaiseExist,
         bytes32 _raiseId,
-        address _raiseOwner,
+        address _raiseCreator,
         uint256 _forVotes,
         uint256 _againstVotes,
         uint256 _proposalId

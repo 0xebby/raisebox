@@ -22,5 +22,8 @@ interface IRaiseBoxDripHandler {
 
     function drip(bytes32 raiseId, uint256 proposalId) external;
     function dripFundsForProposal(bytes32 raiseId, uint256 proposalId) external;
-    // function getDripPercent(bytes32 raiseId, uint256 propCount, uint8 dripPercent) external returns (uint8);
+    function hasDripped(bytes32 raiseId, uint256 proposalId) external view returns (bool);
+    function drippedForRaise(bytes32 raiseId_) external view returns (bool);
+
+    function refund(bytes32 raiseId_) external;
 }

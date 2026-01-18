@@ -91,4 +91,9 @@ interface IRaiseBoxVoting {
             bytes32 raiseId,
             uint256 proposalId
         ) external view returns (uint256);
+
+    function getAmountContributedToRaise(
+        bytes32 raiseId_, 
+        address contributor_
+        ) external view returns (uint256);
 }
