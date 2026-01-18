@@ -47,7 +47,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     function contribute(uint256 amount, bytes32 raiseId) external payable nonReentrant {
         // raiseId should be filled automatically via UI for project clicked by user
 
-        // sanitize `amount` input before getting raiseInfo 
+        // sanitize `amount` input before getting raiseInfo - early revert:
         if (amount == 0) {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_ZeroAmount();
         }
@@ -61,7 +61,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_ContributeMoreEth(minContribution);
         }
 
-        /// @notice ascertain that raise exist busing the raiseId further down
+        /// @notice ascertain that raise exist using the raiseId further down
         /// @dev getRaiseInfo has a doesRaiseExist check embedded in it call stack that reverts early if an invalid raiseId is passed
         IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
 
@@ -226,8 +226,14 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     }
 
     function getUserRaiseContributions(bytes32 raiseId_, address user) external view returns(uint256) {
+        require(user != address(0), "zero address");
+
         raiseBoxCore.doesRaiseExist(raiseId_);
-        require(user != address(0), "zero address cannot contribute");
+        
+        if (!_hasUserContributed(raiseId_, user)) {
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_NotAContributor(user);
+        }
+
         return amountContributedToRaise[user][raiseId_];
         
     }
@@ -241,9 +247,13 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
             return totalContributionsToProject[raiseId];
     }
 
-    function hasUserContributed(bytes32 raiseId, address user) external view returns (bool) {
-        raiseBoxCore.doesRaiseExist(raiseId);
-        return hasContributed[raiseId][user];
+    function _hasUserContributed(bytes32 raiseId_, address contributor_) internal view returns (bool) {
+        raiseBoxCore.doesRaiseExist(raiseId_);
+        return hasContributed[raiseId_][contributor_];
+    }
+
+    function hasUserContributed(bytes32 raiseId_, address contributor_) external view returns (bool) {
+        return _hasUserContributed(raiseId_, contributor_);
     }
 
 }
