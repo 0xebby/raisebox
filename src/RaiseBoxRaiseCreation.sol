@@ -102,8 +102,9 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
         i_lastRaiseCreated[msg.sender] = timeCreated;
         hasCreatedRaise[msg.sender] = true;
         raisesCreatedOnRaiseBox++; 
-        raiseHashes.push(projectInfoHash);       
-        
+        raiseHashes.push(projectInfoHash);  
+
+        raiseBoxCore.addRaiseId(raiseId);
 
         emit RaiseBoxEventsLib.RaiseCreation_RaiseCreated(
             projectInfo.projectName,
