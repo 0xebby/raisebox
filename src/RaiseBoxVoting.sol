@@ -451,4 +451,14 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         } else { return false; }
 
     }
+
+    function getAmountContributedToRaise(
+        bytes32 raiseId_, 
+        address contributor_
+        ) external view returns (uint256) {
+            
+        raiseBoxCore.doesRaiseExist(raiseId_);
+
+        return raiseBoxContribution.getUserRaiseContributions(raiseId_, contributor_);
+    }
 }
