@@ -122,7 +122,7 @@ contract TestsHelpers is Test {
         raiseBoxCore.setProposalContract(address(raiseBoxProposalContract));
 
         raiseBoxDripHandler =
-            new RaiseBoxDripHandler(address(raiseBoxCore), address(raiseBoxProposalContract), address(0));
+            new RaiseBoxDripHandler(address(raiseBoxCore), address(raiseBoxProposalContract), address(0), address(0));
 
         raiseBoxCore.setDripHandlerContract(address(raiseBoxDripHandler));
 
@@ -142,6 +142,8 @@ contract TestsHelpers is Test {
         raiseBoxProposalContract.setVotingContract(address(raiseBoxVoting));
 
         raiseBoxDripHandler.setVoting(address(raiseBoxVoting));
+
+        raiseBoxDripHandler.setContribution(address(raiseBoxContributionContract));
 
         vm.stopPrank();
 
@@ -249,6 +251,7 @@ contract TestsHelpers is Test {
     );
 
  }
+ 
 
     /**
      * @dev Helper function to simulate time passing since testing environment doesn't work as expected

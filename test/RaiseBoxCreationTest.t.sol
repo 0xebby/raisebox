@@ -49,7 +49,40 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
 
         // get raise state at this instance
        raiseBoxCore.getRaiseState(raiseId);
-       
+    }
+
+    function testRefundWithSmallRaise() public {
+     // contribute to small raise
+    vm.startPrank(vitalik);
+    raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseIdSmall);
+    vm.stopPrank();
+
+    vm.startPrank(arbitrum);
+    raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseIdSmall);
+    vm.stopPrank();
+
+    // get drip handler initial balance:
+    uint256 initialDripHandlerBalance = address(raiseBoxDripHandler).balance;
+    console.log(initialDripHandlerBalance);
+
+
+
+
+    // refund:
+    vm.prank(vitalik);
+    raiseBoxDripHandler.refund(raiseIdSmall);
+
+    // refund:
+    vm.prank(vitalik);
+    raiseBoxDripHandler.refund(raiseIdSmall);
+
+    // get drip handler final balance after refunds:
+    uint256 finalDripHandlerBalance = address(raiseBoxDripHandler).balance;
+    console.log(finalDripHandlerBalance);
+
+    // vitalik's balance after refund
+    console.log(vitalik.balance);
+    
     }
 
     function testContributionRulesAreRespected() public {
@@ -116,6 +149,49 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         // // raiseBoxCore.getRaiseState(raiseId);
     }
 
+    function testAutomationEndsExpiredRaises() public {
+        // 3 raises already created in test helper setup:
+
+        // warp time to raise expiration for each of the three raises
+        advanceBlockTime(raiseBoxCore.RAISE_DURATION() + 2 minutes);
+
+        // simulate chainlink checkupkeep
+        (bool upkeepNeeded, bytes memory performData) = raiseBoxCore.checkUpkeep("");
+
+        assertTrue(upkeepNeeded, "Upkeep should be needed");
+
+        // simulate chainlink perform upkeep:
+        raiseBoxCore.performUpkeep(performData);
+
+        // assert that all three raises have ended as a result of the upkeep performed
+        // get ids array: 
+        bytes32[] memory ids = raiseBoxCore.getRaiseIds();
+        for (uint j = 0; j < ids.length; j++) {
+            IRaiseBoxCore.RaiseState state = raiseBoxCore.getRaiseState(ids[j]);
+
+            assertEq(uint256(state), uint256(IRaiseBoxCore.RaiseState.FAILED), "raise not ended successfully by upkeep");
+        }
+
+        // try contributing:
+        vm.startPrank(arbitrum);
+        vm.expectRevert();
+        raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseIdSmall);
+        vm.stopPrank();
+
+        // try hosting a proposal for any of the raises that have been ended by
+        // performUpkeep above
+        vm.startPrank(ebby);
+        uint proposalId = raiseBoxProposalContract.hostProposal(
+        raiseIdSmall, 
+        IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the first proposal for raisebox v3",
+            milestone: "milestone achieved is creation of a steady stable release",
+            dripPercent: 10
+        })
+        );
+
+    }
+
     function testCreate5ConcurrentRaises() public {
    
 
@@ -139,8 +215,6 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         })
     );
     vm.stopPrank();
-
-raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
 
     // arbitrum creates a raise
     vm.startPrank(arbitrum);
@@ -177,6 +251,8 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
         })
     );
     vm.stopPrank();
+
+    raiseBoxCore.getRaiseIds();
 
 
     }
@@ -402,6 +478,8 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
     raiseBoxVoting.triggerVoteTally(raiseId1, proposalId5);
     vm.stopPrank();
 
+    raiseBoxDripHandler.drippedForRaise(raiseId1);
+
     // // sixth proposal
 
     advanceBlockTime(5 weeks);
@@ -419,132 +497,6 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
 
  raiseBoxProposalContract.getLastProposalDripPercent(raiseId1); 
  raiseBoxProposalContract.get25DripsCount(raiseId1);   
-//  vm.startPrank(sally);
-//     raiseBoxVoting.delegateVote(raiseId1, proposalId5, sally, vitalik );
-//     vm.stopPrank();
-
-    // 10, 25, 15, 25, 25
-
-
-    
-
-    // // vm.startPrank(vitalik);
-    // // raiseBoxVoting.delegateVote(raiseId1, proposalId5, vitalik, ebby );
-    // // vm.stopPrank();
-
-    // advanceBlockTime(2 days);
-
-    // vm.startPrank(ebby);
-    // raiseBoxVoting.vote(raiseId1, proposalId5, true);
-    // vm.stopPrank();
-
-    // vm.startPrank(vitalik);
-    // raiseBoxVoting.vote(raiseId1, proposalId5, false);
-    // vm.stopPrank();
-
-    
-
-    // advanceBlockTime(7 days);
-   
-
-    // vm.startPrank(uche);
-    // raiseBoxVoting.triggerVoteTally(raiseId1, proposalId5);
-    // vm.stopPrank();
-
-    //  // // sixth proposal
-
-    // // advanceBlockTime(5 weeks);
-
-    // // vm.prank(uche);
-    // // vm.expectRevert();
-    // // uint proposalId6 = raiseBoxProposalContract.hostProposal(
-    // //     raiseId1, 
-    // //     IRaiseBoxProposal.MilestoneInfo({
-    // //         description: "this is the sixth proposal for raisebox v3",
-    // //         milestone: "v3.5 is live",
-    // //         dripPercent: 25
-    // //     })
-    // //     );
-
-   
-    // raiseBoxCore.getRaiseInfo(raiseId1);
-    // console.log(address(raiseBoxContributionContract).balance);
-    // console.log(address(raiseBoxDripHandler).balance);
-    // raiseBoxContributionContract.getContributors(raiseId1);
-    // raiseBoxContributionContract.getTotalContributors(raiseId1);
-    // IRaiseBoxCore.RaiseState raiseState = raiseBoxCore.getRaiseState(raiseId1);
-    
-    // raiseBoxCore.getRaiseState(raiseId2);
-
-
-    
-    // another raise by different project
-
-//     vm.startPrank(ebby);
-//    bytes32 raiseId2 = raiseBoxRaiseCreationContract.createNewRaise(
-//         IRaiseBoxCore.ProjectInfo({
-//             projectName:"shade l2",
-//             valueProposition:"private layer 2 blockchain",
-//             raiseTarget:20 ether,
-//             projectDuration:52 weeks
-//         })
-//     );
-//     vm.stopPrank();
-
-//     vm.startPrank(gowagr);
-//         raiseBoxContributionContract.contribute{value: 1 ether}(1 ether, raiseId2);
-//     vm.stopPrank();
-
-//     // advanceBlockTime(30 weeks);
-
-
-//     address[19] memory contributorsToRaise2 = [
-//             uche, sally, carl, 
-//             max, mark, alice, 
-//             joe, testOwner, sam, 
-//             vitalik, arbitrum, ethereum, 
-//             polymarket, elon, trump, 
-//             tether, base, magiceden, 
-//             openseas
-//             ];
-
-//         for (uint256 i = 0; i < contributorsToRaise2.length; i++) {
-//             vm.startPrank(contributorsToRaise2[i]);
-//             raiseBoxContributionContract.contribute{value: 1 ether}(1 ether, raiseId2);
-//             vm.stopPrank();
-//         }
-
-//     vm.prank(ebby);
-//     uint proposalIdForRaiseId2 = raiseBoxProposalContract.hostProposal(
-//         raiseId2, 
-//         IRaiseBoxProposal.MilestoneInfo({
-//             description: "stealth addresses achieved in shade l2",
-//             milestone: "wallets can perform transactions in stealth mode and then broadcast to the blockcahin when done.",
-//             dripPercent: 20
-//         })
-//         );
-
-//     advanceBlockTime(2 days);
-
-//     vm.startPrank(openseas);
-//     raiseBoxVoting.vote(raiseId2, proposalIdForRaiseId2, true);
-//     vm.stopPrank();
-
-
-
-    
-//     // voting continues in parallelfor first raise
-//     vm.startPrank(base);
-//     raiseBoxVoting.vote(raiseId1, proposalId, true);
-//     vm.stopPrank();
-
-//     raiseBoxProposalContract.getProposalState(raiseId1, proposalId);
-
-
-
-
-
-    
 
 
    }
