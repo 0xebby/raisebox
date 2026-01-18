@@ -18,6 +18,7 @@ import {IRaiseBoxVoting} from "../src/interfaces/IRaiseBoxVoting.sol";
 import {IRaiseBoxDripHandler} from "src/interfaces/IRaiseBoxDripHandler.sol";
 import {IRaiseBoxCreation} from "src/interfaces/IRaiseBoxCreation.sol";
 import "../lib/forge-std/src/Test.sol";
+import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
 
 
 /**
@@ -27,7 +28,7 @@ import "../lib/forge-std/src/Test.sol";
  * @notice it holds the major storage that all other contracts read and update (authorized updates***)
  * @dev use it's associated interface to get exposed external functions and structs
  */
-contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
+contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInterface {
 
     // type declaration
     using SafeERC20 for IERC20;
@@ -47,15 +48,24 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
     address public raiseBoxRaiseCreation; 
 
+    /// CONSTANTS: ///
+
     // MINIMUM_CONTRIBUTION = 0.1 ether; // 1e17 // or dollar eq
     uint256 public constant MINIMUM_CONTRIBUTION = 0.1 ether;
 
     // percent of the amount raised by the project that goes to protocol
     uint256 private constant PROTOCOL_FEE = 15; // 1.5%
 
-    uint256 public constant RAISE_DURATION = 5 weeks; // 1month and 1 week
+    uint256 public constant RAISE_DURATION = 2 minutes; // 1month and 1 week // 2 minutes for chainlink automation testing
+
     uint public constant MAX_CON_FAILED_PROPOSALS = 3;
+
     uint public constant MAX_FAILED_PROPOSALS = 5;
+
+    // new constants:
+    uint256 constant CONTRIBUTION_PERIOD = 4 weeks;
+
+
 
     // roles
     bytes32 public constant RAISE_CREATION_CONTRACT = keccak256("RAISEBOX_RAISE_CREATION");
@@ -84,11 +94,15 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
 
     mapping(bytes32 => bool) raiseExists;
+
     mapping(bytes32 => RaiseState) raiseState;
+
     mapping(bytes32 => uint256) amountRaisedByProject;
 
+    bytes32[] public raiseIds;
+
     // constructor:
-    constructor() Ownable(msg.sender) ERC20("token", "tokenname") {
+    constructor() Ownable(msg.sender) ERC20("rbt", "raiseboxtoken") {
         raiseBoxOwner = msg.sender; 
 
         iRBTInstance = IERC20(iRBT);
@@ -128,8 +142,8 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
         raiseBoxRaiseCreation = contractAddressToSet;
 
-        // grantRole(RAISE_CREATION_CONTRACT, contractAddressToSet);
-        authorizedCallers[RAISE_CREATION_CONTRACT][contractAddressToSet] = true; // SHOULD EMIT A ROLE GRANTED EVENT -- FORTHCOMING/ EBBY
+        authorizedCallers[RAISE_CREATION_CONTRACT][contractAddressToSet] = true; 
+        // SHOULD EMIT A ROLE GRANTED EVENT -- FORTHCOMING/ EBBY
 
         emit RaiseBoxEventsLib.RaiseBoxCore_RaiseCreationContractSet(contractAddressToSet);
     }
@@ -149,7 +163,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
         raiseBoxContribution = contractAddressToSet;
 
-        // grantRole(CONTRIBUTION_CONTRACT, contractAddressToSet);
         authorizedCallers[CONTRIBUTION_CONTRACT][contractAddressToSet] = true;
 
         emit RaiseBoxEventsLib.ContributionContractSet(contractAddressToSet);
@@ -170,7 +183,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
         raiseBoxProposal = contractAddressToSet;
 
-        // grantRole(PROPOSAL_CONTRACT, contractAddressToSet);
         authorizedCallers[PROPOSAL_CONTRACT][contractAddressToSet] = true;
 
         emit RaiseBoxEventsLib.ProposalContractSet(contractAddressToSet);
@@ -192,7 +204,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
         raiseBoxDripHandler = contractAddressToSet;
 
-        // grantRole(PROPOSAL_CONTRACT, contractAddressToSet);
         authorizedCallers[DRIP_HANDLER][contractAddressToSet] = true;
 
         emit RaiseBoxEventsLib.DripperContractSet(contractAddressToSet);
@@ -214,17 +225,10 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
 
         raiseBoxVoting = contractAddressToSet;
 
-        // grantRole(VOTING_CONTRACT, contractAddressToSet);
         authorizedCallers[VOTING_CONTRACT][contractAddressToSet] = true;
 
         emit RaiseBoxEventsLib.VotingContractSet(contractAddressToSet);
     }
-
-    // function updateRaiseInfoWithCreationHash(bytes32 creationHash) {
-
-    // }
-
-
 
 
      function updateRaiseInfo(
@@ -257,19 +261,20 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
             ) {
             _updateContributions(raiseId_, amountRaisedByProject_);
             
-        } else if (
+            } else if (
             authorizedCallers[PROPOSAL_CONTRACT][msg.sender] && proposalId_ >= 0
             ) {
             _updateRaiseProposalInfo(raiseId_);
            
-        } else if (
+            } else if (
             authorizedCallers[VOTING_CONTRACT][msg.sender] && yesVotes_ >= 0 && noVotes_ >= 0
             ) {
             _updateVotingInfo(raiseId_, yesVotes_, noVotes_, proposalId_);
-        } 
+             } 
         
-        else {  revert RaiseBoxErrorsLib.RaiseBoxCore_updateRaiseInfo_UnAuthorizedCaller(); // call is not from any raiseBox related contract}
-    }
+        else {  revert RaiseBoxErrorsLib.RaiseBoxCore_updateRaiseInfo_UnAuthorizedCaller(); 
+        // call is not from any raiseBox related contract}
+        }
 
     }
 
@@ -290,6 +295,20 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
         } else {
             revert RaiseBoxErrorsLib.RaiseBoxCore_UnauthorizedRaiseEnder(msg.sender);
         }
+
+        emit RaiseBoxEventsLib.RaiseBoxCore_endRaise_RaiseEnded(raiseId_, block.timestamp);
+    }
+
+    function _endRaise(bytes32 raiseId_) internal {
+        RaiseInfo storage _raiseInfo;
+
+        _raiseInfo = raiseInfo[raiseId_];
+
+        if ( _raiseInfo.raiseState == IRaiseBoxCore.RaiseState.FAILED) {
+            revert RaiseBoxErrorsLib.RaiseBoxCore_RaiseAlreadyEnded(raiseId_);
+        }
+
+        _raiseInfo.raiseState = IRaiseBoxCore.RaiseState.FAILED;
 
         emit RaiseBoxEventsLib.RaiseBoxCore_endRaise_RaiseEnded(raiseId_, block.timestamp);
     }
@@ -331,8 +350,11 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
             // happy branch for when voting passes
             if (forVotes_ > againstVotes_) {
 
-                // do something
+                // set raise state to DRIPPING:
+                raiseInfo_.raiseState = _updateRaiseState(RaiseState.DRIPPING, raiseId);
+
                 raiseInfo_.proposalInfo.lastProposalFailed = false;
+                // return;
                 
             } else {
 
@@ -452,15 +474,9 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     }
 
     /**
-     * @dev Returns true if `account` is a contract.
-     * NOTE: It is unsafe to assume that an address for which this function returns
-     * false is an externally-owned account (EOA) and not a contract. Among other
-     * things, `_isContract` will return false for the following types of addresses:
-     *  - an externally-owned account
-     *  - a contract in construction
-     *  - an address where a contract will be created
-     *  - an address where a contract lived, but was destroyed
-     */
+    @dev Returns true if `account` is a contract. 
+    */
+
     function _isContract(address account) internal view returns (bool) {
         return account.code.length > 0;
     }
@@ -567,8 +583,161 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     }
 
     function getProposalsHosted(bytes32 raiseId_) external view returns(uint256) {
-            _requireRaiseExist(raiseId_);
-            return raiseInfo[raiseId_].proposalInfo.proposalsHostedByProject;
+        _requireRaiseExist(raiseId_);
+        return raiseInfo[raiseId_].proposalInfo.proposalsHostedByProject;
     }
+
+    function addRaiseId(bytes32 id_) external {
+        if (!authorizedCallers[RAISE_CREATION_CONTRACT][msg.sender]) {
+            revert RaiseBoxErrorsLib.RaiseBoxCore_addRaiseId_UnauthorizedCaller(msg.sender);
+        }
+         raiseIds.push(id_);
+    }
+
+    function _getRaiseIds() internal view returns (bytes32[] memory) {
+        return raiseIds;
+    }
+
+    function getRaiseIds() external view returns (bytes32[] memory) {
+        return _getRaiseIds();
+    }
+
+
+
+    function checkUpkeep(bytes calldata checkData) external view override returns (bool upkeepNeeded, bytes memory performData) {
+        // upkeep
+        // bytes32[] memory ids = _getRaiseIds();
+        bytes32[] memory tempIds = new bytes32[](raiseIds.length);
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < raiseIds.length; i++) {
+            bytes32 raiseId = raiseIds[i];
+
+            RaiseInfo storage raiseInfo_ = raiseInfo[raiseId];
+
+            uint256 deadline = raiseInfo_.raiseCreationInfo.raiseCreatedAt + RAISE_DURATION;
+
+            // only include raises that are active and past deadline
+
+            // get amount raised:
+           uint256 raisedAmount = raiseInfo_.raiseContributionInfo.amountRaisedByProject;
+
+           // get raise target:
+           uint256 raiseTarget = raiseInfo_.raiseCreationInfo.projectInfo.raiseTarget;
+
+            if (
+                block.timestamp > deadline && 
+                raiseInfo_.raiseState != RaiseState.FAILED &&
+                raisedAmount < raiseTarget
+                ) {
+                tempIds[count] = raiseId;
+                count++;
+            }
+
+        }
+
+        if (count > 0) {
+            // means there are raises that have passed deadline and need upkeep
+            upkeepNeeded = true;
+
+            // prepare performData with the relevant raiseIds
+            bytes32[] memory raisesToPerformUpkeepOn = new bytes32[](count);
+            for (uint256 j = 0; j < count; j++) {
+                raisesToPerformUpkeepOn[j] = tempIds[j];
+            }
+            performData = abi.encode(raisesToPerformUpkeepOn);
+        } else {
+            upkeepNeeded = false;
+            performData = "";
+        }
+        
+       
+    }
+
+    function performUpkeep(bytes calldata performData) external override {
+        // performupkeep, end raises that have passed deadline
+       if (performData.length == 0) return; // no data to process and perform upkeep on
+
+       bytes32[] memory idsToEnd = abi.decode(performData, (bytes32[]));
+
+       for (uint256 i = 0; i < idsToEnd.length; i++) {
+            _endRaise(idsToEnd[i]);
+       }
+
+    }
+
+
+
+
+
+    // function syncRaiseState(bytes32 raiseId_) external {
+
+    //     _requireRaiseExist(raiseId_);
+
+    //     RaiseInfo storage _raiseInfo = raiseInfo[raiseId_];
+
+    //     if (_raiseInfo.raiseState == RaiseState.INACTIVE) {
+    //         _inactiveToActive(_raiseInfo);
+    //     }
+
+    //     if (_raiseInfo.raiseState == RaiseState.ACTIVE) {
+    //         _activeToContribution(_raiseInfo);
+    //     }
+
+    //     if (_raiseInfo.raiseState == RaiseState.CONTRIBUTION) {
+    //         _contributionToProposal(_raiseInfo);
+    //     }
+
+    //     if (_raiseInfo.raiseState == RaiseState.PROPOSAL) {
+    //         _proposalToDelegating(_raiseInfo);
+    //     }
+
+    //     if (_raiseInfo.raiseState == RaiseState.DELEGATING) {
+    //         delegatingToVoting(_raiseInfo);
+    //     }
+
+    //     if (_raiseInfo.raiseState == RaiseState.VOTING) {
+    //         _votingToDripping(_raiseInfo);
+    //     }
+
+    //     if (_raiseInfo.raiseState == RaiseState.DRIPPING) {
+    //         _drippingToProposal(_raiseInfo);
+    //     }
+
+    //     if (_raiseInfo.raiseState == RaiseState.FAILED) {
+    //         _failedToRefunding(_raiseInfo);
+    //     }
+
+    //     if (_raiseInfo.raiseState == RaiseState.REFUNDING) {
+    //         _refundingTo(_raiseInfo);
+    //     }
+    // }
+
+    // function _activeToContribution(RaiseInfo storage raiseInfo_) internal {
+    //     if (block.timestamp >= RAISE_DURATION + raiseInfo[raiseId_].raiseCreationInfo.raiseCreatedAt) {
+    //         raiseInfo_.raiseState = RaiseState.CONTRIBUTION;
+    //     }
+    // }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
