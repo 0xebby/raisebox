@@ -53,7 +53,7 @@ library RaiseBoxErrorsLib {
     /// @notice thrown when a non-raise creator tries to host a proposal for the raise
     error RaiseBoxProposal_hostProposal_NotRaiseOwner();
 
-    /// @notice thrown when an unauthorized caller tries to update proposalInfo
+    /// @notice thrown when an unauthorized caller tries to update raiseProposalInfo
     error RaiseBoxProposal_updateProposalInfo_Unauthorized();
 
     /// @notice thrown when voting is attempted for a raise not in PROPOSAL state
@@ -261,5 +261,11 @@ library RaiseBoxErrorsLib {
 
     /// @notice thrown when trying to fail a raise that has already ended
     error RaiseBoxCore_RaiseAlreadyEnded(bytes32 raiseId_);
+
+    /// @notice thrown when trying to interact with a raise that has already failed
+    error RaiseBoxCore_RaiseAlreadyFailed(bytes32 raiseId_);
+
+    /// @notice thrown when trying to update raise state before delegation and research delay elapses
+    error RaiseBoxCore_DelegationDelayActive();
 
 }

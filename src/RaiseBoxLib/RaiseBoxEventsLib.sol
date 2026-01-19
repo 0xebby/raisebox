@@ -154,7 +154,10 @@ library RaiseBoxEventsLib {
         address contractAddress
         );
     
-    event RaiseVotingInfoUpdated();
+    event RaiseVotingInfoUpdated(
+        IRaiseBoxCore.RaiseState oldRaiseState,
+        IRaiseBoxCore.RaiseState newRaiseState
+    );
 
     // contribution related events:
     event Contributed(
@@ -170,7 +173,7 @@ library RaiseBoxEventsLib {
 
     event ProposalStateUpdated(IRaiseBoxProposal.ProposalState newState); // tempp
 
-    // emitted when proposalInfo is update
+    // emitted when raiseProposalInfo is update
     event RaiseBoxProposal_updateProposalInfo_ProposalInfoUpdated();
 
     event DebugProposalState(
@@ -228,6 +231,12 @@ library RaiseBoxEventsLib {
     event ContributionContractSetByDripHandler(
         address indexed contractAddress
         );
+
+    /// @notice emitted when raise fails:
+    event RaiseBoxCore_failRaise_RaiseFailed(
+        bytes32 indexed raiseId_,
+        uint256 timeFailed
+    );
 
    
 }
