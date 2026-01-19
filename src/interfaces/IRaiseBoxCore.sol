@@ -16,6 +16,7 @@ interface IRaiseBoxCore {
         uint256 currentConFailed;
         uint256 nonConFailedProposals;
         uint256 lastProposalId;
+        uint256 lastProposalTime;
         bool lastProposalFailed;
     }
 
@@ -34,7 +35,7 @@ interface IRaiseBoxCore {
     struct RaiseInfo {
         RaiseCreationInfo raiseCreationInfo;
         RaiseContributionInfo raiseContributionInfo;
-        RaiseProposalInfo proposalInfo;
+        RaiseProposalInfo raiseProposalInfo;
         uint256 raiseDuration; // this is a constant, consider removing
         RaiseState raiseState;
     }
@@ -73,7 +74,7 @@ interface IRaiseBoxCore {
         FAILED,
 
         // raise state for raises that have ended successfully, 
-        // either: all proposals passed and drips were successful or 60 weeks elapsed
+        // either: all funds are dripped before project duration elapses
         ENDED
     } 
 
@@ -117,6 +118,10 @@ interface IRaiseBoxCore {
     
     function getProposalsHosted(bytes32 raiseId) external view returns(uint256);
 
+    function getDelegationAndResearchDelay() external view returns (uint256);
+
+    function getLastProposalTime(bytes32 raiseId_) external view returns (uint256);
+
     // function getRaiseProposalsInfo(bytes32 raiseId) external returns (RaiseProposalInfo memory);
 
     function updateRaiseInfo(
@@ -132,6 +137,8 @@ interface IRaiseBoxCore {
     ) external;
 
     function endRaise(bytes32 raiseId_) external;
+
+    function syncRaiseState(bytes32 raiseId_) external;
 
 
     // tasks:

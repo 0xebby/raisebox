@@ -24,8 +24,8 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
     using Strings for bytes32;
 
     // [1 year and 6 months] before same project can create another raise on raisebox
-    uint256 public constant PROJECT_LIFESPAN = 25 minutes; // for test // 1 year and 2 months
-    uint256 public constant MIN_PROJECT_DURATION = 2 minutes; // min 6 months
+    uint256 public constant PROJECT_LIFESPAN = 100 minutes; // for test // 1 year and 2 months
+    uint256 public constant MIN_PROJECT_DURATION = 2 minutes; // min 6 months // for test 2 minutes
 
     mapping(address => uint16) public raisesCreated;
     mapping(address projectOwner => uint256 lastRaiseCreated) public i_lastRaiseCreated;
