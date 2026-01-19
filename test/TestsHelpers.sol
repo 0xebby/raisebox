@@ -88,9 +88,9 @@ contract TestsHelpers is Test {
     uint256 RAISE_TARGET_LARGE = 1000 ether;
 
     /// @notice raise duration for small, medium and large:
-    uint256 RAISE_DURATION_SMALL = 30 weeks;
-    uint256 RAISE_DURATION_MEDIUM = 50 weeks;
-    uint256 RAISE_DURATION_LARGE = 60 weeks;
+    uint256 RAISE_DURATION_SMALL = 60 minutes;
+    uint256 RAISE_DURATION_MEDIUM = 65 minutes;
+    uint256 RAISE_DURATION_LARGE = 70 minutes;
 
     // raise ids:
     bytes32 raiseIdSmall;
@@ -233,22 +233,22 @@ contract TestsHelpers is Test {
 
     /// @notice create raises with the targets above:
     /// @notice ebby, vitalik and ben have been whitelisted in setup
-    vm.startPrank(ebby);
-        raiseIdSmall = raiseBoxRaiseCreationContract.createNewRaise(
-        projectInfoSmall
-        );
-    vm.stopPrank();
+    // vm.startPrank(ebby);
+    //     raiseIdSmall = raiseBoxRaiseCreationContract.createNewRaise(
+    //     projectInfoSmall
+    //     );
+    // vm.stopPrank();
 
-    vm.startPrank(vitalik);
-    raiseIdMedium = raiseBoxRaiseCreationContract.createNewRaise(
-        projectInfoMedium
-    );
-    vm.stopPrank();
+    // vm.startPrank(vitalik);
+    // raiseIdMedium = raiseBoxRaiseCreationContract.createNewRaise(
+    //     projectInfoMedium
+    // );
+    // vm.stopPrank();
 
-    vm.startPrank(ben);
-    raiseIdLarge = raiseBoxRaiseCreationContract.createNewRaise(
-        projectInfoLarge
-    );
+    // vm.startPrank(ben);
+    // raiseIdLarge = raiseBoxRaiseCreationContract.createNewRaise(
+    //     projectInfoLarge
+    // );
 
  }
  

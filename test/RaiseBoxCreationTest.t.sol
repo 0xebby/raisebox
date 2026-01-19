@@ -11,6 +11,301 @@ import {RaiseBoxEventsLib} from "src/RaiseBoxLib/RaiseBoxEventsLib.sol";
 
 contract RaiseBoxCreationTest is Test, TestsHelpers {
 
+
+    function testStateTransitionDuringRaiseCreation() public {
+
+        IRaiseBoxCore.ProjectInfo memory projectInfoSmall = IRaiseBoxCore.ProjectInfo({
+        projectName: "small project",
+        valueProposition: "small project value proposition",
+        raiseTarget: RAISE_TARGET_SMALL,
+        projectDuration: RAISE_DURATION_SMALL
+    });
+
+    // create a raise
+    vm.startPrank(sally);
+    bytes32 raiseId = raiseBoxRaiseCreationContract.createNewRaise(projectInfoSmall);
+    vm.stopPrank();
+        
+
+    // get raise state just after creation:
+    IRaiseBoxCore.RaiseState raiseState = raiseBoxCore.getRaiseState(raiseId);
+
+    // assertions:
+    assertEq(uint256(raiseState), uint256(IRaiseBoxCore.RaiseState.ACTIVE), "raise state should be ACTIVE after creation");
+
+
+
+    }
+
+    function testAutomateWithPerformUpkeep() public {
+
+        IRaiseBoxCore.ProjectInfo memory projectInfoSmall = IRaiseBoxCore.ProjectInfo({
+        projectName: "small project",
+        valueProposition: "small project value proposition",
+        raiseTarget: RAISE_TARGET_SMALL,
+        projectDuration: RAISE_DURATION_SMALL
+        });
+
+        // create a raise
+        vm.startPrank(sally);
+        bytes32 raiseId = raiseBoxRaiseCreationContract.createNewRaise(projectInfoSmall);
+        vm.stopPrank();
+
+        // get state: should active:
+        IRaiseBoxCore.RaiseState raiseStateAfterCreation = raiseBoxCore.getRaiseState(raiseId);
+
+         advanceBlockTime(6 minutes);
+         (bool upkeepNeeded, bytes memory performData) = raiseBoxCore.checkUpkeep("");
+
+       
+        raiseBoxCore.performUpkeep(performData);
+
+        raiseBoxCore.getRaiseIds();
+
+        raiseBoxCore.getRaiseState(raiseId);
+
+        address[10] memory contributors = [
+            ebby, 
+            max, mark, alice, 
+            joe, testOwner, sam, 
+            vitalik, arbitrum, ethereum
+            ];
+
+        for (uint256 i = 0; i < contributors.length; i++) {
+            vm.startPrank(contributors[i]);
+            raiseBoxContributionContract.contribute{value: 1 ether}(1 ether, raiseId);
+            vm.stopPrank();
+        }
+
+        (bool upkeepNeeded2, bytes memory performData2) = raiseBoxCore.checkUpkeep("");
+
+         raiseBoxCore.performUpkeep(performData2);
+
+          raiseBoxCore.getRaiseState(raiseId);
+
+        vm.startPrank(sally);
+        uint proposalId = raiseBoxProposalContract.hostProposal(
+        raiseId, 
+        IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the first proposal for raisebox v3",
+            milestone: "milestone achieved is creation of a steady stable release",
+            dripPercent: 10
+            })
+        );
+        vm.stopPrank();
+
+        raiseBoxCore.getRaiseState(raiseId);
+        advanceBlockTime(5 minutes);
+
+        raiseBoxCore.performUpkeep(performData);
+
+        raiseBoxCore.getRaiseState(raiseId);
+
+
+
+
+        vm.startPrank(ebby);
+        raiseBoxVoting.vote(raiseId, proposalId, true);
+        vm.stopPrank();
+
+        vm.startPrank(sam);
+        raiseBoxVoting.vote(raiseId, proposalId, true);
+        vm.stopPrank();
+
+        vm.startPrank(joe);
+        raiseBoxVoting.vote(raiseId, proposalId, false);
+        vm.stopPrank();
+
+        advanceBlockTime(20 minutes);
+
+        vm.prank(sally);
+        raiseBoxVoting.triggerVoteTally(raiseId, proposalId);
+
+        raiseBoxCore.getRaiseState(raiseId);
+
+        (bool upkeepNeeded3, bytes memory performData3) = raiseBoxCore.checkUpkeep("");
+
+         raiseBoxCore.performUpkeep(performData3);
+
+          raiseBoxCore.getRaiseState(raiseId);
+
+    }
+
+    function testStateTransitionFromActiveToContribution() public {
+
+        IRaiseBoxCore.ProjectInfo memory projectInfoSmall = IRaiseBoxCore.ProjectInfo({
+        projectName: "small project",
+        valueProposition: "small project value proposition",
+        raiseTarget: RAISE_TARGET_SMALL,
+        projectDuration: RAISE_DURATION_SMALL
+        });
+
+        // create a raise
+        vm.startPrank(sally);
+        bytes32 raiseId = raiseBoxRaiseCreationContract.createNewRaise(projectInfoSmall);
+        vm.stopPrank();
+
+        // get state: should active:
+        IRaiseBoxCore.RaiseState raiseStateAfterCreation = raiseBoxCore.getRaiseState(raiseId);
+
+        // warp time to after the 5 minutes creation delay:
+        advanceBlockTime(5 minutes);
+
+        // call sync state to update state from active to contribution:
+        // calls _fromActiveToContribution internally
+        vm.prank(sally);
+        raiseBoxCore.syncRaiseState(raiseId);
+
+        raiseBoxCore.getRaiseState(raiseId);
+
+        // warp time till raise duration expiration:
+        // advanceBlockTime(31 minutes);
+
+        // // calls _failRaise internally:
+        // // changes state from contribution to failed
+        // vm.prank(sally);
+        // raiseBoxCore.syncRaiseState(raiseId);
+
+        // assertEq(uint256(raiseBoxCore.getRaiseState(raiseId)), uint256(IRaiseBoxCore.RaiseState.FAILED), "raise state should be FAILED after duration elapses and _failRaise called internally");
+
+        /// contribute till target is met:
+
+        address[10] memory contributors = [
+            ebby, 
+            max, mark, alice, 
+            joe, testOwner, sam, 
+            vitalik, arbitrum, ethereum
+            ];
+
+        for (uint256 i = 0; i < contributors.length; i++) {
+            vm.startPrank(contributors[i]);
+            raiseBoxContributionContract.contribute{value: 1 ether}(1 ether, raiseId);
+            vm.stopPrank();
+        }
+
+        raiseBoxCore.getLastProposalTime(raiseId);
+
+        vm.startPrank(sally);
+        uint proposalId = raiseBoxProposalContract.hostProposal(
+        raiseId, 
+        IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the first proposal for raisebox v3",
+            milestone: "milestone achieved is creation of a steady stable release",
+            dripPercent: 10
+            })
+        );
+        vm.stopPrank();
+        console.log(block.timestamp);
+
+        advanceBlockTime(5 minutes);
+
+        // calls _fromDelegationToVoting internally
+        vm.prank(sally);
+        raiseBoxCore.syncRaiseState(raiseId);
+
+
+        vm.startPrank(ebby);
+        raiseBoxVoting.vote(raiseId, proposalId, true);
+        vm.stopPrank();
+
+        vm.startPrank(sam);
+        raiseBoxVoting.vote(raiseId, proposalId, false);
+        vm.stopPrank();
+
+        vm.startPrank(joe);
+        raiseBoxVoting.vote(raiseId, proposalId, false);
+        vm.stopPrank();
+
+        advanceBlockTime(20 minutes);
+
+        vm.prank(sally);
+        raiseBoxVoting.triggerVoteTally(raiseId, proposalId);
+
+        raiseBoxCore.getRaiseState(raiseId);
+
+        vm.startPrank(sally);
+        raiseBoxCore.syncRaiseState(raiseId);
+        vm.stopPrank();
+
+        vm.startPrank(sally);
+        advanceBlockTime(2.5 minutes);
+        uint proposalId2 = raiseBoxProposalContract.hostProposal(
+        raiseId, 
+        IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the second proposal for raisebox v3",
+            milestone: "milestone achieved is creation of a steady stable release",
+            dripPercent: 25
+            })
+        );
+        vm.stopPrank();
+
+        // calls _fromDelegationToVoting internally
+        advanceBlockTime(5 minutes);
+        vm.prank(sally);
+        raiseBoxCore.syncRaiseState(raiseId);
+
+        vm.startPrank(ebby);
+        raiseBoxVoting.vote(raiseId, proposalId2, true);
+        vm.stopPrank();
+
+        vm.startPrank(sam);
+        raiseBoxVoting.vote(raiseId, proposalId2, false);
+        vm.stopPrank();
+
+        vm.startPrank(joe);
+        raiseBoxVoting.vote(raiseId, proposalId2, false);
+        vm.stopPrank();
+
+        advanceBlockTime(20 minutes);
+
+        vm.prank(sally);
+        raiseBoxVoting.triggerVoteTally(raiseId, proposalId2);
+
+        raiseBoxCore.getRaiseState(raiseId);
+        raiseBoxCore.getRaiseInfo(raiseId);
+
+
+        vm.startPrank(sally);
+        advanceBlockTime(2.5 minutes);
+        uint proposalId3 = raiseBoxProposalContract.hostProposal(
+        raiseId, 
+        IRaiseBoxProposal.MilestoneInfo({
+            description: "this is the third proposal for raisebox v3",
+            milestone: "milestone achieved is creation of a steady stable release",
+            dripPercent: 20
+            })
+        );
+        vm.stopPrank();
+
+        // calls _fromDelegationToVoting internally
+        advanceBlockTime(5 minutes);
+        vm.prank(sally);
+        raiseBoxCore.syncRaiseState(raiseId);
+
+        vm.startPrank(ebby);
+        raiseBoxVoting.vote(raiseId, proposalId3, true);
+        vm.stopPrank();
+
+        vm.startPrank(sam);
+        raiseBoxVoting.vote(raiseId, proposalId3, false);
+        vm.stopPrank();
+
+        vm.startPrank(joe);
+        raiseBoxVoting.vote(raiseId, proposalId3, false);
+        vm.stopPrank();
+
+        advanceBlockTime(20 minutes);
+
+        vm.prank(sally);
+        raiseBoxVoting.triggerVoteTally(raiseId, proposalId3);
+
+        raiseBoxCore.getRaiseState(raiseId);
+        raiseBoxCore.getRaiseInfo(raiseId);
+
+        vm.prank(joe);
+        raiseBoxDripHandler.refund(raiseId);
+    }
+
     function testEndRaiseWorksAsExpected() public {
         // create a raise
         vm.startPrank(arbitrum);
@@ -94,7 +389,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
                 projectName: "raisebox",
                 valueProposition: "fully decentralized milestone based crowdfunding for projects you care about",
                 raiseTarget: 20 ether,
-                projectDuration: 52 weeks
+                projectDuration: 52 minutes
             })
         ); 
         vm.stopPrank();
