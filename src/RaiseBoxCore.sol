@@ -56,14 +56,25 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
     // percent of the amount raised by the project that goes to protocol
     uint256 private constant PROTOCOL_FEE = 15; // 1.5%
 
-    uint256 public constant RAISE_DURATION = 20 minutes; // 1month and 1 week // 2 minutes for chainlink automation testing
+   
 
     uint public constant MAX_CON_FAILED_PROPOSALS = 3;
 
     uint public constant MAX_FAILED_PROPOSALS = 5;
 
     // new constants:
-    uint256 constant CONTRIBUTION_PERIOD = 4 weeks;
+
+    uint256 public constant RAISE_DURATION = 30 minutes; // 1month and 1 week // 2 minutes for chainlink automation testing
+
+    uint256 public constant CREATION_DELAY = 5 minutes; // 12 hours after creation // 5 minute for testing
+
+    uint256 constant CONTRIBUTION_PERIOD = 30 minutes; // 2 weeks // 30 minutes for testing
+
+    uint256 constant DELEGATION_RESEARCH_DELAY = 3 minutes; // 2 days // 3 mins for testing
+
+    function getDelegationAndResearchDelay() external view returns (uint256) {
+        return DELEGATION_RESEARCH_DELAY;
+    }
 
 
 
@@ -299,20 +310,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
         emit RaiseBoxEventsLib.RaiseBoxCore_endRaise_RaiseEnded(raiseId_, block.timestamp);
     }
 
-    function _endRaise(bytes32 raiseId_) internal {
-        RaiseInfo storage _raiseInfo;
-
-        _raiseInfo = raiseInfo[raiseId_];
-
-        if ( _raiseInfo.raiseState == IRaiseBoxCore.RaiseState.FAILED) {
-            revert RaiseBoxErrorsLib.RaiseBoxCore_RaiseAlreadyEnded(raiseId_);
-        }
-
-        _raiseInfo.raiseState = IRaiseBoxCore.RaiseState.FAILED;
-
-        emit RaiseBoxEventsLib.RaiseBoxCore_endRaise_RaiseEnded(raiseId_, block.timestamp);
-    }
-
 
     function _updateContributions(bytes32 raiseId_, uint256 amount_) internal {
         RaiseInfo storage raiseInfo_;
@@ -331,19 +328,31 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
 
         _raiseInfo = raiseInfo[raiseId_];
 
-        _raiseInfo.proposalInfo.proposalsHostedByProject += 1;
+        _raiseInfo.raiseProposalInfo.proposalsHostedByProject += 1;
+
+        _raiseInfo.raiseProposalInfo.lastProposalTime = block.timestamp;
 
         // sets raise state to VOTING, allowing voting on proposals to happen
-        _raiseInfo.raiseState = _updateRaiseState(RaiseState.VOTING, raiseId_);
+        _raiseInfo.raiseState = _updateRaiseState(RaiseState.DELEGATING, raiseId_);
 
         emit RaiseBoxEventsLib.RaiseProposalInfoUpdated();
        
     }
 
-    function _updateVotingInfo(bytes32 raiseId, uint256 forVotes_, uint256 againstVotes_, uint256 proposalId_) internal {
+    // function _updateVotes(bytes32 raiseId_, )
+
+    function _updateVotingInfo(
+        bytes32 raiseId, 
+        uint256 forVotes_, 
+        uint256 againstVotes_, 
+        uint256 proposalId_
+        ) internal {
 
         // get raise info from storage
         RaiseInfo storage raiseInfo_ = raiseInfo[raiseId];
+
+        // initial state 
+        RaiseState oldRaiseState = raiseInfo_.raiseState;
 
         if (raiseInfo_.raiseState == RaiseState.VOTING) {
 
@@ -351,33 +360,40 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
             if (forVotes_ > againstVotes_) {
 
                 // set raise state to DRIPPING:
-                raiseInfo_.raiseState = _updateRaiseState(RaiseState.DRIPPING, raiseId);
+                raiseInfo_.raiseState = RaiseState.DRIPPING;
 
-                raiseInfo_.proposalInfo.lastProposalFailed = false;
+                emit RaiseBoxEventsLib.RaiseBoxCore_updateState_RaiseStateUpdated(oldRaiseState, raiseInfo_.raiseState);
+
+                raiseInfo_.raiseProposalInfo.lastProposalFailed = false;
                 // return;
                 
             } else {
 
                 // for when voting does not pass
 
+                // reset raise state back to proposal state
+                raiseInfo_.raiseState = RaiseState.PROPOSAL;
+
+                emit RaiseBoxEventsLib.RaiseBoxCore_updateState_RaiseStateUpdated(oldRaiseState, raiseInfo_.raiseState);
+
                 // update nonConFailedProposals, doesn't depend on the previous proposal failing
-                raiseInfo_.proposalInfo.nonConFailedProposals++;
+                raiseInfo_.raiseProposalInfo.nonConFailedProposals++;
 
                 // handle edge case where proposalId_ is 0 since valid proposalIds start from 1.*
                 if (proposalId_ == 1) {
-                    raiseInfo_.proposalInfo.conFailedProposals++;
-                    raiseInfo_.proposalInfo.lastProposalFailed = true;
+                    raiseInfo_.raiseProposalInfo.conFailedProposals++;
+                    // raiseInfo_.raiseProposalInfo.lastProposalFailed = true;
                     // return;
                 }
 
                 // for consecutive proposal failures
-                if (raiseInfo_.proposalInfo.lastProposalFailed) {
-                    raiseInfo_.proposalInfo.conFailedProposals++;
+                if (raiseInfo_.raiseProposalInfo.lastProposalFailed) {
+                    raiseInfo_.raiseProposalInfo.conFailedProposals++;
                 }
 
 
                 // update lastProposalFailed in storage
-                raiseInfo_.proposalInfo.lastProposalFailed = true;
+                raiseInfo_.raiseProposalInfo.lastProposalFailed = true;
                 
             }
 
@@ -385,28 +401,29 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
 
         // failure thresholds: whichever triggers first -> FAIL the raise
         if (
-            raiseInfo_.proposalInfo.conFailedProposals >= MAX_CON_FAILED_PROPOSALS
+            raiseInfo_.raiseProposalInfo.conFailedProposals >= MAX_CON_FAILED_PROPOSALS
             
             ) {
-            raiseInfo_.raiseState = _updateRaiseState(RaiseState.FAILED, raiseId);
+            raiseInfo_.raiseState = RaiseState.FAILED;
+
+            emit RaiseBoxEventsLib.RaiseBoxCore_updateState_RaiseStateUpdated(oldRaiseState, raiseInfo_.raiseState);
 
             emit RaiseBoxEventsLib.RaiseBox_ExceededMaxConFailedProposals(3);
             emit RaiseBoxEventsLib.RaiseBox_RaiseFailed(raiseId);
             return;
 
-        } else if (raiseInfo_.proposalInfo.nonConFailedProposals >= MAX_FAILED_PROPOSALS) {
-            raiseInfo_.raiseState = _updateRaiseState(RaiseState.FAILED, raiseId);
+        } else if (raiseInfo_.raiseProposalInfo.nonConFailedProposals >= MAX_FAILED_PROPOSALS) {
+            raiseInfo_.raiseState = RaiseState.FAILED;
+
+            emit RaiseBoxEventsLib.RaiseBoxCore_updateState_RaiseStateUpdated(oldRaiseState, raiseInfo_.raiseState);
 
             emit RaiseBoxEventsLib.RaiseBox_ExceededMaxFailedProposals(5);
             emit RaiseBoxEventsLib.RaiseBox_RaiseFailed(raiseId);
             return;
         }
 
-    // reset raise state back to proposal state
-    raiseInfo_.raiseState = RaiseState.PROPOSAL;
 
-
-    emit RaiseBoxEventsLib.RaiseVotingInfoUpdated();
+    emit RaiseBoxEventsLib.RaiseVotingInfoUpdated(oldRaiseState, raiseInfo_.raiseState);
        
 }
 
@@ -432,12 +449,132 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
         // raise deadline update:
         _raiseInfo.raiseDuration = RAISE_DURATION;
 
-        /// @dev raise state update: INACTIVE ---> CONTRIBUTION
+        /// @dev raise state update: INACTIVE ---> ACTIVE
         /// opens raise to contributions, only then can raisers contribute
-        _raiseInfo.raiseState = _updateRaiseState(RaiseState.CONTRIBUTION, raiseId_);
+        /// @dev add a creation delay to delay transition from active to contribution
+        
+        if (_raiseInfo.raiseState == RaiseState.INACTIVE) {
+            _raiseInfo.raiseState = _updateRaiseState(RaiseState.ACTIVE, raiseId_);
+        }
 
         emit RaiseBoxEventsLib.RaiseCreationInfoUpdated(raiseId_);
     }
+
+    // state mutating internal functions for raise state transitions:
+    // will all be called via the syncRaiseState external function
+
+    function syncRaiseState(bytes32 raiseId_) external {
+
+
+        _requireRaiseExist(raiseId_);
+
+        RaiseInfo storage _raiseInfo = raiseInfo[raiseId_];
+
+        if (_raiseInfo.raiseState == RaiseState.ACTIVE) {
+        _fromActiveToContribution(raiseId_);
+        }
+
+        if (_raiseInfo.raiseState == RaiseState.CONTRIBUTION) {
+        _failedRaise(raiseId_);
+        }
+
+        if (_raiseInfo.raiseState == RaiseState.DELEGATING) {
+        _fromDelegationToVoting(raiseId_);
+        } 
+
+        if (_raiseInfo.raiseState == RaiseState.DRIPPING) {
+        _fromDrippingToProposal(raiseId_);
+        }
+
+    }
+
+    function _fromActiveToContribution(bytes32 raiseId_) internal {
+
+        RaiseInfo storage _raiseInfo = raiseInfo[raiseId_];
+
+        // current state to update from
+        RaiseState oldRaiseState = raiseInfo[raiseId_].raiseState;
+
+        if (
+            block.timestamp >= (CREATION_DELAY + _raiseInfo.raiseCreationInfo.raiseCreatedAt) && 
+            _raiseInfo.raiseState == RaiseState.ACTIVE
+            ) {
+            _raiseInfo.raiseState = RaiseState.CONTRIBUTION;
+        }
+
+        emit RaiseBoxEventsLib.RaiseBoxCore_updateState_RaiseStateUpdated(oldRaiseState, _raiseInfo.raiseState);
+        
+    }
+
+    function _failedRaise(bytes32 raiseId_) internal {
+        // move state from contribution to failed since target not met
+        RaiseInfo storage _raiseInfo = raiseInfo[raiseId_];
+
+        // current state to update from
+        RaiseState oldRaiseState = _raiseInfo.raiseState;
+
+        if ( _raiseInfo.raiseState == RaiseState.FAILED) {
+            revert RaiseBoxErrorsLib.RaiseBoxCore_RaiseAlreadyFailed(raiseId_);
+        }
+
+        if ( 
+            block.timestamp > (_raiseInfo.raiseCreationInfo.raiseCreatedAt + RAISE_DURATION) &&
+            _raiseInfo.raiseContributionInfo.amountRaisedByProject != _raiseInfo.raiseCreationInfo.projectInfo.raiseTarget
+        ) {
+            _raiseInfo.raiseState = RaiseState.FAILED;
+        }
+
+        emit RaiseBoxEventsLib.RaiseBoxCore_updateState_RaiseStateUpdated(oldRaiseState, _raiseInfo.raiseState);
+
+        emit RaiseBoxEventsLib.RaiseBoxCore_failRaise_RaiseFailed(raiseId_, block.timestamp);
+    }
+
+    function _fromDelegationToVoting(bytes32 raiseId_) internal {
+        RaiseInfo storage raiseInfo_ = raiseInfo[raiseId_];
+
+        if (raiseInfo_.raiseState != RaiseState.DELEGATING) return;
+
+        if (
+            block.timestamp <
+            raiseInfo_.raiseProposalInfo.lastProposalTime + DELEGATION_RESEARCH_DELAY
+        ) {
+            return;
+        }
+
+        RaiseState oldState = raiseInfo_.raiseState;
+        raiseInfo_.raiseState = RaiseState.VOTING;
+
+        emit RaiseBoxEventsLib.RaiseBoxCore_updateState_RaiseStateUpdated(
+        oldState,
+        RaiseState.VOTING
+        );
+}
+
+
+    function _fromDrippingToProposal(bytes32 raiseId_) internal {
+        RaiseInfo storage _raiseInfo = raiseInfo[raiseId_];
+
+        // current state to update from
+        RaiseState oldRaiseState = raiseInfo[raiseId_].raiseState;
+
+        if (!_raiseInfo.raiseProposalInfo.lastProposalFailed && _raiseInfo.raiseProposalInfo.lastProposalTime <= block.timestamp) {
+            // means it passed and hence was dripped
+            _raiseInfo.raiseState = RaiseState.PROPOSAL;
+        }
+    }
+
+    // function _fromPassedToEnded() internal {
+    //     // this transitions raise state from passed (a state where raise passed) to ended(a state where all funds have been dripped)
+
+    //     RaiseInfo storage _raiseInfo = raiseInfo[raiseId_];
+
+    //     // current state to update from
+    //     RaiseState oldRaiseState = raiseInfo[raiseId_].raiseState;
+
+    //     if ()
+    // }
+
+
 
     function _updateRaiseState(RaiseState newRaiseState, bytes32 raiseId) internal returns(RaiseState) {
 
@@ -584,7 +721,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
 
     function getProposalsHosted(bytes32 raiseId_) external view returns(uint256) {
         _requireRaiseExist(raiseId_);
-        return raiseInfo[raiseId_].proposalInfo.proposalsHostedByProject;
+        return raiseInfo[raiseId_].raiseProposalInfo.proposalsHostedByProject;
     }
 
     function addRaiseId(bytes32 id_) external {
@@ -661,63 +798,21 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
        bytes32[] memory idsToEnd = abi.decode(performData, (bytes32[]));
 
        for (uint256 i = 0; i < idsToEnd.length; i++) {
-            _endRaise(idsToEnd[i]);
+            _failedRaise(idsToEnd[i]);
        }
 
+    }
+
+    function getLastProposalTime(bytes32 raiseId_) external view returns (uint256) {
+        _requireRaiseExist(raiseId_);
+        return raiseInfo[raiseId_].raiseProposalInfo.lastProposalTime;
     }
 
 
 
 
 
-    // function syncRaiseState(bytes32 raiseId_) external {
-
-    //     _requireRaiseExist(raiseId_);
-
-    //     RaiseInfo storage _raiseInfo = raiseInfo[raiseId_];
-
-    //     if (_raiseInfo.raiseState == RaiseState.INACTIVE) {
-    //         _inactiveToActive(_raiseInfo);
-    //     }
-
-    //     if (_raiseInfo.raiseState == RaiseState.ACTIVE) {
-    //         _activeToContribution(_raiseInfo);
-    //     }
-
-    //     if (_raiseInfo.raiseState == RaiseState.CONTRIBUTION) {
-    //         _contributionToProposal(_raiseInfo);
-    //     }
-
-    //     if (_raiseInfo.raiseState == RaiseState.PROPOSAL) {
-    //         _proposalToDelegating(_raiseInfo);
-    //     }
-
-    //     if (_raiseInfo.raiseState == RaiseState.DELEGATING) {
-    //         delegatingToVoting(_raiseInfo);
-    //     }
-
-    //     if (_raiseInfo.raiseState == RaiseState.VOTING) {
-    //         _votingToDripping(_raiseInfo);
-    //     }
-
-    //     if (_raiseInfo.raiseState == RaiseState.DRIPPING) {
-    //         _drippingToProposal(_raiseInfo);
-    //     }
-
-    //     if (_raiseInfo.raiseState == RaiseState.FAILED) {
-    //         _failedToRefunding(_raiseInfo);
-    //     }
-
-    //     if (_raiseInfo.raiseState == RaiseState.REFUNDING) {
-    //         _refundingTo(_raiseInfo);
-    //     }
-    // }
-
-    // function _activeToContribution(RaiseInfo storage raiseInfo_) internal {
-    //     if (block.timestamp >= RAISE_DURATION + raiseInfo[raiseId_].raiseCreationInfo.raiseCreatedAt) {
-    //         raiseInfo_.raiseState = RaiseState.CONTRIBUTION;
-    //     }
-    // }
+  
 
 
 
