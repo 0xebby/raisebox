@@ -26,6 +26,10 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
     /// @notice state variables
     mapping(address contributor => mapping(bytes32 raiseId => uint256 amtContributed)) public amountContributedToRaise;
+    
+    // Track ETH and ERC20 contributions separately
+    mapping(bytes32 raiseId => uint256) public ethContributionsToProject;
+    mapping(bytes32 raiseId => uint256) public erc20ContributionsToProject;
 
     mapping(bytes32 => address[]) private contributors;
 
@@ -71,14 +75,8 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         address raiseOwner = raiseInfo.raiseCreationInfo.raiseOwner;
         if (msg.sender == raiseOwner) revert RaiseBoxErrorsLib.RaiseBoxContribution_SelfContributionForbidden();
 
-        // Verify which currency the Project/Raise Info uses and validate accordingly
-        IRaiseBoxCore.PaymentMethod paymentMethod = raiseInfo.raiseCreationInfo.projectInfo.paymentMethod;
-
-        if (paymentMethod == IRaiseBoxCore.PaymentMethod.ETH) {
-            _validateEthContribution(raiseId, amount);
-        } else {
-            _validateTokenContribution(raiseId, amount);
-        }
+        // Validate contribution based on what was sent (ETH or ERC20)
+        bool isETH = _validateContribution(amount);
 
         uint256 raiseTarget = raiseInfo.raiseCreationInfo.projectInfo.raiseTarget;
 
@@ -134,6 +132,12 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         totalContributions += amount;
         amountContributedToRaise[msg.sender][raiseId] = userPrevContribution;
         totalContributionsToProject[raiseId] = totalContributions;
+
+        if (isETH) {
+            ethContributionsToProject[raiseId] += amount;
+        } else {
+            erc20ContributionsToProject[raiseId] += amount;
+        }
         
 
         if (!hasContributed[raiseId][msg.sender]) {
@@ -143,7 +147,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         }
 
         /// @dev only update storage when raise has passed,
-        /// i.e. the amount to raise by project has been raised successfully
+        /// i.e. amount to raise by project has been raised successfully
         /// instead of updating storage everytime a contribution is made, wasteful
         /// raise is successful and moved to proposal state as target has been met
         if (totalContributionsToProject[raiseId] >= raiseTarget) {
@@ -164,27 +168,28 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
         // Interactions
 
-        // funds sent to protocol for safekeeping pending release to project
-        if (paymentMethod == IRaiseBoxCore.PaymentMethod.ETH) {
+        // Handle both ETH and ERC20 contributions
+        if (isETH) {
             (bool successfullyContributed,) = address(raiseBoxDripHandler).call{value: amount}(""); 
             if (!successfullyContributed) {
                 revert RaiseBoxErrorsLib.RaiseBoxContribution_contribute_ContributionFailed();
             }
         } else {
-            // Handle ERC20 token transfer
             address acceptedToken = raiseBoxCore.getAcceptedToken();
-            IERC20(acceptedToken).safeTransferFrom(
-                msg.sender,
-                address(raiseBoxDripHandler),
-                amount
-            );
+            if (acceptedToken == address(0)) {
+                revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_ERC20TokenNotSet();
+            }
+            
+            IERC20 token = IERC20(acceptedToken);
+            token.safeTransferFrom(msg.sender, address(raiseBoxDripHandler), amount);
         }
 
         emit RaiseBoxEventsLib.Contributed(
             msg.sender,
             amount,
             raiseId,
-            totalContributionsToProject[raiseId] 
+            totalContributionsToProject[raiseId],
+            isETH
         );
     }
 
@@ -193,25 +198,25 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
     // INTERNAL FUNCTIONS
 
-    function _validateEthContribution(bytes32 raiseId, uint256 amount) internal view {
-        if (msg.value != amount) {
-            revert RaiseBoxErrorsLib.RaiseBoxContribution_ValueSentMismatch();
-        }
-    }
+    function _validateContribution(uint256 amount) internal returns (bool) {
+        if (msg.value > 0) {
+            // ETH contribution validation
+            if (msg.value != amount) {
+                revert RaiseBoxErrorsLib.RaiseBoxContribution_ValueSentMismatch();
+            }
+            return true;
+        } else {
+            // ERC20 contribution validation
+            address acceptedToken = raiseBoxCore.getAcceptedToken();
+            if (acceptedToken == address(0)) {
+                revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_ERC20TokenNotSet();
+            }
 
-    function _validateTokenContribution(bytes32 raiseId, uint256 amount) internal view {
-        if (msg.value != 0) {
-            revert RaiseBoxErrorsLib.RaiseBoxContribution_ETHERSentForERC20Raise();
-        }
-       
-        address acceptedToken = raiseBoxCore.getAcceptedToken();
-        if (acceptedToken == address(0)) {
-            revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_ERC20TokenNotSet();
-        }
-
-        IERC20 token = IERC20(acceptedToken);
-        if (token.balanceOf(msg.sender) < amount) {
-            revert RaiseBoxErrorsLib.RaiseBoxContribution_InsufficientTokenBalance();
+            IERC20 token = IERC20(acceptedToken);
+            if (token.balanceOf(msg.sender) < amount) {
+                revert RaiseBoxErrorsLib.RaiseBoxContribution_InsufficientTokenBalance();
+            }
+            return false;
         }
     }
 
@@ -232,6 +237,11 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     }
 
     // EXTERNAL/GETTER FUNCTIONS
+
+    function getEthAndErcRaisedByProject(bytes32 raiseId_) external view returns (uint256 ethRaised, uint256 erc20Raised) {
+        raiseBoxCore.doesRaiseExist(raiseId_);
+        return (ethContributionsToProject[raiseId_], erc20ContributionsToProject[raiseId_]);
+    }
 
     function getMaxContributionAllowedForARaise(bytes32 raiseId_) external returns (uint256) {
             raiseBoxCore.doesRaiseExist(raiseId_);

@@ -13,8 +13,6 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 contract RaiseBoxIntegrationTests is Test, TestsHelpers {
     using Strings for uint256;
 
-    IRaiseBoxCore.PaymentMethod paymentMethod;
-
     /// TEST SUITE 1: BASIC FUNCTIONALITY ///
 
     
@@ -35,7 +33,8 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
             uche, 
             contributionAmount, 
             raiseIdSmall,
-            contributionAmount
+            contributionAmount,
+            true
             );
         raiseBoxContributionContract.contribute{value: contributionAmount}(contributionAmount, raiseIdSmall);
         vm.stopPrank();
@@ -287,11 +286,10 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
 
         /// construct projectInfo struct
         IRaiseBoxCore.ProjectInfo memory projectInfoMEDIUM = IRaiseBoxCore.ProjectInfo({
-        projectName: "medium project",
-        valueProposition: "medium project value proposition",
-        raiseTarget: RAISE_TARGET_MEDIUM,
-        projectDuration: RAISE_DURATION_MEDIUM,
-        paymentMethod: IRaiseBoxCore.PaymentMethod.ETH
+            projectName: "medium project",
+            valueProposition: "medium project value proposition",
+            raiseTarget: RAISE_TARGET_MEDIUM,
+            projectDuration: RAISE_DURATION_MEDIUM
         });
 
         /// create a raise

@@ -20,8 +20,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
                 projectName: "raisebox",
                 valueProposition: "fully decentralized milestone based crowdfunding for projects you care about",
                 raiseTarget: 20 ether,
-                projectDuration: 52 weeks,
-                paymentMethod: IRaiseBoxCore.PaymentMethod.ETH
+                projectDuration: 52 weeks
             })
         ); 
         vm.stopPrank();
@@ -95,8 +94,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
             projectName:"uche's raise",
             valueProposition:"LuminaPad is a decentralized platform for collaborative note-taking and knowledge sharing",
             raiseTarget:200.65 ether,
-            projectDuration:52 weeks,
-            paymentMethod: IRaiseBoxCore.PaymentMethod.ETH
+            projectDuration:52 weeks
         })
     );
     vm.stopPrank();
@@ -110,8 +108,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
             projectName:"arbitrum's raise",
             valueProposition:"agi",
             raiseTarget:2000 ether,
-            projectDuration:52 weeks,
-            paymentMethod: IRaiseBoxCore.PaymentMethod.ETH
+            projectDuration:52 weeks
         })
     );
     vm.stopPrank();
@@ -123,8 +120,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
             projectName:"max's raise",
             valueProposition:"agi",
             raiseTarget:500 ether,
-            projectDuration:52 weeks,
-            paymentMethod: IRaiseBoxCore.PaymentMethod.ETH
+            projectDuration:52 weeks
         })
     );
     vm.stopPrank();
@@ -136,8 +132,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
             projectName:"hhhhhhhhhhh",
             valueProposition:"agi",
             raiseTarget:50000 ether,
-            projectDuration:52 weeks,
-            paymentMethod: IRaiseBoxCore.PaymentMethod.ETH
+            projectDuration:52 weeks
         })
     );
     vm.stopPrank();
@@ -155,9 +150,8 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
             projectName:"sentient",
             valueProposition:"agi",
             raiseTarget:20 ether,
-            projectDuration:52 weeks,
-            paymentMethod: IRaiseBoxCore.PaymentMethod.ETH
-        })
+            projectDuration:52 weeks
+        })  
     );
     vm.stopPrank();
 
@@ -522,8 +516,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
             projectName:"sentient",
             valueProposition:"agi",
             raiseTarget:20 ether,
-            projectDuration:52 weeks,
-            paymentMethod: IRaiseBoxCore.PaymentMethod.ETH
+            projectDuration:52 weeks
         })
     );
     vm.stopPrank();
@@ -1250,8 +1243,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
             projectName:"sentient",
             valueProposition:"agi",
             raiseTarget:144 ether,
-            projectDuration:52 weeks,
-            paymentMethod: IRaiseBoxCore.PaymentMethod.ETH
+            projectDuration:52 weeks
         })
         );
         vm.stopPrank();
@@ -1294,8 +1286,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
                 projectName: "new project",
                 valueProposition: "to test vulnerability in voting contract",
                 raiseTarget: 10 ether,
-                projectDuration: 52 weeks,
-                paymentMethod: IRaiseBoxCore.PaymentMethod.ETH
+                projectDuration: 52 weeks
             })
         );
         vm.stopPrank();

@@ -9,6 +9,7 @@ interface IRaiseBoxDripHandler {
     event CoreSet(address coreAddress);
     event VotingSet(address votingAddress);
     event ProposalSet(address proposalAddress);
+    event ContributionSet(address contributionAddress);
 
     // errors
     error Drip_InvalidProject();

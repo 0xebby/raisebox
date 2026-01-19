@@ -35,7 +35,7 @@ contract TokenTest is Test {
         dripHandler = new RaiseBoxDripHandler(
             address(raiseBoxCore),
             address(raiseboxProposal),
-            address(0)
+            address(0)  // voting - will set later
         );
 
         raiseBoxContribution =
@@ -56,7 +56,10 @@ contract TokenTest is Test {
         raiseBoxCore.setVotingContract(address(raiseBoxVoting));
         raiseBoxCore.setDripHandlerContract(address(dripHandler));
         raiseboxProposal.setVotingContract(address(raiseBoxVoting));
+        
+        // Complete circular dependencies
         dripHandler.setVoting(address(raiseBoxVoting));
+        dripHandler.setContribution(address(raiseBoxContribution));
 
         // Set token after all contracts are deployed
         vm.startPrank(owner);
@@ -68,6 +71,8 @@ contract TokenTest is Test {
 
     function testERC20Contribution() public {
         address contributor = makeAddr("contributor");
+        console.log("DripHandler CA: ", address(dripHandler));
+        console.log("RaiseBoxContribution CA: ", address(raiseBoxContribution));
         
         // Setup: Create ERC20 raise
         vm.startPrank(owner);
@@ -76,8 +81,7 @@ contract TokenTest is Test {
                 projectName: "ERC20 Test Project",
                 valueProposition: "Testing ERC20 contributions",
                 raiseTarget: 1000 ether,
-                projectDuration: 52 weeks,
-                paymentMethod: IRaiseBoxCore.PaymentMethod.ERC20
+                projectDuration: 52 weeks
             })
         );
         vm.stopPrank();
@@ -110,15 +114,47 @@ contract TokenTest is Test {
                 projectName: "ERC20 Test Project",
                 valueProposition: "Testing ERC20 contributions",
                 raiseTarget: 1000 ether,
-                projectDuration: 52 weeks,
-                paymentMethod: IRaiseBoxCore.PaymentMethod.ERC20
+                projectDuration: 52 weeks
             })
         );
         vm.stopPrank();
         uint256 amount = 10 ether;
 
         vm.prank(contributor);
-        vm.expectRevert();
-        raiseBoxContribution.contribute{value: amount }(amount, raiseId); /// throws RaiseBoxContribution_ETHERSentForERC20Raise() error!
+        raiseBoxContribution.contribute{value: amount }(amount, raiseId);
+        // Assert: Check contribution was recorded
+        uint256 contributed = raiseBoxContribution.getUserRaiseContributions(raiseId, contributor);
+        assertEq(contributed, 10 ether);
+        
+        uint256 totalRaised = raiseBoxContribution.getTotalContributionsToRaise(raiseId);
+        assertEq(totalRaised, 10 ether);
+    }
+
+    function testErc20AndEtherContribution() public {
+        address contributor = makeAddr("contributor");
+        vm.deal(contributor, 100 ether);
+        token.mint(contributor, 100 ether);
+        
+        // Setup: Create ERC20 raise
+        vm.startPrank(owner);
+        bytes32 raiseId = raiseBoxCreation.createNewRaise(
+            IRaiseBoxCore.ProjectInfo({
+                projectName: "ERC20 Test Project",
+                valueProposition: "Testing ERC20 contributions",
+                raiseTarget: 1000 ether,
+                projectDuration: 52 weeks
+            })
+        );
+        vm.stopPrank();
+
+        vm.startPrank(contributor);
+        token.approve(address(raiseBoxContribution), 10 ether);
+        raiseBoxContribution.contribute{value: 10 ether}(10 ether, raiseId);
+        raiseBoxContribution.contribute(10 ether, raiseId);
+        vm.stopPrank();
+
+        (uint256 ethRaised, uint256 erc20Raised) = raiseBoxContribution.getEthAndErcRaisedByProject(raiseId);
+        assertEq(10 ether, ethRaised);
+        assertEq(10 ether, erc20Raised);
     }
 }

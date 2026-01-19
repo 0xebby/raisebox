@@ -161,7 +161,8 @@ library RaiseBoxEventsLib {
         address indexed user, 
         uint256 indexed userContribution, 
         bytes32 indexed raiseId, 
-        uint256 amountRaisedSoFar
+        uint256 amountRaisedSoFar,
+        bool isERC20
     );
 
     event BlockTimeAdvancedBy(

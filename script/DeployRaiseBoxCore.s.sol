@@ -65,6 +65,7 @@ contract DeployRaiseBoxCore is Script {
         raiseBoxCore.setVotingContract(address(raiseBoxVoting));
 
         raiseBoxDripHandler.setVoting(address(raiseBoxVoting));
+        raiseBoxDripHandler.setContribution(address(raiseBoxContributionContract));
 
         vm.stopBroadcast();
     }

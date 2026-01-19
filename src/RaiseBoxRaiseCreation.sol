@@ -51,13 +51,6 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
             revert RaiseBoxErrorsLib.RaiseBoxRaiseCreation_OwnerNotWhiteListed();
         }
 
-        if (projectInfo.paymentMethod == IRaiseBoxCore.PaymentMethod.ERC20) {
-            address acceptedToken = raiseBoxCore.getAcceptedToken();
-            if (acceptedToken == address(0)) {
-                revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_ERC20TokenNotSet();
-            }
-        }
-
         if (
             bytes(projectInfo.projectName).length <= 0 || 
             bytes(projectInfo.projectName).length > type(uint8).max

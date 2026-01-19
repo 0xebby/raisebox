@@ -7,6 +7,7 @@ import {IRaiseBoxDripHandler} from "src/interfaces/IRaiseBoxDripHandler.sol";
 import {IRaiseBoxCore} from "./interfaces/IRaiseBoxCore.sol";
 import {IRaiseBoxVoting} from "./interfaces/IRaiseBoxVoting.sol";
 import {IRaiseBoxProposal} from "./interfaces/IRaiseBoxProposal.sol";
+import {IRaiseBoxContribution} from "./interfaces/IRaiseBoxContribution.sol";
 import {RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -21,6 +22,7 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     IRaiseBoxCore public raiseBoxCore;
     IRaiseBoxVoting public raiseBoxVoting;
     IRaiseBoxProposal public raiseBoxProposal;
+    IRaiseBoxContribution public raiseBoxContribution;
 
     constructor(address core, address proposalAddress, address votingAddress) Ownable(msg.sender) {
         raiseBoxCore = IRaiseBoxCore(core);
@@ -33,6 +35,11 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
         emit VotingSet(votingContract);
     }
 
+    function setContribution(address contributionContract) external onlyOwner {
+        raiseBoxContribution = IRaiseBoxContribution(contributionContract);
+        emit ContributionSet(contributionContract);
+    }
+
     // get needed raiseBox contracts from the core using the getters instead of doing it from constructor:
     // address public raiseBoxVoting = raiseBoxCore.getVotingContract();
     // address public raiseBoxProposal = raiseBoxCore.getProposalContract();
@@ -41,7 +48,9 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     mapping(bytes32 => mapping(uint256 => bool)) public drippedForProposal;
 
     // total amount dripped for a project
-    mapping(bytes32 => uint256) public totalDrippedForProject;
+    // mapping(bytes32 => uint256) public totalDrippedForProject;
+    mapping(bytes32 => uint256) public totalEthDrippedForProject;
+    mapping(bytes32 => uint256) public totalErc20DrippedForProject;
 
     // last drip percent for a project (5..100 in multiples of 5)
     // least drip is 5% and max allowed drip is 25%
@@ -73,44 +82,42 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
 
         if (drippedForProposal[raiseId][proposalId]) revert RaiseBoxErrorsLib.RaiseBoxDripHandler_dripFunds_DripAlreadyExecutedForProposal(raiseId, proposalId);
 
-        // Fetch the payment method
-        IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
-        IRaiseBoxCore.PaymentMethod paymentMethod = raiseInfo.raiseCreationInfo.projectInfo.paymentMethod;
-
         // determine percentage to drip using proposal count and last drip data
         uint256 propCount = raiseBoxProposal.getProposalCount(raiseId);
         uint8 dripPercent = raiseBoxProposal.getDripPercent(raiseId, proposalId);
 
+        (uint256 ethRaised, uint256 erc20Raised) = raiseBoxContribution.getEthAndErcRaisedByProject(raiseId);
+
         // compute amount to release based on amount raised at time of raise
-        uint256 amountRaised = raiseBoxCore.getAmtRaisedByProject(raiseId);
-        uint256 amountToDrip = ((amountRaised - totalDrippedForProject[raiseId]) * dripPercent) / 100;
+        uint256 ethToDrip = ((ethRaised - totalEthDrippedForProject[raiseId]) * dripPercent) / 100;
+        uint256 erc20ToDrip = ((erc20Raised - totalErc20DrippedForProject[raiseId]) * dripPercent) / 100;
 
         // ensure this contract has enough balance
+        address acceptedToken = raiseBoxCore.getAcceptedToken();
+        uint256 acceptedTokenBalance = IERC20(acceptedToken).balanceOf(address(this));
         uint256 dripBalance = address(this).balance;
-        if (dripBalance < amountToDrip) revert Drip_InsufficientBalance(dripBalance, amountToDrip);
+        if (dripBalance < ethToDrip) revert Drip_InsufficientBalance(dripBalance, ethToDrip);
+        if (acceptedTokenBalance < erc20ToDrip) revert Drip_InsufficientBalanceECR20(acceptedTokenBalance, erc20ToDrip);
 
         // effects
         drippedForProposal[raiseId][proposalId] = true;
-        totalDrippedForProject[raiseId] += amountToDrip;
+        totalEthDrippedForProject[raiseId] += ethToDrip;
+        totalErc20DrippedForProject[raiseId] += erc20ToDrip;
         lastDripPercent[raiseId] = dripPercent;
 
         // interactions - send funds to project owner
-        // drip based on currency/Payment type
         address payable projectOwner = payable(raiseBoxCore.getRaiseCreator(raiseId));
 
-        if (paymentMethod == IRaiseBoxCore.PaymentMethod.ETH) {
-            (bool sent,) = projectOwner.call{value: amountToDrip}("");
-            if (!sent) revert Drip_InsufficientBalance(address(this).balance, amountToDrip);
-        } else {
-            address acceptedToken = raiseBoxCore.getAcceptedToken();
+        if (ethToDrip > 0) {
+            (bool sent,) = projectOwner.call{value: ethToDrip}("");
+            if (!sent) revert Drip_InsufficientBalance(address(this).balance, ethToDrip);
+        } 
+        if (erc20ToDrip > 0) {
             IERC20 token = IERC20(acceptedToken);
-
-            uint256 balance = token.balanceOf(address(this));
-            if (balance < amountToDrip) revert Drip_InsufficientBalanceECR20(balance, amountToDrip);
-            token.transfer(projectOwner, amountToDrip);
+            token.transfer(projectOwner, erc20ToDrip);
         }
 
-        emit FundsDripped(raiseId, proposalId, dripPercent, amountToDrip);
+        emit FundsDripped(raiseId, proposalId, dripPercent, ethToDrip + erc20ToDrip);
     }
 
     // ---------- Read helpers ----------

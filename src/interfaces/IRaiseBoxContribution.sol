@@ -20,4 +20,6 @@ interface IRaiseBoxContribution {
     function getTotalContributors(bytes32 raiseId) external view returns (uint256);
 
     function getUserRaiseContributions(bytes32 raiseId_, address user) external view returns(uint);
+
+    function getEthAndErcRaisedByProject(bytes32 raiseId_) external view returns (uint256 ethRaised, uint256 erc20Raised);
 }
