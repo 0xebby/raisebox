@@ -16,3 +16,9 @@
 # can user contribute allowed amount at excatly raise deadline
 # can user contribute above allowed amount at deadline?
 # can user contribute multiple times as long as amount contributed so far hasn't exceeded max allowed per user per project?
+
+
+
+
+
+# voting should happen after the set time for voting to start have been exceeded, 3 minutes for testing
