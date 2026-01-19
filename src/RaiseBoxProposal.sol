@@ -128,7 +128,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         IRaiseBoxCore.ProjectInfo memory projectInfo;
         raiseBoxCore.updateRaiseInfo(
             projectInfo,
-            lastProposalTime[raiseId_],
+            0,
             0,
             true,
             raiseId_, // the only used field here
@@ -139,7 +139,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         );
 
         // update milestone info for proposal in storage
-        proposalInfo[raiseId_][proposalId_] = ProposalInfo({
+        raiseProposalInfo[raiseId_][proposalId_] = ProposalInfo({
             milestoneInfo: milestoneInfo_,
             proposalId: proposalId_,
             lastProposalTime: lastProposalTime[raiseId_],
@@ -151,12 +151,14 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
         emit RaiseBoxEventsLib.RaiseBoxProposal_updateProposalInfo_ProposalInfoUpdated();
 
-        /// @dev this ensures that voting begins exactly 48 hours after hosting a proposal
+        /// @dev this ensures that voting begins exactly (3minutes for testing) 48 hours after hosting a proposal
         /// @dev contributors can use this window to delegate votes, confirm milestone claims
+        // get delegation_reserach_delay:
+        
         raiseBoxVoting.setVotingStartTime(
             raiseId_, 
             proposalId_, 
-            (lastProposalTime[raiseId_] + 2 days)
+            (lastProposalTime[raiseId_] + raiseBoxCore.getDelegationAndResearchDelay())
             );
 
         emit RaiseBoxEventsLib.NewProposalHosted(
@@ -187,11 +189,11 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
     mapping(bytes32 => uint256) public proposalsHostedByProject; 
 
-    uint256 public constant INTERVAL_BETWEEN_PROPOSALS = 4 weeks;
+    uint256 public constant INTERVAL_BETWEEN_PROPOSALS = 2 minutes;
 
     uint256 public constant MAX_ALLOWED_FAILED_PROPOSALS = 5;
 
-    mapping(bytes32 => mapping(uint256 => ProposalInfo)) public proposalInfo;
+    mapping(bytes32 => mapping(uint256 => ProposalInfo)) public raiseProposalInfo;
 
     mapping(bytes32 => ProposalState) public proposalState;
 
@@ -214,7 +216,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         _isValidProposal(raiseId_, proposalId_);
 
         ProposalInfo storage proposalInfo_;
-        proposalInfo_ = proposalInfo[raiseId_][proposalId_];
+        proposalInfo_ = raiseProposalInfo[raiseId_][proposalId_];
 
         // ensure that the proposalState for `rasieId_` and `proposalId_` is INACTIVE
         if (_getProposalState(raiseId_, proposalId_) == IRaiseBoxProposal.ProposalState.ACTIVE) {
@@ -241,7 +243,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
         if (_isValidProposal(raiseId_, proposalId_)) {
 
-            return proposalInfo[raiseId_][proposalId_].proposalState;
+            return raiseProposalInfo[raiseId_][proposalId_].proposalState;
         }
     }
 
@@ -250,9 +252,9 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
             raiseBoxCore.doesRaiseExist(raiseId_);
 
             // get proposalDetails
-            ProposalInfo memory proposalInfo =  proposalInfo[raiseId_][proposalId_];
+            ProposalInfo memory raiseProposalInfo =  raiseProposalInfo[raiseId_][proposalId_];
 
-            if (proposalInfo.doesProposalExist) {
+            if (raiseProposalInfo.doesProposalExist) {
                 
                 return true;
 
@@ -289,7 +291,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     {
 
         if (_isValidProposal(raiseId_, proposalId_)) {
-            proposalInfo_ = proposalInfo[raiseId_][proposalId_];
+            proposalInfo_ = raiseProposalInfo[raiseId_][proposalId_];
             return proposalInfo_;
         }
     }
@@ -313,7 +315,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
         if (_isValidProposal(raiseId_, proposalId_)) {
 
-            proposalInfo[raiseId_][proposalId_].proposalState = proposalState_;
+            raiseProposalInfo[raiseId_][proposalId_].proposalState = proposalState_;
 
         }
       
@@ -347,7 +349,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
     function getDripPercent(bytes32 raiseId_, uint256 proposalId_) external returns (uint8) {
         _isValidProposal(raiseId_, proposalId_);
-        return proposalInfo[raiseId_][proposalId_].milestoneInfo.dripPercent;
+        return raiseProposalInfo[raiseId_][proposalId_].milestoneInfo.dripPercent;
     }
 
 

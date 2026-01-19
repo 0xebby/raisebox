@@ -19,8 +19,6 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     IRaiseBoxDripHandler public immutable raiseBoxDripHandler; 
 
-    address public owner;
-
     //** ------------------------------------------------------------------ **//
     //                        CONSTRUCTOR                                     //
     //** ------------------------------------------------------------------ **//
@@ -35,7 +33,6 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         raiseBoxContribution = IRaiseBoxContribution(raiseBoxContributionAddress);
         raiseBoxProposal = IRaiseBoxProposal(raiseBoxProposalAddress);
         raiseBoxDripHandler = IRaiseBoxDripHandler(raiseBoxDripHandlerAddress);
-        owner = msg.sender;
     }
 
     //** ------------------------------------------------------------------ **//
@@ -227,7 +224,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     mapping(bytes32 => mapping(uint256 => uint256)) public s_votingStartTime;
 
-    uint256 public constant VOTING_DURATION = 7 days;
+    uint256 public constant VOTING_DURATION = 20 minutes ; // 7 days in production // 2 minutes for testing
 
     mapping(address => mapping(bytes32 => mapping(uint256 => uint256))) public s_delegatedVotes;
 
@@ -296,7 +293,8 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     /// @notice any attempt to end just after voting duration exceeds will fail
     /// @dev ends voting if voting hasn't already been ended by another call
     /// @dev can only end if voting duration has been exceeded by atleast 12 hours
-    function triggerVoteTally(bytes32 raiseId_, uint256 proposalId_) external onlyRaiseCreator(raiseId_) {
+    function triggerVoteTally(bytes32 raiseId_, uint256 proposalId_) external
+    /**onlyRaiseCreator(raiseId_)*/ {
 
         uint256 _start = s_votingStartTime[raiseId_][proposalId_];
 
@@ -305,7 +303,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         // if voting duration elapsed, mark ended and emit events:
         if (block.timestamp >= (_start + VOTING_DURATION)) {
             _tallyVotes(raiseId_, proposalId_);
-            _endVoting(raiseId_, proposalId_);
+            // _endVoting(raiseId_, proposalId_);
             emit RaiseBoxVoting_VoteTallyTriggered(
                 msg.sender, 
                 proposalId_, 
@@ -317,51 +315,70 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     }
 
-    function _tallyVotes(bytes32 raiseId, uint256 proposalId) internal returns (uint256, uint256) {
-        (uint256 forVotes, uint256 againstVotes, uint256 totalVotes) = _getProposalVotes(raiseId, proposalId);
+    function _tallyVotes(bytes32 raiseId_, uint256 proposalId_) internal returns (uint256, uint256) {
+        (uint256 forVotes_, uint256 againstVotes_, uint256 totalVotes) = _getProposalVotes(raiseId_, proposalId_);
 
-        bool quorumReached = _isQuorumReached(
-            raiseId,
-            proposalId,
-            forVotes,
-            againstVotes
-        );
+        IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId_);
 
 
         // if for is greater than against, proposal passed and % of funds will be dripped
-        if (forVotes > againstVotes) {
+        if (forVotes_ > againstVotes_) {
 
-            raiseBoxProposal.updateProposalInfo(raiseId, proposalId);
+            raiseBoxProposal.updateProposalInfo(raiseId_, proposalId_);
+
+            raiseBoxCore.updateRaiseInfo(
+            raiseInfo.raiseCreationInfo.projectInfo,
+            0,
+            0,
+            raiseInfo.raiseCreationInfo.doesRaiseExist,
+            raiseId_,
+            raiseInfo.raiseCreationInfo.raiseOwner,
+            forVotes_,
+            againstVotes_,
+            proposalId_
+            );
 
             emit RaiseBoxEventsLib.RaiseBoxVoting_tallyVotes_ProposalPassed(
-                proposalId,
-                forVotes,
-                againstVotes,
+                proposalId_,
+                forVotes_,
+                againstVotes_,
                 totalVotes,
                 block.timestamp
             );
 
             // delegate call to dripHandler since proposal has passed
-            raiseBoxDripHandler.dripFundsForProposal(raiseId, proposalId);
+            raiseBoxDripHandler.dripFundsForProposal(raiseId_, proposalId_);
         } else {
 
-            raiseBoxProposal.updateProposalInfo(raiseId, proposalId);
+            raiseBoxProposal.updateProposalInfo(raiseId_, proposalId_);
+
+            raiseBoxCore.updateRaiseInfo(
+            raiseInfo.raiseCreationInfo.projectInfo,
+            0,
+            0,
+            raiseInfo.raiseCreationInfo.doesRaiseExist,
+            raiseId_,
+            raiseInfo.raiseCreationInfo.raiseOwner,
+            forVotes_,
+            againstVotes_,
+            proposalId_
+            );
 
             emit RaiseBoxEventsLib.RaiseBoxVoting_tallyVotes_ProposalFailed(
-                proposalId,
-                forVotes,
-                againstVotes,
+                proposalId_,
+                forVotes_,
+                againstVotes_,
                 totalVotes,
                 block.timestamp
             );
 
-            s_raiseFailedProposals[raiseId]++;
+            s_raiseFailedProposals[raiseId_]++;
             // revert RaiseBoxVoting_ProposalFailed();
         }
 
-        emit VotesTallied(raiseId, proposalId, forVotes, againstVotes, totalVotes);
+        emit VotesTallied(raiseId_, proposalId_, forVotes_, againstVotes_, totalVotes);
 
-        return (forVotes, againstVotes);
+        return (forVotes_, againstVotes_);
 
     }
 
@@ -398,6 +415,9 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
        emit RaiseBoxEventsLib.RaiseBoxVoting_endVoting_VotingEndedSucessfully(block.timestamp);
     }
+
+
+
 
     /// if forvotes/totalvotes * 100 >= 67 the quoromhas been achieved and proposal passes
 
@@ -452,13 +472,4 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     }
 
-    function getAmountContributedToRaise(
-        bytes32 raiseId_, 
-        address contributor_
-        ) external view returns (uint256) {
-            
-        raiseBoxCore.doesRaiseExist(raiseId_);
-
-        return raiseBoxContribution.getUserRaiseContributions(raiseId_, contributor_);
-    }
 }

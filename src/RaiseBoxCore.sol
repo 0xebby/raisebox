@@ -72,10 +72,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
 
     uint256 constant DELEGATION_RESEARCH_DELAY = 3 minutes; // 2 days // 3 mins for testing
 
-    function getDelegationAndResearchDelay() external view returns (uint256) {
-        return DELEGATION_RESEARCH_DELAY;
-    }
-
 
 
     // roles
@@ -464,28 +460,36 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
     // will all be called via the syncRaiseState external function
 
     function syncRaiseState(bytes32 raiseId_) external {
+        _syncRaiseState(raiseId_);
+    }
 
+    function _syncRaiseState(bytes32 raiseId_) internal {
 
-        _requireRaiseExist(raiseId_);
+        // _requireRaiseExist(raiseId_);
 
-        RaiseInfo storage _raiseInfo = raiseInfo[raiseId_];
+         RaiseInfo storage _raiseInfo = raiseInfo[raiseId_];
+
+// if raise does not exist or already terminal, do nothing
+        if (_raiseInfo.raiseCreationInfo.raiseCreatedAt == 0) return;
+        if (_raiseInfo.raiseState == RaiseState.FAILED) return;
+
+        // RaiseInfo storage _raiseInfo = raiseInfo[raiseId_];
 
         if (_raiseInfo.raiseState == RaiseState.ACTIVE) {
-        _fromActiveToContribution(raiseId_);
+            _fromActiveToContribution(raiseId_);
         }
 
         if (_raiseInfo.raiseState == RaiseState.CONTRIBUTION) {
-        _failedRaise(raiseId_);
+            _failedRaise(raiseId_);
         }
 
         if (_raiseInfo.raiseState == RaiseState.DELEGATING) {
-        _fromDelegationToVoting(raiseId_);
+            _fromDelegationToVoting(raiseId_);
         } 
 
         if (_raiseInfo.raiseState == RaiseState.DRIPPING) {
-        _fromDrippingToProposal(raiseId_);
+            _fromDrippingToProposal(raiseId_);
         }
-
     }
 
     function _fromActiveToContribution(bytes32 raiseId_) internal {
@@ -503,7 +507,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
         }
 
         emit RaiseBoxEventsLib.RaiseBoxCore_updateState_RaiseStateUpdated(oldRaiseState, _raiseInfo.raiseState);
-        
     }
 
     function _failedRaise(bytes32 raiseId_) internal {
@@ -724,6 +727,10 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
         return raiseInfo[raiseId_].raiseProposalInfo.proposalsHostedByProject;
     }
 
+    function getDelegationAndResearchDelay() external view returns (uint256) {
+        return DELEGATION_RESEARCH_DELAY;
+    }
+
     function addRaiseId(bytes32 id_) external {
         if (!authorizedCallers[RAISE_CREATION_CONTRACT][msg.sender]) {
             revert RaiseBoxErrorsLib.RaiseBoxCore_addRaiseId_UnauthorizedCaller(msg.sender);
@@ -752,24 +759,21 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
 
             RaiseInfo storage raiseInfo_ = raiseInfo[raiseId];
 
-            uint256 deadline = raiseInfo_.raiseCreationInfo.raiseCreatedAt + RAISE_DURATION;
+            uint256 deadline = raiseInfo_.raiseCreationInfo.raiseCreatedAt + 5 minutes;
 
             // only include raises that are active and past deadline
-
-            // get amount raised:
-           uint256 raisedAmount = raiseInfo_.raiseContributionInfo.amountRaisedByProject;
-
-           // get raise target:
-           uint256 raiseTarget = raiseInfo_.raiseCreationInfo.projectInfo.raiseTarget;
-
             if (
-                block.timestamp > deadline && 
-                raiseInfo_.raiseState != RaiseState.FAILED &&
-                raisedAmount < raiseTarget
+                block.timestamp > deadline
                 ) {
                 tempIds[count] = raiseId;
                 count++;
             }
+
+            // if (raiseInfo_.raiseState == RaiseState.CONTRIBUTION && block.timestamp > deadline) {
+            //         tempIds[count] = raiseId;
+            //         count++;
+            // }
+
 
         }
 
@@ -798,7 +802,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
        bytes32[] memory idsToEnd = abi.decode(performData, (bytes32[]));
 
        for (uint256 i = 0; i < idsToEnd.length; i++) {
-            _failedRaise(idsToEnd[i]);
+            _syncRaiseState(idsToEnd[i]);
        }
 
     }

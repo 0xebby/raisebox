@@ -178,6 +178,13 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
 
         } else {
             // this would handle refunds for after proposals were dripped and protocol fees deducted
+
+            //  emit RaiseBoxEventsLib.RaiseBoxRefunds_refundContribution_Refunded(
+            //     block.timestamp, 
+            //     msg.sender, 
+            //     contributions, 
+            //     raiseId_
+            //     );
         }
         
 
