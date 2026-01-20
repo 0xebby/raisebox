@@ -9,12 +9,14 @@ interface IRaiseBoxDripHandler {
     event CoreSet(address coreAddress);
     event VotingSet(address votingAddress);
     event ProposalSet(address proposalAddress);
+    event ContributionSet(address contributionAddress);
 
     // errors
     error Drip_InvalidProject();
     error Drip_AlreadyExecuted(bytes32 raiseId, uint256 proposalId);
     error Drip_VotingNotPassed(bytes32 raiseId, uint256 proposalId);
     error Drip_InsufficientBalance(uint256 dripBalance, uint256 required);
+    error Drip_InsufficientBalanceECR20(uint256 dripBalance, uint256 required);
     error Drip_InvalidPercent();
     error DripHandler_NotVotingContract(address caller);
     error DripHandler_NotProposalContract();

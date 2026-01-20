@@ -533,7 +533,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
     }
 
     function getAcceptedToken() external view returns (address) {
-        return iRBT;
+        return address(iRBTInstance);
     }
 
     function doesRaiseExist(bytes32 raiseId_) external view {

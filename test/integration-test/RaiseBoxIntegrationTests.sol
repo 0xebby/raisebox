@@ -33,7 +33,8 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
             uche, 
             contributionAmount, 
             raiseIdSmall,
-            contributionAmount
+            contributionAmount,
+            true
             );
         raiseBoxContributionContract.contribute{value: contributionAmount}(contributionAmount, raiseIdSmall);
         vm.stopPrank();
@@ -285,10 +286,10 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
 
         /// construct projectInfo struct
         IRaiseBoxCore.ProjectInfo memory projectInfoMEDIUM = IRaiseBoxCore.ProjectInfo({
-        projectName: "medium project",
-        valueProposition: "medium project value proposition",
-        raiseTarget: RAISE_TARGET_MEDIUM,
-        projectDuration: RAISE_DURATION_MEDIUM    
+            projectName: "medium project",
+            valueProposition: "medium project value proposition",
+            raiseTarget: RAISE_TARGET_MEDIUM,
+            projectDuration: RAISE_DURATION_MEDIUM
         });
 
         /// create a raise

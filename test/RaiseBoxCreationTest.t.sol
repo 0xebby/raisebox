@@ -149,7 +149,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
             projectName:"arbitrum's raise",
             valueProposition:"agi",
             raiseTarget:2000 ether,
-            projectDuration:60 weeks
+            projectDuration:52 weeks
         })
     );
     vm.stopPrank();
@@ -161,7 +161,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
             projectName:"max's raise",
             valueProposition:"agi",
             raiseTarget:500 ether,
-            projectDuration:50 weeks
+            projectDuration:52 weeks
         })
     );
     vm.stopPrank();
@@ -173,7 +173,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
             projectName:"hhhhhhhhhhh",
             valueProposition:"agi",
             raiseTarget:50000 ether,
-            projectDuration:50 weeks
+            projectDuration:52 weeks
         })
     );
     vm.stopPrank();
@@ -192,7 +192,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
             valueProposition:"agi",
             raiseTarget:20 ether,
             projectDuration:52 weeks
-        })
+        })  
     );
     vm.stopPrank();
 
@@ -1284,7 +1284,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
             projectName:"sentient",
             valueProposition:"agi",
             raiseTarget:144 ether,
-            projectDuration:60 weeks
+            projectDuration:52 weeks
         })
         );
         vm.stopPrank();
@@ -1327,7 +1327,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
                 projectName: "new project",
                 valueProposition: "to test vulnerability in voting contract",
                 raiseTarget: 10 ether,
-                projectDuration: 60 weeks
+                projectDuration: 52 weeks
             })
         );
         vm.stopPrank();

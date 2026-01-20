@@ -7,7 +7,9 @@ import {IRaiseBoxDripHandler} from "src/interfaces/IRaiseBoxDripHandler.sol";
 import {IRaiseBoxCore} from "./interfaces/IRaiseBoxCore.sol";
 import {IRaiseBoxVoting} from "./interfaces/IRaiseBoxVoting.sol";
 import {IRaiseBoxProposal} from "./interfaces/IRaiseBoxProposal.sol";
+import {IRaiseBoxContribution} from "./interfaces/IRaiseBoxContribution.sol";
 import {RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title RaiseBoxDripHandler
@@ -21,6 +23,7 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     IRaiseBoxCore public raiseBoxCore;
     IRaiseBoxVoting public raiseBoxVoting;
     IRaiseBoxProposal public raiseBoxProposal;
+    IRaiseBoxContribution public raiseBoxContribution;
 
     constructor(address core, address proposalAddress, address votingAddress) Ownable(msg.sender) {
         raiseBoxCore = IRaiseBoxCore(core);
@@ -33,11 +36,22 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
         emit VotingSet(votingContract);
     }
 
+    function setContribution(address contributionContract) external onlyOwner {
+        raiseBoxContribution = IRaiseBoxContribution(contributionContract);
+        emit ContributionSet(contributionContract);
+    }
+
+    // get needed raiseBox contracts from the core using the getters instead of doing it from constructor:
+    // address public raiseBoxVoting = raiseBoxCore.getVotingContract();
+    // address public raiseBoxProposal = raiseBoxCore.getProposalContract();
+
     // track if a proposal has already had its drip executed
     mapping(bytes32 => mapping(uint256 => bool)) public drippedForProposal;
 
     // total amount dripped for a project
-    mapping(bytes32 => uint256) public totalDrippedForProject;
+    // mapping(bytes32 => uint256) public totalDrippedForProject;
+    mapping(bytes32 => uint256) public totalEthDrippedForProject;
+    mapping(bytes32 => uint256) public totalErc20DrippedForProject;
 
     function dripFundsForProposal(bytes32 raiseId, uint256 proposalId) external nonReentrant
     {
@@ -56,25 +70,39 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
         uint256 propCount = raiseBoxProposal.getProposalCount(raiseId);
         uint8 dripPercent = raiseBoxProposal.getDripPercent(raiseId, proposalId);
 
+        (uint256 ethRaised, uint256 erc20Raised) = raiseBoxContribution.getEthAndErcRaisedByProject(raiseId);
+
         // compute amount to release based on amount raised at time of raise
-        uint256 amountRaised = raiseBoxCore.getAmtRaisedByProject(raiseId);
-        uint256 amountToDrip = ((amountRaised - totalDrippedForProject[raiseId]) * dripPercent) / 100;
+        uint256 ethToDrip = ((ethRaised - totalEthDrippedForProject[raiseId]) * dripPercent) / 100;
+        uint256 erc20ToDrip = ((erc20Raised - totalErc20DrippedForProject[raiseId]) * dripPercent) / 100;
 
         // ensure this contract has enough balance
+        address acceptedToken = raiseBoxCore.getAcceptedToken();
+        uint256 acceptedTokenBalance = IERC20(acceptedToken).balanceOf(address(this));
         uint256 dripBalance = address(this).balance;
-        if (dripBalance < amountToDrip) revert Drip_InsufficientBalance(dripBalance, amountToDrip);
+        if (dripBalance < ethToDrip) revert Drip_InsufficientBalance(dripBalance, ethToDrip);
+        if (acceptedTokenBalance < erc20ToDrip) revert Drip_InsufficientBalanceECR20(acceptedTokenBalance, erc20ToDrip);
 
         // effects
         drippedForProposal[raiseId][proposalId] = true;
+        totalEthDrippedForProject[raiseId] += ethToDrip;
+        totalErc20DrippedForProject[raiseId] += erc20ToDrip;
+        lastDripPercent[raiseId] = dripPercent;
         totalDrippedForProject[raiseId] += amountToDrip;
 
         // interactions - send funds to project owner
         address payable projectOwner = payable(raiseBoxCore.getRaiseCreator(raiseId));
-        (bool sent,) = projectOwner.call{value: amountToDrip}("");
 
-        if (!sent) revert Drip_InsufficientBalance(address(this).balance, amountToDrip);
+        if (ethToDrip > 0) {
+            (bool sent,) = projectOwner.call{value: ethToDrip}("");
+            if (!sent) revert Drip_InsufficientBalance(address(this).balance, ethToDrip);
+        } 
+        if (erc20ToDrip > 0) {
+            IERC20 token = IERC20(acceptedToken);
+            token.transfer(projectOwner, erc20ToDrip);
+        }
 
-        emit FundsDripped(raiseId, proposalId, dripPercent, amountToDrip);
+        emit FundsDripped(raiseId, proposalId, dripPercent, ethToDrip + erc20ToDrip);
     }
 
     // ---------- Read helpers ----------

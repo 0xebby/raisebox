@@ -142,6 +142,7 @@ contract TestsHelpers is Test {
         raiseBoxProposalContract.setVotingContract(address(raiseBoxVoting));
 
         raiseBoxDripHandler.setVoting(address(raiseBoxVoting));
+        raiseBoxDripHandler.setContribution(address(raiseBoxContributionContract));
 
         vm.stopPrank();
 
@@ -207,27 +208,27 @@ contract TestsHelpers is Test {
     /// @notice project info for small, mediumand large project:
     /// small:
     IRaiseBoxCore.ProjectInfo memory projectInfoSmall = IRaiseBoxCore.ProjectInfo({
-        projectName: "small project",
-        valueProposition: "small project value proposition",
-        raiseTarget: RAISE_TARGET_SMALL,
-        projectDuration: RAISE_DURATION_SMALL
-    });
+            projectName: "small project",
+            valueProposition: "small project value proposition",
+            raiseTarget: RAISE_TARGET_SMALL,
+            projectDuration: RAISE_DURATION_SMALL
+        });
 
     /// medium:
     IRaiseBoxCore.ProjectInfo memory projectInfoMedium = IRaiseBoxCore.ProjectInfo({
-        projectName: "medium project",
-        valueProposition: "medium project value proposition",
-        raiseTarget: RAISE_TARGET_MEDIUM,
-        projectDuration: RAISE_DURATION_MEDIUM    
+            projectName: "medium project",
+            valueProposition: "medium project value proposition",
+            raiseTarget: RAISE_TARGET_MEDIUM,
+            projectDuration: RAISE_DURATION_MEDIUM
         });
 
     /// large:
     IRaiseBoxCore.ProjectInfo memory projectInfoLarge = IRaiseBoxCore.ProjectInfo({
-        projectName: "large project",
-        valueProposition: "large project value proposition",
-        raiseTarget: RAISE_TARGET_LARGE,
-        projectDuration: RAISE_DURATION_LARGE
-    });
+            projectName: "large project",
+            valueProposition: "large project value proposition",
+            raiseTarget: RAISE_TARGET_LARGE,
+            projectDuration: RAISE_DURATION_LARGE
+        });
 
     /// @notice create raises with the targets above:
     /// @notice ebby, vitalik and ben have been whitelisted in setup

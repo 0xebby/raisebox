@@ -5,6 +5,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {RaiseBoxCore} from "../src/RaiseBoxCore.sol";
 import {IRaiseBoxContribution} from "../src/interfaces/IRaiseBoxContribution.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
@@ -20,9 +22,14 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
     using Strings for uint256;
     using Address for address;
+    using SafeERC20 for IERC20;
 
     /// @notice state variables
     mapping(address contributor => mapping(bytes32 raiseId => uint256 amtContributed)) public amountContributedToRaise;
+    
+    // Track ETH and ERC20 contributions separately
+    mapping(bytes32 raiseId => uint256) public ethContributionsToProject;
+    mapping(bytes32 raiseId => uint256) public erc20ContributionsToProject;
 
     mapping(bytes32 => address[]) private contributors;
 
@@ -52,10 +59,6 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_ZeroAmount();
         }
 
-        if (msg.value != amount) {
-            revert RaiseBoxErrorsLib.RaiseBoxContribution_ValueSentMismatch();
-        }
-
         uint256 minContribution = raiseBoxCore.getMinimumContribution();
         if (amount < minContribution) {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_ContributeMoreEth(minContribution);
@@ -81,6 +84,9 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
         if (msg.sender == raiseInfo.raiseCreationInfo.raiseOwner) revert RaiseBoxErrorsLib.RaiseBoxContribution_SelfContributionForbidden();
 
+        // Validate contribution based on what was sent (ETH or ERC20)
+        bool isETH = _validateContribution(amount);
+
         uint256 raiseTarget = raiseInfo.raiseCreationInfo.projectInfo.raiseTarget;
 
         uint256 constRaiseDuration = raiseBoxCore.getRaiseDeadline(raiseId);
@@ -98,7 +104,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
                     abi.encodePacked(
                         "Cannot over contribute: you can contribute only: ",
                         ((maxContribution - userPrevContribution) / 1e18).toString(),
-                        " ether more to this project"
+                        " more to this project"
                     )
                 )
             );
@@ -120,7 +126,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_contribute_OverContributionIsForbidden(
                  string(
                 abi.encodePacked(
-                    ((raiseTarget - totalContributions) / 1e18).toString(), "eth more to raiseTarget"
+                    ((raiseTarget - totalContributions) / 1e18).toString(), " more to raiseTarget"
                 )
                 )
             ); 
@@ -129,13 +135,18 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
         // Effects
         userPrevContribution += amount;
-
         contributionsToProjectArray[msg.sender][raiseId].push(amount);
-
+        
+        // Update total contributions consistently
         totalContributions += amount;
-
         amountContributedToRaise[msg.sender][raiseId] = userPrevContribution;
         totalContributionsToProject[raiseId] = totalContributions;
+
+        if (isETH) {
+            ethContributionsToProject[raiseId] += amount;
+        } else {
+            erc20ContributionsToProject[raiseId] += amount;
+        }
         
 
         if (!hasContributed[raiseId][msg.sender]) {
@@ -145,7 +156,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         }
 
         /// @dev only update storage when raise has passed,
-        /// i.e. the amount to raise by project has been raised successfully
+        /// i.e. amount to raise by project has been raised successfully
         /// instead of updating storage everytime a contribution is made, wasteful
         /// raise is successful and moved to proposal state as target has been met
         if (totalContributionsToProject[raiseId] >= raiseTarget) {
@@ -166,18 +177,28 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
         // Interactions
 
-        // funds sent to protocol for safekeeping pending release to project
-        (bool successfullyContributed,) = address(raiseBoxDripHandler).call{value: amount}(""); 
-
-        if (!successfullyContributed) {
-            revert RaiseBoxErrorsLib.RaiseBoxContribution_contribute_ContributionFailed();
+        // Handle both ETH and ERC20 contributions
+        if (isETH) {
+            (bool successfullyContributed,) = address(raiseBoxDripHandler).call{value: amount}(""); 
+            if (!successfullyContributed) {
+                revert RaiseBoxErrorsLib.RaiseBoxContribution_contribute_ContributionFailed();
+            }
+        } else {
+            address acceptedToken = raiseBoxCore.getAcceptedToken();
+            if (acceptedToken == address(0)) {
+                revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_ERC20TokenNotSet();
+            }
+            
+            IERC20 token = IERC20(acceptedToken);
+            token.safeTransferFrom(msg.sender, address(raiseBoxDripHandler), amount);
         }
 
         emit RaiseBoxEventsLib.Contributed(
             msg.sender,
             amount,
             raiseId,
-            totalContributionsToProject[raiseId] 
+            totalContributionsToProject[raiseId],
+            isETH
         );
     }
 
@@ -185,6 +206,28 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     // should not be able to receive eth directly except via contribute above
 
     // INTERNAL FUNCTIONS
+
+    function _validateContribution(uint256 amount) internal returns (bool) {
+        if (msg.value > 0) {
+            // ETH contribution validation
+            if (msg.value != amount) {
+                revert RaiseBoxErrorsLib.RaiseBoxContribution_ValueSentMismatch();
+            }
+            return true;
+        } else {
+            // ERC20 contribution validation
+            address acceptedToken = raiseBoxCore.getAcceptedToken();
+            if (acceptedToken == address(0)) {
+                revert RaiseBoxErrorsLib.RaiseBoxCreation_createRaise_ERC20TokenNotSet();
+            }
+
+            IERC20 token = IERC20(acceptedToken);
+            if (token.balanceOf(msg.sender) < amount) {
+                revert RaiseBoxErrorsLib.RaiseBoxContribution_InsufficientTokenBalance();
+            }
+            return false;
+        }
+    }
 
     /**
      * @dev calculates the maximum contribution allowed per user per project
@@ -203,6 +246,11 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     }
 
     // EXTERNAL/GETTER FUNCTIONS
+
+    function getEthAndErcRaisedByProject(bytes32 raiseId_) external view returns (uint256 ethRaised, uint256 erc20Raised) {
+        raiseBoxCore.doesRaiseExist(raiseId_);
+        return (ethContributionsToProject[raiseId_], erc20ContributionsToProject[raiseId_]);
+    }
 
     function getMaxContributionAllowedForARaise(bytes32 raiseId_) external returns (uint256) {
             raiseBoxCore.doesRaiseExist(raiseId_);

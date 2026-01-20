@@ -2,7 +2,6 @@
 pragma solidity ^0.8.19;
 
 interface IRaiseBoxCore {
-
     struct ProjectInfo {
         string projectName;
         string valueProposition;
