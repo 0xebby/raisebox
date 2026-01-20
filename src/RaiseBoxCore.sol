@@ -6,9 +6,6 @@ pragma solidity ^0.8.19;
 // imports
 import {RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
 import {RaiseBoxEventsLib} from "src/RaiseBoxLib/RaiseBoxEventsLib.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
@@ -28,16 +25,9 @@ import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/autom
  * @notice it holds the major storage that all other contracts read and update (authorized updates***)
  * @dev use it's associated interface to get exposed external functions and structs
  */
-contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInterface {
-
-    // type declaration
-    using SafeERC20 for IERC20;
+contract RaiseBoxCore is IRaiseBoxCore, Ownable, AutomationCompatibleInterface {
 
     // State variables
-    address private immutable iRBT;
-
-    IERC20 iRBTInstance;
-
     address public raiseBoxContribution;
 
     address public raiseBoxProposal; 
@@ -55,8 +45,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
 
     // percent of the amount raised by the project that goes to protocol
     uint256 private constant PROTOCOL_FEE = 15; // 1.5%
-
-   
 
     uint public constant MAX_CON_FAILED_PROPOSALS = 3;
 
@@ -99,7 +87,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
 
     mapping (address => bool) private verifiedFounders;
 
-
     mapping(bytes32 => bool) raiseExists;
 
     mapping(bytes32 => RaiseState) raiseState;
@@ -109,16 +96,12 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
     bytes32[] public raiseIds;
 
     // constructor:
-    constructor() Ownable(msg.sender) ERC20("rbt", "raiseboxtoken") {
+    constructor() Ownable(msg.sender) {
         raiseBoxOwner = msg.sender; 
-
-        iRBTInstance = IERC20(iRBT);
 
         // change before deployment
         protocol = payable(address(0x1));
     }
-
-
 
 
     function verifyAndAddToWhitelist(address founder) external onlyOwner() {
@@ -328,14 +311,12 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
 
         _raiseInfo.raiseProposalInfo.lastProposalTime = block.timestamp;
 
-        // sets raise state to VOTING, allowing voting on proposals to happen
+        // sets raise state to DELATING, allowing delegation and research on proposals to happen
         _raiseInfo.raiseState = _updateRaiseState(RaiseState.DELEGATING, raiseId_);
 
         emit RaiseBoxEventsLib.RaiseProposalInfoUpdated();
        
     }
-
-    // function _updateVotes(bytes32 raiseId_, )
 
     function _updateVotingInfo(
         bytes32 raiseId, 
@@ -465,13 +446,11 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
 
     function _syncRaiseState(bytes32 raiseId_) internal {
 
-        // _requireRaiseExist(raiseId_);
+        _requireRaiseExist(raiseId_);
 
          RaiseInfo storage _raiseInfo = raiseInfo[raiseId_];
 
 // if raise does not exist or already terminal, do nothing
-        if (_raiseInfo.raiseCreationInfo.raiseCreatedAt == 0) return;
-        if (_raiseInfo.raiseState == RaiseState.FAILED) return;
 
         // RaiseInfo storage _raiseInfo = raiseInfo[raiseId_];
 
@@ -479,7 +458,11 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
             _fromActiveToContribution(raiseId_);
         }
 
-        if (_raiseInfo.raiseState == RaiseState.CONTRIBUTION) {
+        if (
+            _raiseInfo.raiseState == RaiseState.CONTRIBUTION &&
+            block.timestamp > (_raiseInfo.raiseCreationInfo.raiseCreatedAt + RAISE_DURATION) &&
+            _raiseInfo.raiseContributionInfo.amountRaisedByProject < _raiseInfo.raiseCreationInfo.projectInfo.raiseTarget
+            ) {
             _failedRaise(raiseId_);
         }
 
@@ -520,12 +503,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
             revert RaiseBoxErrorsLib.RaiseBoxCore_RaiseAlreadyFailed(raiseId_);
         }
 
-        if ( 
-            block.timestamp > (_raiseInfo.raiseCreationInfo.raiseCreatedAt + RAISE_DURATION) &&
-            _raiseInfo.raiseContributionInfo.amountRaisedByProject != _raiseInfo.raiseCreationInfo.projectInfo.raiseTarget
-        ) {
-            _raiseInfo.raiseState = RaiseState.FAILED;
-        }
+        _raiseInfo.raiseState = RaiseState.FAILED;
 
         emit RaiseBoxEventsLib.RaiseBoxCore_updateState_RaiseStateUpdated(oldRaiseState, _raiseInfo.raiseState);
 
@@ -621,21 +599,21 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
         return account.code.length > 0;
     }
 
-    /**
-     * @dev allows owner to set accepted token address
-     *   @param newTokenAddress the address of the new accepted token
-     *   @notice only tokens set here can be used for contributions
-     *   @notice raiseBoxFaucet contract (deployed) already exists and drips RBT for testing/testnet use
-     */
-    function setAcceptedToken(address newTokenAddress) external onlyOwner {
-        require(newTokenAddress != address(0), "invalid address");
+    // /**
+    //  * @dev allows owner to set accepted token address
+    //  *   @param newTokenAddress the address of the new accepted token
+    //  *   @notice only tokens set here can be used for contributions
+    //  *   @notice raiseBoxFaucet contract (deployed) already exists and drips RBT for testing/testnet use
+    //  */
+    // function setAcceptedToken(address newTokenAddress) external onlyOwner {
+    //     require(newTokenAddress != address(0), "invalid address");
 
-        if (!_isContract(newTokenAddress)) revert RaiseBoxErrorsLib.RaiseBoxCore_NotSupportedToken();
+    //     if (!_isContract(newTokenAddress)) revert RaiseBoxErrorsLib.RaiseBoxCore_NotSupportedToken();
 
-        iRBTInstance = IERC20(newTokenAddress);
+    //     iRBTInstance = IERC20(newTokenAddress);
 
-        emit RaiseBoxEventsLib.RaiseBoxCore_AcceptedTokenSet(newTokenAddress);
-    }
+    //     emit RaiseBoxEventsLib.RaiseBoxCore_AcceptedTokenSet(newTokenAddress);
+    // }
 
 
     function _getRaiseInfo(bytes32 raiseId) internal view returns (RaiseInfo memory) {
@@ -686,9 +664,9 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
         return protocolFeeAddress;
     }
 
-    function getAcceptedToken() external view returns (address) {
-        return iRBT;
-    }
+    // function getAcceptedToken() external view returns (address) {
+    //     return iRBT;
+    // }
 
     function doesRaiseExist(bytes32 raiseId_) external view {
        _requireRaiseExist(raiseId_);
@@ -768,13 +746,6 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
                 tempIds[count] = raiseId;
                 count++;
             }
-
-            // if (raiseInfo_.raiseState == RaiseState.CONTRIBUTION && block.timestamp > deadline) {
-            //         tempIds[count] = raiseId;
-            //         count++;
-            // }
-
-
         }
 
         if (count > 0) {
@@ -783,6 +754,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
 
             // prepare performData with the relevant raiseIds
             bytes32[] memory raisesToPerformUpkeepOn = new bytes32[](count);
+
             for (uint256 j = 0; j < count; j++) {
                 raisesToPerformUpkeepOn[j] = tempIds[j];
             }
