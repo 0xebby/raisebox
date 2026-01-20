@@ -74,21 +74,26 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
 
         // compute amount to release based on amount raised at time of raise
         uint256 ethToDrip = ((ethRaised - totalEthDrippedForProject[raiseId]) * dripPercent) / 100;
+
         uint256 erc20ToDrip = ((erc20Raised - totalErc20DrippedForProject[raiseId]) * dripPercent) / 100;
 
         // ensure this contract has enough balance
         address acceptedToken = raiseBoxCore.getAcceptedToken();
+
         uint256 acceptedTokenBalance = IERC20(acceptedToken).balanceOf(address(this));
+
         uint256 dripBalance = address(this).balance;
+
         if (dripBalance < ethToDrip) revert Drip_InsufficientBalance(dripBalance, ethToDrip);
+
         if (acceptedTokenBalance < erc20ToDrip) revert Drip_InsufficientBalanceECR20(acceptedTokenBalance, erc20ToDrip);
 
         // effects
         drippedForProposal[raiseId][proposalId] = true;
         totalEthDrippedForProject[raiseId] += ethToDrip;
         totalErc20DrippedForProject[raiseId] += erc20ToDrip;
-        lastDripPercent[raiseId] = dripPercent;
-        totalDrippedForProject[raiseId] += amountToDrip;
+        // lastDripPercent[raiseId] = dripPercent;
+        // totalDrippedForProject[raiseId] += amountToDrip;
 
         // interactions - send funds to project owner
         address payable projectOwner = payable(raiseBoxCore.getRaiseCreator(raiseId));

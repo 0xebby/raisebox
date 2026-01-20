@@ -15,6 +15,7 @@ import {IRaiseBoxProposal} from "src/interfaces/IRaiseBoxProposal.sol";
 import {RaiseBoxEventsLib} from "src/RaiseBoxLib/RaiseBoxEventsLib.sol";
 import {RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {MockToken} from "src/mock/MockToken.sol";
 
 
 contract TestsHelpers is Test {
@@ -37,7 +38,12 @@ contract TestsHelpers is Test {
     RaiseBoxDripHandler raiseBoxDripHandler;
 
     // faucet contract address
-    address faucetToken = 0xB15D5A9DCcCCcb3Caf55360D89610834A72Cf6b3;
+    // address faucetToken = 0xB15D5A9DCcCCcb3Caf55360D89610834A72Cf6b3;
+
+    MockToken raiseboxtoken;
+
+    uint256 public constant INITIAL_SUPPLY = 100_000;
+    
 
     // raisebox testOwner == deployer
     address testOwner;
@@ -104,7 +110,10 @@ contract TestsHelpers is Test {
     address raiseBoxOwner;
 
     function setUp() public {
-        vm.startPrank(address(this));
+        vm.startPrank(address(this)); 
+
+        // raiseboxtoken: token used for interaction alongside eth:
+        raiseboxtoken  = new MockToken(INITIAL_SUPPLY);
 
         // deploy the main contract that holds general storage
         raiseBoxCore = new RaiseBoxCore();
@@ -185,9 +194,12 @@ contract TestsHelpers is Test {
 
         vm.deal(contributor5, 100 ether);
 
-
-
-
+        // Set token after all contracts are deployed
+        // vm.startPrank(owner);
+        raiseBoxCore.setAcceptedToken(address(raiseboxtoken));
+        // vm.stopPrank();
+        
+        raiseBoxCore.verifyAndAddToWhitelist(testOwner);
 
         // whitelist 2 users to serve as raiseCreators:
         raiseBoxCore.verifyAndAddToWhitelist(ebby);

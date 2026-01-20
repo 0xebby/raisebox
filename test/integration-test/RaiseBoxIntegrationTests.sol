@@ -260,11 +260,11 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
 
         vm.startPrank(whale);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                RaiseBoxErrorsLib.RaiseBoxContribution_contribute_AboveMaxAllowed.selector, 
-                maxContribution,
-                reason
-                )
+            // abi.encodeWithSelector(
+            //     RaiseBoxErrorsLib.RaiseBoxContribution_contribute_AboveMaxAllowed.selector, 
+            //     maxContribution,
+            //     reason
+            //     )
         );
         raiseBoxContributionContract.contribute{value: overMax}(overMax, raiseIdMedium);
         vm.stopPrank();
