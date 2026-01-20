@@ -106,8 +106,6 @@ interface IRaiseBoxCore {
 
     function getRaiseBoxOwner() external view returns (address);
 
-    function getAcceptedToken() external view returns (address);
-
     function isRaiseCreator(address raiseCreator, bytes32 raiseId) external view returns (bool);
 
     function getRaiseCreatedAt(bytes32 raiseId_) external view returns (uint256);
@@ -121,8 +119,6 @@ interface IRaiseBoxCore {
     function getDelegationAndResearchDelay() external view returns (uint256);
 
     function getLastProposalTime(bytes32 raiseId_) external view returns (uint256);
-
-    // function getRaiseProposalsInfo(bytes32 raiseId) external returns (RaiseProposalInfo memory);
 
     function updateRaiseInfo(
         ProjectInfo calldata _projectInfo,
