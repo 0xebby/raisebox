@@ -233,11 +233,11 @@ contract TestsHelpers is Test {
 
     /// @notice create raises with the targets above:
     /// @notice ebby, vitalik and ben have been whitelisted in setup
-    // vm.startPrank(ebby);
-    //     raiseIdSmall = raiseBoxRaiseCreationContract.createNewRaise(
-    //     projectInfoSmall
-    //     );
-    // vm.stopPrank();
+    vm.startPrank(ebby);
+        raiseIdSmall = raiseBoxRaiseCreationContract.createNewRaise(
+        projectInfoSmall
+        );
+    vm.stopPrank();
 
     // vm.startPrank(vitalik);
     // raiseIdMedium = raiseBoxRaiseCreationContract.createNewRaise(

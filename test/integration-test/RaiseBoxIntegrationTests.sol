@@ -20,11 +20,19 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
         
         console.log("\n=== TEST 1: Single Contribution Success ===");
 
-        uint256 contributionAmount = 1 ether;
+        uint256 contributionAmount = raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseIdSmall);
 
         // intial state record
         uint256 initialBalance = uche.balance;
         uint256 initialDripBalance = address(raiseBoxDripHandler).balance;
+
+        // sync state so raise transitions from active to contribution, anyone can call:
+        vm.startPrank(sally);
+        advanceBlockTime(5 minutes);
+
+        // this transitions state from active to contribution after creation delay elapse
+        raiseBoxCore.syncRaiseState(raiseIdSmall);
+        vm.stopPrank();
 
         // contribute:
         vm.startPrank(uche);
@@ -84,6 +92,14 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
         console.log("\n=== TEST 2: Multiple contributors to small raise ===");
 
         uint256 contributionAmount = 2 ether;
+
+        // sync state so raise transitions from active to contribution, anyone can call:
+        vm.startPrank(sally);
+        advanceBlockTime(5 minutes);
+
+        // this transitions state from active to contribution after creation delay elapse
+        raiseBoxCore.syncRaiseState(raiseIdSmall);
+        vm.stopPrank();
 
         // uche contributes
         vm.startPrank(uche);
