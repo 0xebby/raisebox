@@ -147,7 +147,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         /// @dev only update storage when raise has passed,
         /// i.e. the amount to raise by project has been raised successfully
         /// instead of updating storage everytime a contribution is made, wasteful
-        /// raise is successful and moved to proposal state as target has been met
+        /// raise is successful and moved to PROPOSAL state as target has been met
         if (totalContributionsToProject[raiseId] >= raiseTarget) {
             raiseBoxCore.updateRaiseInfo(
                 raiseInfo.raiseCreationInfo.projectInfo,
