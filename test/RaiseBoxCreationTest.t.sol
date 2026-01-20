@@ -109,7 +109,7 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         vm.stopPrank();
 
         vm.startPrank(sam);
-        raiseBoxVoting.vote(raiseId, proposalId, true);
+        raiseBoxVoting.vote(raiseId, proposalId, false);
         vm.stopPrank();
 
         vm.startPrank(joe);

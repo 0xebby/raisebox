@@ -462,6 +462,7 @@ contract RaiseBoxCore is IRaiseBoxCore, Ownable, AutomationCompatibleInterface {
             _raiseInfo.raiseState == RaiseState.CONTRIBUTION &&
             block.timestamp > (_raiseInfo.raiseCreationInfo.raiseCreatedAt + RAISE_DURATION) &&
             _raiseInfo.raiseContributionInfo.amountRaisedByProject < _raiseInfo.raiseCreationInfo.projectInfo.raiseTarget
+            
             ) {
             _failedRaise(raiseId_);
         }

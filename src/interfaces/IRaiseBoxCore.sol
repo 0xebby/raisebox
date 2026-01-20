@@ -43,38 +43,38 @@ interface IRaiseBoxCore {
     /// @dev the different states that a raise on raisebox can be in
     enum RaiseState{
 
-        // raise not created yet, default state
+        // raise not created yet, default state [0]
         INACTIVE,
 
-        // raise just created before contribution begins
+        // raise just created before contribution begins [1]
         ACTIVE,
 
-        // raise has been created and contribution is activated
+        // raise has been created and contribution is activated [2]
         CONTRIBUTION,
 
-        // raise passed, i.e raise target was reached before raise duration elapsed
+        // raise passed, i.e raise target was reached before raise duration elapsed [3]
         PROPOSAL,
 
-        // just after proposal has been hosted, allows for votes deleation and milestone claims verifications
+        // just after proposal has been hosted, allows for votes deleation and milestone claims verifications [4]
         DELEGATING,
 
-        //  state where contributors can vote on proposal 
+        //  state where contributors can vote on proposal [5]
         VOTING,
 
-        // after a successful favorable vote, funds are dripped to raise creator in this state
+        // after a successful favorable vote, funds are dripped to raise creator in this state [6]
         DRIPPING,
 
-        PASSED,
+        PASSED, /**[7] */
 
         // raise failed either by 3 consecutive failed proposals or 5 non consecutive failed proposals, 
-        // raise failed by amtToRaise > amtRaised after raiseDuration
-        REFUNDING,
+        // raise failed by amtToRaise > amtRaised after raiseDuration [8]
+        REFUNDING, 
 
-        // state of a raise that either did not meet target or violated the allowed failed proposals limits as stated above
+        // state of a raise that either did not meet target or violated the allowed failed proposals limits as stated above [9]
         FAILED,
 
         // raise state for raises that have ended successfully, 
-        // either: all funds are dripped before project duration elapses
+        // either: all funds are dripped before project duration elapses [10]
         ENDED
     } 
 
