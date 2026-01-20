@@ -40,7 +40,7 @@ contract TestsHelpers is Test {
     // faucet contract address
     // address faucetToken = 0xB15D5A9DCcCCcb3Caf55360D89610834A72Cf6b3;
 
-    MockToken raiseboxtoken;
+    MockToken raiseBoxToken;
 
     uint256 public constant INITIAL_SUPPLY = 100_000;
     
@@ -112,8 +112,8 @@ contract TestsHelpers is Test {
     function setUp() public {
         vm.startPrank(address(this)); 
 
-        // raiseboxtoken: token used for interaction alongside eth:
-        raiseboxtoken  = new MockToken(INITIAL_SUPPLY);
+        // raiseBoxToken: token used for interaction alongside eth:
+        raiseBoxToken  = new MockToken(INITIAL_SUPPLY);
 
         // deploy the main contract that holds general storage
         raiseBoxCore = new RaiseBoxCore();
@@ -196,7 +196,7 @@ contract TestsHelpers is Test {
 
         // Set token after all contracts are deployed
         // vm.startPrank(owner);
-        raiseBoxCore.setAcceptedToken(address(raiseboxtoken));
+        raiseBoxCore.setAcceptedToken(address(raiseBoxToken));
         // vm.stopPrank();
         
         raiseBoxCore.verifyAndAddToWhitelist(testOwner);

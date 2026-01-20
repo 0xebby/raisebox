@@ -33,9 +33,9 @@ contract TokenTest is Test, TestsHelpers {
         vm.stopPrank();
         
         // Setup: Give tokens to contributor and approve
-        raiseboxtoken.mint(contributor, 500 ether);
+        raiseBoxToken.mint(contributor, 500 ether);
         vm.startPrank(contributor);
-        raiseboxtoken.approve(address(raiseBoxContributionContract), 500 ether);
+        raiseBoxToken.approve(address(raiseBoxContributionContract), 500 ether);
         
         // Test: Contribute ERC20 tokens
         raiseBoxContributionContract.contribute(100 ether, raiseId);
@@ -79,7 +79,7 @@ contract TokenTest is Test, TestsHelpers {
     function testErc20AndEtherContribution() public {
         address contributor = makeAddr("contributor");
         vm.deal(contributor, 100 ether);
-        raiseboxtoken.mint(contributor, 100 ether);
+        raiseBoxToken.mint(contributor, 100 ether);
         
         // Setup: Create ERC20 raise
         vm.startPrank(testOwner);
@@ -94,7 +94,7 @@ contract TokenTest is Test, TestsHelpers {
         vm.stopPrank();
 
         vm.startPrank(contributor);
-        raiseboxtoken.approve(address(raiseBoxContributionContract), 10 ether);
+        raiseBoxToken.approve(address(raiseBoxContributionContract), 10 ether);
         raiseBoxContributionContract.contribute{value: 10 ether}(10 ether, raiseId);
         raiseBoxContributionContract.contribute(10 ether, raiseId);
         vm.stopPrank();
