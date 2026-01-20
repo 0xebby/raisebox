@@ -68,12 +68,21 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         /// @dev getRaiseInfo has a doesRaiseExist check embedded in it call stack that reverts early if an invalid raiseId is passed
         IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
 
+        
+        if (raiseInfo.raiseState == IRaiseBoxCore.RaiseState.ENDED) {
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_RaiseEnded(raiseId);
+        }
+
+        if (raiseInfo.raiseState == IRaiseBoxCore.RaiseState.FAILED) {
+            revert RaiseBoxErrorsLib.
+            RaiseBoxContribution_contribute_RaiseAlreadyFailed(raiseId);
+        }
+
         if (raiseInfo.raiseState != IRaiseBoxCore.RaiseState.CONTRIBUTION) {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_contribute_RaiseNotInContributionState();
         }
 
-        address raiseOwner = raiseInfo.raiseCreationInfo.raiseOwner;
-        if (msg.sender == raiseOwner) revert RaiseBoxErrorsLib.RaiseBoxContribution_SelfContributionForbidden();
+        if (msg.sender == raiseInfo.raiseCreationInfo.raiseOwner) revert RaiseBoxErrorsLib.RaiseBoxContribution_SelfContributionForbidden();
 
         // Validate contribution based on what was sent (ETH or ERC20)
         bool isETH = _validateContribution(amount);
@@ -110,7 +119,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
             // target wasn't met within the raiseDuration
             /// @dev moves raise state to failed and triggers refund mechanism
             raiseBoxCore.endRaise(raiseId);
-            revert RaiseBoxErrorsLib.RaiseBoxContribution_RaiseEnded(raiseId);
+            return;
         }
 
         if (totalContributions + amount > raiseTarget) { 
@@ -157,7 +166,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
                 totalContributionsToProject[raiseId],
                 raiseInfo.raiseCreationInfo.doesRaiseExist,
                 raiseId,
-                raiseOwner,
+                raiseInfo.raiseCreationInfo.raiseOwner,
                 0,
                 0,
                 0

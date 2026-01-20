@@ -213,4 +213,8 @@ library RaiseBoxEventsLib {
     );
 
     event RaiseBoxProposal_verifyDripPercent_lastDripPercent(uint256 dripPercent);
+
+     event rb_refundContribution_ContributionRefunded(bytes32 indexed raiseId, uint256 totalRefunded);
+
+   
 }

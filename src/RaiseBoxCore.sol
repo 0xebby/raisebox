@@ -18,6 +18,7 @@ import {IRaiseBoxVoting} from "../src/interfaces/IRaiseBoxVoting.sol";
 import {IRaiseBoxDripHandler} from "src/interfaces/IRaiseBoxDripHandler.sol";
 import {IRaiseBoxCreation} from "src/interfaces/IRaiseBoxCreation.sol";
 import "../lib/forge-std/src/Test.sol";
+import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
 
 
 /**
@@ -27,7 +28,7 @@ import "../lib/forge-std/src/Test.sol";
  * @notice it holds the major storage that all other contracts read and update (authorized updates***)
  * @dev use it's associated interface to get exposed external functions and structs
  */
-contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
+contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInterface  {
 
     // type declaration
     using SafeERC20 for IERC20;
@@ -56,6 +57,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
     uint256 public constant RAISE_DURATION = 5 weeks; // 1month and 1 week
     uint public constant MAX_CON_FAILED_PROPOSALS = 3;
     uint public constant MAX_FAILED_PROPOSALS = 5;
+    bytes32[] public raiseIds;
 
     // roles
     bytes32 public constant RAISE_CREATION_CONTRACT = keccak256("RAISEBOX_RAISE_CREATION");
@@ -570,5 +572,101 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable {
             _requireRaiseExist(raiseId_);
             return raiseInfo[raiseId_].proposalInfo.proposalsHostedByProject;
     }
+
+
+    ///// new:
+
+    function addRaiseId(bytes32 id_) external {
+        if (!authorizedCallers[RAISE_CREATION_CONTRACT][msg.sender]) {
+            revert RaiseBoxErrorsLib.RaiseBoxCore_addRaiseId_UnauthorizedCaller(msg.sender);
+        }
+         raiseIds.push(id_);
+    }
+
+    function _getRaiseIds() internal view returns (bytes32[] memory) {
+        return raiseIds;
+    }
+
+    function getRaiseIds() external view returns (bytes32[] memory) {
+        return _getRaiseIds();
+    }
+
+
+     function _endRaise(bytes32 raiseId_) internal {
+        RaiseInfo storage _raiseInfo;
+
+        _raiseInfo = raiseInfo[raiseId_];
+
+        if ( _raiseInfo.raiseState == IRaiseBoxCore.RaiseState.FAILED) {
+            revert RaiseBoxErrorsLib.RaiseBoxCore_RaiseAlreadyEnded(raiseId_);
+        }
+
+        _raiseInfo.raiseState = IRaiseBoxCore.RaiseState.FAILED;
+
+        emit RaiseBoxEventsLib.RaiseBoxCore_endRaise_RaiseEnded(raiseId_, block.timestamp);
+    }
+
+    function checkUpkeep(bytes calldata checkData) external view override returns (bool upkeepNeeded, bytes memory performData) {
+        // upkeep
+        // bytes32[] memory ids = _getRaiseIds();
+        bytes32[] memory tempIds = new bytes32[](raiseIds.length);
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < raiseIds.length; i++) {
+            bytes32 raiseId = raiseIds[i];
+
+            RaiseInfo storage raiseInfo_ = raiseInfo[raiseId];
+
+            uint256 deadline = raiseInfo_.raiseCreationInfo.raiseCreatedAt + RAISE_DURATION;
+
+            // only include raises that are active and past deadline
+
+            // get amount raised:
+           uint256 raisedAmount = raiseInfo_.raiseContributionInfo.amountRaisedByProject;
+
+           // get raise target:
+           uint256 raiseTarget = raiseInfo_.raiseCreationInfo.projectInfo.raiseTarget;
+
+            if (
+                block.timestamp > deadline && 
+                raiseInfo_.raiseState != RaiseState.FAILED &&
+                raisedAmount < raiseTarget
+                ) {
+                tempIds[count] = raiseId;
+                count++;
+            }
+
+        }
+
+        if (count > 0) {
+            // means there are raises that have passed deadline and need upkeep
+            upkeepNeeded = true;
+
+            // prepare performData with the relevant raiseIds
+            bytes32[] memory raisesToPerformUpkeepOn = new bytes32[](count);
+            for (uint256 j = 0; j < count; j++) {
+                raisesToPerformUpkeepOn[j] = tempIds[j];
+            }
+            performData = abi.encode(raisesToPerformUpkeepOn);
+        } else {
+            upkeepNeeded = false;
+            performData = "";
+        }
+        
+       
+    }
+
+    function performUpkeep(bytes calldata performData) external override {
+        // performupkeep, end raises that have passed deadline
+       if (performData.length == 0) return; // no data to process and perform upkeep on
+
+       bytes32[] memory idsToEnd = abi.decode(performData, (bytes32[]));
+
+       for (uint256 i = 0; i < idsToEnd.length; i++) {
+            _endRaise(idsToEnd[i]);
+       }
+
+    }
+
 }
 
