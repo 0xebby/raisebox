@@ -22,6 +22,12 @@ library RaiseBoxErrorsLib {
     /// @param proposalId the invalid proposalId passed
     error RaiseBoxProposal_isValidProposal_ProposalDoesNotExist(uint256 proposalId);
 
+    /// @notice
+    error RaiseBoxVoting_NotContributor(
+        bytes32 raiseId, 
+        address user
+        );
+
     /// @notice thrown when an invalid `raiseId` is passed to `canHostProposal` modifier
     /// @param raiseId the invalid `id` passed
     error RaiseBoxProposal_canHostProposal_InvalidRaiseId(bytes32 raiseId);
@@ -35,6 +41,9 @@ library RaiseBoxErrorsLib {
 
     /// @notice thrown when the legth of project milestone text is `0` less or greater than allowed length
     error RaiseBoxProposal_hostProposal_InvalidMilestoneLength();
+
+    /// @notice thrown when a non-raise creator tries to host a proposal for the raise
+    error RaiseBoxProposal_hostProposal_NotRaiseOwner();
 
     /// @notice thrown when an unauthorized caller tries to update proposalInfo
     error RaiseBoxProposal_updateProposalInfo_Unauthorized();
@@ -142,7 +151,7 @@ library RaiseBoxErrorsLib {
     error RaiseBoxVoting_CannotReDelegate();
     
     error RaiseBoxVoting_CannotDelegateAfterVotingBegins();
-    error RaiseBoxDripHandler_dripFunds_DripAlreadyExecutedForProposal(bytes32 raiseId, uint256 proposalId);
+    error RaiseBoxDripHandler_dripFunds_DripAlreadyExecuted(bytes32 raiseId, uint256 proposalId);
     error RaiseBoxVoting_ProposalDoesNotExist(uint256 proposalId);
 
     // contribution related errors:
@@ -204,6 +213,10 @@ library RaiseBoxErrorsLib {
     /// @notice thrown when raise creator tries to contribute to self
     error RaiseBoxContribution_SelfContributionForbidden();
 
+    /// @notice thrown when contribution is attempted to a raise that has failed
+    /// @dev failed raises are raises that didn't meet target before deadline
+    error RaiseBoxContribution_contribute_RaiseAlreadyFailed(bytes32 raiseId);
+
     /// @notice thrown when `address` tries to delegate vote in a raise they've not contributed to
     /// @param raiseId `id` of raise
     error RaiseBoxVoting_canDelegate_NotAContributor(bytes32 raiseId);
@@ -213,5 +226,17 @@ library RaiseBoxErrorsLib {
     
     /// @notice thrown if protocol address has not been set
     error RaiseBoxCore_getProtocol_RaiseBoxProtocolUnset();
+
+    error RaiseBoxProposal_hostProposal_MaxDripsAlreadyUsed(uint256);
+
+    error RaiseBoxProposal_hostProposal_FirstDripGreaterThan10(uint256);
+
+    error RaiseBoxProposal_hostProposal_CannotDrip25Con(uint8);
+
+    /// @notice thrown when trying to end a raise that has already been ended
+    error RaiseBoxCore_RaiseAlreadyEnded(bytes32 raiseId);
+
+    /// @notice thrown when unauthorized caller tries to add raiseId to storage
+    error RaiseBoxCore_addRaiseId_UnauthorizedCaller(address caller);
 
 }

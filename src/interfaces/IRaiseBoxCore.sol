@@ -39,16 +39,43 @@ interface IRaiseBoxCore {
         RaiseState raiseState;
     }
 
+    /// @dev the different states that a raise on raisebox can be in
     enum RaiseState{
-        INACTIVE, // raise not created yet, default state
-        CONTRIBUTION, // raise has been created
-        PROPOSAL, // raise passed but still active
-        VOTING, // raise in proposal hosting state, active, passed, in_proposal
-        FAILED, // raise failed and becomes inactive again
+
+        // raise not created yet, default state
+        INACTIVE,
+
+        // raise just created before contribution begins
+        ACTIVE,
+
+        // raise has been created and contribution is activated
+        CONTRIBUTION,
+
+        // raise passed, i.e raise target was reached before raise duration elapsed
+        PROPOSAL,
+
+        // just after proposal has been hosted, allows for votes deleation and milestone claims verifications
+        DELEGATING,
+
+        //  state where contributors can vote on proposal 
+        VOTING,
+
+        // after a successful favorable vote, funds are dripped to raise creator in this state
+        DRIPPING,
+
         PASSED,
-        REFUNDING, // raise failed either by 3 consecutive failed proposals or 5 non consecutive failed proposals, raise failed by amtToRaise > amtRaised after raiseDuration
-        ENDED // raise started and then was ended successfully, either: all proposals passed and drips were successful or 60 weeks elapsed
-    } //[0,1,2,3,4, 5]
+
+        // raise failed either by 3 consecutive failed proposals or 5 non consecutive failed proposals, 
+        // raise failed by amtToRaise > amtRaised after raiseDuration
+        REFUNDING,
+
+        // state of a raise that either did not meet target or violated the allowed failed proposals limits as stated above
+        FAILED,
+
+        // raise state for raises that have ended successfully, 
+        // either: all proposals passed and drips were successful or 60 weeks elapsed
+        ENDED
+    } 
 
 
     // function incrementConFailedProposals(bytes32 raiseId) external;
@@ -101,6 +128,22 @@ interface IRaiseBoxCore {
     ) external;
 
     function endRaise(bytes32 raiseId_) external;
+
+    function addRaiseId(bytes32 id_) external;
+
+    function getRaiseIds() external view returns (bytes32[] memory);
+
+
+    // tasks:
+    // ensure drip percent passed by raise creator during hosting of proposal is used in the internal _determineDripPercent function in RaiseBoxDripHandler contract
+    // setup raisebox to work with the raisebox faucet ERC20 token
+    // contributions, refunds and drips should be done with the token
+    // ensure token swap is 1 token : $1 for simplicity and swap mechanism uses uniswap
+    // ensure all errors/events across raisebox are form the errors/events libraries
+    // set up raise creator prior verification using polygon privadoId -- ensure the creator has the zk proof from thrid party verifier before adding to raisebox whitelist for raise creation
+    // setup protocol fee calculation and withdrawal mechanism 
+    // protocol fee is 1.5% of total amount raised by project on successful completion of raise
+    // implement erc-4337 gassless contribution via account abstraction using a paymaster
 
   
 }

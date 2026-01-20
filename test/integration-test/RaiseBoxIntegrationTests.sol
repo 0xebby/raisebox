@@ -276,6 +276,10 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
     function test_Integration_50_EndToEndRaiseCycle() public {
         console.log("\n=== TEST 50: Comprehensive end-to-end raise cycle ===");
 
+        /// create a non-contributor that will try to infiltrate and break the protocol logics at different stages:
+        address nonContributor = makeAddr("non-contributor");
+        vm.deal(nonContributor, 1000 ether);
+
         /// use raiseCreator
 
 
@@ -289,9 +293,25 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
 
         /// create a raise
         vm.startPrank(raiseCreator);
+        // vm.expectEmit(false, true, false, true, true, false);
+        // RaiseBoxEventsLib.RaiseCreation_RaiseCreated(
+        //     "medium project",
+        //     raiseCreator,
+        //     "medium project value proposition",
+        //     RAISE_TARGET_MEDIUM,
+        //     // needs raiseId,
+        //     block.timestamp
+
+        // )
         bytes32 endToEndRaiseId = raiseBoxRaiseCreationContract.createNewRaise(
             projectInfoMEDIUM
         );
+        vm.stopPrank();
+
+        /// nonContributor also tries to create a raise and fails since not whitelisted prior
+        vm.startPrank(nonContributor);
+        vm.expectRevert();
+        raiseBoxRaiseCreationContract.createNewRaise( projectInfoMEDIUM );
         vm.stopPrank();
 
         /// get latest raise state:
@@ -428,6 +448,22 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
         );
 
     /// HOSTING OF PROPOSALS:
+
+    /// non creator tries to host proposal for a raise:
+    /// has to happen here first as any successful proposal hosting would remove
+    /// raise from PROPOSAL state
+    /// should fail as caller isn't the raise creator
+    vm.startPrank(nonContributor);
+    vm.expectRevert();
+    raiseBoxProposalContract.hostProposal(
+        endToEndRaiseId,
+        IRaiseBoxProposal.MilestoneInfo({
+        description: "First proposal for end to end raise",
+        milestone:"This is the first proposal for the comprehensive end to end raise cycle test",
+        dripPercent: 10
+        })
+    );
+    vm.stopPrank();
     
     /// raiseCreator can now host proposals that contributors will then vote on:
     /// host first proposal:
@@ -487,6 +523,17 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
         lastProposalTime >= block.timestamp - 5 minutes,
         "last proposal time should be recent"
     );
+
+    /// nonContributor tries to delegate votes and fails:
+    vm.startPrank(nonContributor);
+    vm.expectRevert(
+        abi.encodeWithSelector(
+            RaiseBoxErrorsLib.RaiseBoxVoting_canDelegate_NotAContributor.selector,
+            endToEndRaiseId 
+            )
+    );
+    raiseBoxVoting.delegateVote(endToEndRaiseId, proposalId1, nonContributor, contributor5);
+    vm.stopPrank();
 
     /// vote on proposal 1:
     /// contributors 1-5 will vote:
@@ -558,6 +605,29 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
     /// voting starts after 2 days of proposal hosting, allows for delegation and confirming milestone completion claims
     advanceBlockTime(2 days); 
 
+    /// nonContributor tries to vote and fails:
+    vm.startPrank(nonContributor);
+    vm.expectRevert(
+        abi.encodeWithSelector(
+            RaiseBoxErrorsLib.RaiseBoxVoting_NotContributor.selector, 
+            endToEndRaiseId,
+            nonContributor
+            )
+    );
+    raiseBoxVoting.vote(endToEndRaiseId, proposalId1, false);
+    vm.stopPrank();
+
+    /// non contributor also tries to vote for a non-existent proposal
+    vm.startPrank(nonContributor);
+    vm.expectRevert(
+        abi.encodeWithSelector(
+            RaiseBoxErrorsLib.RaiseBoxProposal_isValidProposal_ProposalDoesNotExist.selector, 
+            90
+            )
+    );
+    raiseBoxVoting.vote(endToEndRaiseId, 90 /* fake proposal with id = 90 */, false);
+    vm.stopPrank();
+
     /// voters: contributor 5: 3 votes, contributor 3: 1 vote, contributor 4: 1 vote
 
     /// contributor 5 votes false
@@ -623,6 +693,18 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
     vm.expectEmit(true, true, false, false);
     emit RaiseBoxEventsLib.RaiseBoxVoting_VoteTallyTriggered( raiseCreator, proposalId1, block.timestamp );
     vm.startPrank(raiseCreator);
+    raiseBoxVoting.triggerVoteTally(endToEndRaiseId, proposalId1);
+    vm.stopPrank();
+
+    // raiseCreator tries to trigger vote tallying of same proposal twice and fails:
+    vm.startPrank(raiseCreator);
+    vm.expectRevert(
+        abi.encodeWithSelector(
+            RaiseBoxErrorsLib.RaiseBoxVoting_VotingAlreadyEnded.selector,
+            endToEndRaiseId,
+            proposalId1
+        )
+    );
     raiseBoxVoting.triggerVoteTally(endToEndRaiseId, proposalId1);
     vm.stopPrank();
 

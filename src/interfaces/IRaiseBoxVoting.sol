@@ -35,10 +35,7 @@ interface IRaiseBoxVoting {
         uint256 triggerTime
         );
     
-    error RaiseBoxVoting_NotContributor(
-        bytes32 raiseId, 
-        address user
-        );
+
     error RaiseBoxVoting_AlreadyVoted(
         uint256 proposalId, 
         address user

@@ -31,6 +31,7 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
     mapping(address projectOwner => uint256 lastRaiseCreated) public i_lastRaiseCreated;
     mapping(address => bool) public hasCreatedRaise;
     uint256 private raisesCreatedOnRaiseBox;
+    bytes32[] private raiseHashes;
 
     // ----------------------------------------------------------------------- constructor -------------------------------------------------------------------------  //
 
@@ -85,7 +86,9 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
         }
 
         raisesCreated[msg.sender] += 1;
-        raiseBoxCore.updateRaiseInfo( // updates storage with raiseCreation info
+        bytes32 projectInfoHash = keccak256(abi.encode(projectInfo, raiseId, timeCreated, msg.sender));
+        raiseBoxCore.updateRaiseInfo( 
+            // updates storage with raiseCreation info
             projectInfo,
             timeCreated,
             0,
@@ -98,7 +101,8 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
         );
         i_lastRaiseCreated[msg.sender] = timeCreated;
         hasCreatedRaise[msg.sender] = true;
-        raisesCreatedOnRaiseBox++;        
+        raisesCreatedOnRaiseBox++; 
+        raiseHashes.push(projectInfoHash);       
         
 
         emit RaiseBoxEventsLib.RaiseCreation_RaiseCreated(
@@ -118,6 +122,10 @@ contract RaiseBoxCreation is IRaiseBoxCreation {
 
      function getHasCreatedARaise(address creator) external view returns (bool) {
         hasCreatedRaise[creator];
+     }
+
+     function getRaiseHashAtIndex(uint256 index) external view returns (bytes32) {
+        return raiseHashes[index];
      }
 
 

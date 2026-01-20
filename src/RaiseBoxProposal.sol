@@ -46,7 +46,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
             // ascertain owner is host of project and is trying to host proposal
             if (raiseInfo.raiseCreationInfo.raiseOwner != proposalHost_) {
-                revert raiseBoxProposal_InvalidRaiseOwner();
+                revert RaiseBoxErrorsLib.RaiseBoxProposal_hostProposal_NotRaiseOwner();
             }
 
             // ascertain that project has not hosted proposal in the last 4 weeks
@@ -88,23 +88,46 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         if (
             milestoneInfo_.dripPercent < 5 || 
             milestoneInfo_.dripPercent > 25 || 
-            (milestoneInfo_.dripPercent % 5 != 0)
+            milestoneInfo_.dripPercent % 5 != 0
             ) {
             revert RaiseBoxErrorsLib.RaiseBoxProposal_hostProposal_InvalidDripPercent();
         }
+
+        /// drip percent check:
+        if (proposalsHostedByProject[raiseId_] == 0) {
+            if (milestoneInfo_.dripPercent > 10) {
+                revert RaiseBoxErrorsLib.RaiseBoxProposal_hostProposal_FirstDripGreaterThan10(milestoneInfo_.dripPercent);
+            }
+            
+        } else {
+            if (milestoneInfo_.dripPercent == 25) {
+
+                if (_25DripsUsed[raiseId_] >= ALLOWED_MAX_DRIP) {
+                    revert RaiseBoxErrorsLib.RaiseBoxProposal_hostProposal_MaxDripsAlreadyUsed(milestoneInfo_.dripPercent);
+                } 
+
+                if (_getLastProposalDripPercent(raiseId_) == 25) {
+                        revert RaiseBoxErrorsLib.RaiseBoxProposal_hostProposal_CannotDrip25Con(milestoneInfo_.dripPercent);
+                }
+
+                _25DripsUsed[raiseId_]++;
+            }
+        }
+       
 
         // effects
         proposalCount++;
         proposalsHostedByProject[raiseId_]++;
         lastProposalTime[raiseId_] = block.timestamp;
         s_hasHostedProposal[raiseId_] = true;
-
+        
         
         proposalId_ = proposalsHostedByProject[raiseId_];
-        
+
         // update core here:
+        IRaiseBoxCore.ProjectInfo memory projectInfo;
         raiseBoxCore.updateRaiseInfo(
-            raiseBoxCore.getRaiseInfo(raiseId_).raiseCreationInfo.projectInfo,
+            projectInfo,
             lastProposalTime[raiseId_],
             0,
             true,
@@ -123,6 +146,8 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
             proposalState: ProposalState.ACTIVE,
             doesProposalExist: true
         });
+
+        lastDripPercent[raiseId_] = milestoneInfo_.dripPercent;
 
         emit RaiseBoxEventsLib.RaiseBoxProposal_updateProposalInfo_ProposalInfoUpdated();
 
@@ -293,6 +318,36 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         }
       
         emit RaiseBoxEventsLib.ProposalStateUpdated(proposalState_);
+    }
+
+    // last drip percent for a project (5..100 in multiples of 5)
+    // least drip is 5% and max allowed drip is 25%
+    // only two 25% drips allowed and cannot be consecutive nor the first drip
+    // first drip is max 10%
+    mapping(bytes32 => uint8) public lastDripPercent;
+
+    // number of times 25% drip used for a project
+    mapping(bytes32 => uint8) public _25DripsUsed;
+
+    // maximum allowed 25% drips per project lifecycle
+    uint8 public constant ALLOWED_MAX_DRIP = 2;
+
+    function getLastProposalDripPercent(bytes32 raiseId) external returns (uint8) {
+        return _getLastProposalDripPercent(raiseId);
+    }
+
+    function _getLastProposalDripPercent(bytes32 raiseId_) internal returns (uint8) {
+        raiseBoxCore.doesRaiseExist(raiseId_);
+        return lastDripPercent[raiseId_];
+    }
+
+    function get25DripsCount(bytes32 raiseId_ ) external returns (uint8) {
+        return _25DripsUsed[raiseId_];
+    }
+
+    function getDripPercent(bytes32 raiseId_, uint256 proposalId_) external returns (uint8) {
+        _isValidProposal(raiseId_, proposalId_);
+        return proposalInfo[raiseId_][proposalId_].milestoneInfo.dripPercent;
     }
 
 

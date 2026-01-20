@@ -23,8 +23,6 @@ interface IRaiseBoxProposal {
     }
     
     event ProposalPassed();
-
-    error raiseBoxProposal_InvalidRaiseOwner();
     error RaiseBoxProposal_hostProposal_ProjectDoesNotExist();
     error RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
     error RaiseBoxProposal_hostProposal_RaiseNotPassedYet();
@@ -61,5 +59,11 @@ interface IRaiseBoxProposal {
     function getTotalProposals() external view returns (uint256);
 
     // returns true if a proposal exist within a raise.
-    function isValidProposal(bytes32 rasieId, uint256 proposalId) external view returns (bool);
+    function isValidProposal(bytes32 raiseId, uint256 proposalId) external view returns (bool);
+
+    function get25DripsCount(bytes32 raiseId_ ) external returns (uint8);
+
+    function getLastProposalDripPercent(bytes32 raiseId) external returns (uint8);
+
+    function getDripPercent(bytes32 raiseId_, uint256 proposalId_) external returns (uint8);
 }

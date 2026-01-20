@@ -30,7 +30,8 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
 
     mapping(address => mapping(bytes32 => uint256[])) public contributionsToProjectArray; // array of contributions per user per project
 
-    uint256 public constant MAX_CONTRIBUTION_PERCENTAGE = 20; // 2% OF AMOUNT TO RAISE
+    uint256 public constant MAX_CONTRIBUTION_PERCENTAGE = 200; 
+    // 20.0% OF AMOUNT TO RAISE, tentative for testing, should 20 - 2.0% in production
 
     // tracks total amount contributed to project
 
@@ -64,12 +65,21 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         /// @dev getRaiseInfo has a doesRaiseExist check embedded in it call stack that reverts early if an invalid raiseId is passed
         IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
 
+        
+        if (raiseInfo.raiseState == IRaiseBoxCore.RaiseState.ENDED) {
+            revert RaiseBoxErrorsLib.RaiseBoxContribution_RaiseEnded(raiseId);
+        }
+
+        if (raiseInfo.raiseState == IRaiseBoxCore.RaiseState.FAILED) {
+            revert RaiseBoxErrorsLib.
+            RaiseBoxContribution_contribute_RaiseAlreadyFailed(raiseId);
+        }
+
         if (raiseInfo.raiseState != IRaiseBoxCore.RaiseState.CONTRIBUTION) {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_contribute_RaiseNotInContributionState();
         }
 
-        address raiseOwner = raiseInfo.raiseCreationInfo.raiseOwner;
-        if (msg.sender == raiseOwner) revert RaiseBoxErrorsLib.RaiseBoxContribution_SelfContributionForbidden();
+        if (msg.sender == raiseInfo.raiseCreationInfo.raiseOwner) revert RaiseBoxErrorsLib.RaiseBoxContribution_SelfContributionForbidden();
 
         uint256 raiseTarget = raiseInfo.raiseCreationInfo.projectInfo.raiseTarget;
 
@@ -103,7 +113,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
             // target wasn't met within the raiseDuration
             /// @dev moves raise state to failed and triggers refund mechanism
             raiseBoxCore.endRaise(raiseId);
-            revert RaiseBoxErrorsLib.RaiseBoxContribution_RaiseEnded(raiseId);
+            return;
         }
 
         if (totalContributions + amount > raiseTarget) { 
@@ -145,7 +155,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
                 totalContributionsToProject[raiseId],
                 raiseInfo.raiseCreationInfo.doesRaiseExist,
                 raiseId,
-                raiseOwner,
+                raiseInfo.raiseCreationInfo.raiseOwner,
                 0,
                 0,
                 0
@@ -187,7 +197,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     {
         uint256 amountToRaise = raiseBoxCore.getAmountToRaise(raiseId);
 
-        maxContributionPerUser = ((MAX_CONTRIBUTION_PERCENTAGE * amountToRaise) / 100);
+        maxContributionPerUser = ((MAX_CONTRIBUTION_PERCENTAGE * amountToRaise) / 1000);
 
         return maxContributionPerUser;
     }

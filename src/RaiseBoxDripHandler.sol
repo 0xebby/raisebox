@@ -13,9 +13,10 @@ import {RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
  * @title RaiseBoxDripHandler
  * @notice Handles releasing (dripping) funds to project owners when milestone proposals pass.
  * @dev Assumes voting contract provides a tally that can be used to decide if proposal passed.
- *      Designed to be set as the `protocol` address in `RaiseBoxCore` so contributions are
- *      held here and released by this contract. Owner should set core/proposal/voting addresses.
+ * @dev Designed to be set as the `protocol` address in `RaiseBoxCore` so contributions are
+ * @dev held here and released by this contract. Owner should set core/proposal/voting addresses.
  */
+
 contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     IRaiseBoxCore public raiseBoxCore;
     IRaiseBoxVoting public raiseBoxVoting;
@@ -32,44 +33,28 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
         emit VotingSet(votingContract);
     }
 
-    // get needed raiseBox contracts from the core using the getters instead of doing it from constructor:
-    // address public raiseBoxVoting = raiseBoxCore.getVotingContract();
-    // address public raiseBoxProposal = raiseBoxCore.getProposalContract();
-
     // track if a proposal has already had its drip executed
     mapping(bytes32 => mapping(uint256 => bool)) public drippedForProposal;
 
     // total amount dripped for a project
     mapping(bytes32 => uint256) public totalDrippedForProject;
 
-    // last drip percent for a project (5..100 in multiples of 5)
-    // least drip is 5% and max allowed drip is 25%
-    // only two 25% drips allowed and cannot be consecutive nor the first drip
-    // first drip is max 10%
-    mapping(bytes32 => uint8) public lastDripPercent;
-
-    // number of times 25% drip used for a project
-    mapping(bytes32 => uint8) public _25DripsUsed;
-
-    // maximum allowed 25% drips per project lifecycle
-    uint8 public constant ALLOWED_MAX_DRIP = 2;
-
-    function dripFundsForProposal(bytes32 raiseId, uint256 proposalId) external 
-    /**
-     * nonReentrant
-     */
+    function dripFundsForProposal(bytes32 raiseId, uint256 proposalId) external nonReentrant
     {
         if (address(raiseBoxProposal) == address(0)) revert DripHandler_NotProposalContract();
 
         if (msg.sender != address(raiseBoxVoting)) revert DripHandler_NotVotingContract(msg.sender);
 
-        raiseBoxCore.doesRaiseExist(raiseId);
+        /// @notice checks if proposal requesting drip is valid with a valid raiseId
+        raiseBoxProposal.isValidProposal(raiseId, proposalId);
 
-        if (drippedForProposal[raiseId][proposalId]) revert RaiseBoxErrorsLib.RaiseBoxDripHandler_dripFunds_DripAlreadyExecutedForProposal(raiseId, proposalId);
+        /// raise state should be in VOTING
+
+        if (drippedForProposal[raiseId][proposalId]) revert RaiseBoxErrorsLib.RaiseBoxDripHandler_dripFunds_DripAlreadyExecuted(raiseId, proposalId);
 
         // determine percentage to drip using proposal count and last drip data
         uint256 propCount = raiseBoxProposal.getProposalCount(raiseId);
-        uint8 dripPercent = _determineDripPercent(raiseId, propCount);
+        uint8 dripPercent = raiseBoxProposal.getDripPercent(raiseId, proposalId);
 
         // compute amount to release based on amount raised at time of raise
         uint256 amountRaised = raiseBoxCore.getAmtRaisedByProject(raiseId);
@@ -82,14 +67,6 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
         // effects
         drippedForProposal[raiseId][proposalId] = true;
         totalDrippedForProject[raiseId] += amountToDrip;
-        lastDripPercent[raiseId] = dripPercent;
-
-        if (dripPercent == 25) {
-            // increment 25% usage
-            if (_25DripsUsed[raiseId] < type(uint8).max) {
-                _25DripsUsed[raiseId] += 1;
-            }
-        }
 
         // interactions - send funds to project owner
         address payable projectOwner = payable(raiseBoxCore.getRaiseCreator(raiseId));
@@ -100,52 +77,10 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
         emit FundsDripped(raiseId, proposalId, dripPercent, amountToDrip);
     }
 
-    /// @notice Determine drip percent per project/proposal following rules
-    /// @dev Rules implemented:
-    /// - if proposalCount <= 1 => 10%
-    /// - if proposalCount == 2 => 25%
-    /// - if proposalCount > 2 && lastDripPercent != 25 && _25DripsUsed < ALLOWED_MAX_DRIP => 25%
-    /// - if proposalCount > 2 && lastDripPercent == 25 => 15%
-    /// - else => 10%
-    function _determineDripPercent(bytes32 raiseId, uint256 propCount) internal view returns (uint8) {
-        if (propCount <= 1) {
-            return 10;
-        }
-
-        if (propCount == 2) {
-            if (_25DripsUsed[raiseId] < ALLOWED_MAX_DRIP && lastDripPercent[raiseId] != 25) {
-                return 25;
-            }
-            return 15;
-        }
-
-        // propCount > 2
-        if (lastDripPercent[raiseId] == 25) {
-            // revert RaiseBoxDripHandler_PreviousDripIs25();
-            return 15;
-        }
-
-        // attempt to give 25% if the project hasn't exhausted its two 25% drips
-        if (_25DripsUsed[raiseId] < ALLOWED_MAX_DRIP) {
-            return 25;
-        }
-
-        // fallback
-        return 10;
-    }
-
     // ---------- Read helpers ----------
 
     function hasDripped(bytes32 raiseId, uint256 proposalId) external view returns (bool) {
         return drippedForProposal[raiseId][proposalId];
-    }
-
-    function getLastDripPercent(bytes32 raiseId) external view returns (uint8) {
-        return lastDripPercent[raiseId];
-    }
-
-    function get25DripUsed(bytes32 raiseId) external view returns (uint8) {
-        return _25DripsUsed[raiseId];
     }
 
     function drip(bytes32 raiseId, uint256 proposalId) external {
@@ -154,48 +89,4 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
 
     /// @notice Accept ETH into the drip handler (protocol must point here)
     receive() external payable {}
-
-    // /// @notice Set the central RaiseBoxCore contract address
-    // function setCore(address coreAddress) external onlyOwner {
-    //     require(coreAddress != address(0), "core address zero");
-    //     raiseBoxCore = IRaiseBoxCore(coreAddress);
-    //     emit CoreSet(coreAddress);
-    // }
-
-    // /// @notice Set the RaiseBoxVoting contract address
-    // function setVoting(address votingAddress) external onlyOwner {
-    //     require(votingAddress != address(0), "voting address zero");
-    //     raiseBoxVoting = IRaiseBoxVoting(votingAddress);
-    //     emit VotingSet(votingAddress);
-    // }
-
-    // /// @notice Set the RaiseBoxProposal contract address
-    // function setProposal(address proposalAddress) external onlyOwner {
-    //     require(proposalAddress != address(0), "proposal address zero");
-    //     raiseBoxProposal = IRaiseBoxProposal(proposalAddress);
-    //     emit ProposalSet(proposalAddress);
-    // }
-
-    /// @notice Called to drip funds for a passed proposal. Only callable by the Proposal contract.
-    /// @dev This calls `raiseBoxVoting._tallyVotes(...)` and require [forVotes > againstVotes].
-    /**
-     * @notice Drip rules:
-     *     - max funds drip at anytime should be 25%
-     *     - funds drip on very first proposal after raise is capped at 10%
-     *     - 25% funds drip can only be dripped twice throughout project lifecycle
-     *     - 25% fund drip cannot happen consecutively:
-     *       i.e after receiving a 25% fund drip, project cannot receive another 25%
-     *       in the very next drip.
-     *     - after first 25% fund drip, drips are capped at 15% untill a drip after the last 25% drip
-     *     - drips %: in multiples of 5 up to 100
-     *     - only 10% of overall funds contributed at time of hosting proposal is released per time?
-     *     - if proposalCount <= 1 => 10% fund drip
-     *     - if proposalCount == 2 => 25% fund drip
-     *     - if proposalCount > 2 && lastDripPercent != 25 && _25DripsUsed < ALLOWED_MAX_DRIP => 25%
-     *     - if proposalCount > 2 && lastDripPercent == 25 => 15%
-     *     - else => 10%
-     *
-     *     @param raiseId The project ID
-     *     @param proposalId The proposal ID
-     */
 }

@@ -21,14 +21,7 @@ interface IRaiseBoxCreation {
     error CrowdFund_OnlyProjectOwnerCanCall();
 
     // project creation related errors:
-    error RaiseBox_getProjectByIndex_InvalidProjectIndex();
     error RaiseBoxCreation_createRaise_RaiseAlreadyActive();
-    error RaiseBoxCreation_createRaise_ZeroAddress();
-    error RaiseBoxCreation_createRaise_InvalidValueProp();
-    error RaiseBoxCreation_createRaise_CannotRaiseZeroFunds();
-    error RaiseBoxCreation_createRaise_InvalidDuration();
-    error RaiseBoxCreation_createRaise_DurationCannotBeZero();
-    error RaiseBoxCreation_createRaise_InvalidProjectName();
 
 
     error RaiseBox_NoContributionsMade();
@@ -56,6 +49,8 @@ interface IRaiseBoxCreation {
     function getRaiseCreator(bytes32 raiseId) external view returns (address);
     function getHasCreatedARaise(address creator) external view returns (bool);
     function getAllRaisesCreated() external view returns (uint256);
+    function getRaiseHashAtIndex(uint256 index) external view returns (bytes32);
+
 
 
 }
