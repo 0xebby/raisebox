@@ -380,7 +380,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
         return (forVotes_, againstVotes_);
 
-    }
+    } 
 
     function getFailedProposalsCount(bytes32 raiseId) external view returns (uint256) {
         return s_raiseFailedProposals[raiseId];
