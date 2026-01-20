@@ -161,6 +161,14 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
         uint256 secondContribution = 1 ether;
         uint256 thirdContribution = 0.3 ether;
 
+        // sync state so raise transitions from active to contribution, anyone can call:
+        vm.startPrank(sally);
+        advanceBlockTime(5 minutes);
+
+        // this transitions state from active to contribution after creation delay elapse
+        raiseBoxCore.syncRaiseState(raiseIdSmall);
+        vm.stopPrank();
+
         vm.startPrank(uche);
         raiseBoxContributionContract.contribute{value: firstContribution}(firstContribution, raiseIdSmall);
         vm.stopPrank();
@@ -204,13 +212,14 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
 
     function test_Integration_04_RejectZeroAmountContribution() public {
         console.log("\n=== TEST 4: Reject zero amount contribution ===");
+        raiseBoxCore.getRaiseState(raiseIdSmall);
 
         vm.startPrank(uche);
         vm.expectRevert(RaiseBoxErrorsLib.RaiseBoxContribution_ZeroAmount.selector);
         raiseBoxContributionContract.contribute{value: 0 ether}(0 ether, raiseIdSmall);
         vm.stopPrank();
 
-        console.log("zero aount rejected");
+        console.log("zero amount rejected");
     }
 
     function test_Integration_05_RejectValueMismatchForContribution() public {
