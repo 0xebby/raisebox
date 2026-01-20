@@ -439,16 +439,16 @@ contract TestsHelpers is Test {
             }
            
 
-            // simulate delayfor voting to happen, voting duration ==> 7 days
+            // simulate delay for voting to happen, voting duration ==> 7 days
             advanceBlockTime(7 days);
             vm.prank(arbitrum);
             raiseBoxVoting.triggerVoteTally(raiseId_, a);
 
-            // simulate delay before anew proposal can be hosted ==> 4 weeks
-            advanceBlockTime(4 weeks);
+            // simulate delay before a new proposal can be hosted ==> 4 weeks
+            advanceBlockTime(3 weeks);
             }
 
             
         
     }
-} //F
+}

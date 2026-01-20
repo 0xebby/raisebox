@@ -126,11 +126,11 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
             revert RaiseBoxErrorsLib.RaiseBoxContribution_contribute_OverContributionIsForbidden(
                  string(
                 abi.encodePacked(
-                    ((raiseTarget - totalContributions) / 1e18).toString(), " more to raiseTarget"
-                )
+                    ((raiseTarget - totalContributions) / 1e18).toString(), " more ether to raiseTarget"
+                    )
                 )
             ); 
-           
+    
             }
 
         // Effects
