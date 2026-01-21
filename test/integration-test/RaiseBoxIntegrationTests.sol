@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.30;
 
 import "lib/forge-std/src/Test.sol";
 import {TestsHelpers} from "test/TestsHelpers.sol";
@@ -680,10 +680,10 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
 
     /// assertions:
     /// assert total proposal votes = 5
-    (uint256 forVotes, uint256 againstVotes, uint256 totalVotes) = raiseBoxVoting.getProposalVotes(endToEndRaiseId, proposalId1);
+    (uint256 forVotes, uint256 againstVotes) = raiseBoxVoting.getProposalVotes(endToEndRaiseId, proposalId1);
     /// assert total votes casted
     assertEq(
-        totalVotes, 
+        (forVotes + againstVotes), 
         5,
         "total votes for proposal should be 5 (3 + 1 + 1)"
     );
