@@ -339,36 +339,14 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     // Handle proposal outcome
     if (forVotes_ > againstVotes_) {
-        emit RaiseBoxEventsLib.RaiseBoxVoting_tallyVotes_ProposalPassed(
-            proposalId_,
-            forVotes_,
-            againstVotes_,
-            totalVotes,
-            block.timestamp
-        );
-
         // Delegate call to dripHandler since proposal has passed
         raiseBoxDripHandler.dripFundsForProposal(raiseId_, proposalId_);
-    } else {
-        emit RaiseBoxEventsLib.RaiseBoxVoting_tallyVotes_ProposalFailed(
-            proposalId_,
-            forVotes_,
-            againstVotes_,
-            totalVotes,
-            block.timestamp
-        );
-
-        s_raiseFailedProposals[raiseId_]++;
-    }
+    } 
 
     emit VotesTallied(raiseId_, proposalId_, forVotes_, againstVotes_, totalVotes);
 
     return (forVotes_, againstVotes_);
 }
-
-    function getFailedProposalsCount(bytes32 raiseId) external view returns (uint256) {
-        return s_raiseFailedProposals[raiseId];
-    }
 
     /// @dev sets voting ended for a given proposalId
     function _endVoting(bytes32 raiseId_, uint256 proposalId_) internal {
