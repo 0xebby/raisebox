@@ -154,7 +154,10 @@ library RaiseBoxEventsLib {
         address contractAddress
         );
     
-    event RaiseVotingInfoUpdated();
+    event RaiseVotingInfoUpdated(
+        IRaiseBoxCore.RaiseState oldRaiseState,
+        IRaiseBoxCore.RaiseState newRaiseState
+    );
 
     // contribution related events:
     event Contributed(
@@ -215,4 +218,15 @@ library RaiseBoxEventsLib {
     event RaiseBoxProposal_verifyDripPercent_lastDripPercent(uint256 dripPercent);
 
      event rb_refundContribution_ContributionRefunded(bytes32 indexed raiseId, uint256 totalRefunded);
+
+    event RaiseBoxCore_failRaise_RaiseFailed(bytes32 raiseId_, uint256 failedAt);
+
+    /// @notice emitted when refunds are successfully sent to raise contributors
+    /// @dev only happens for a failed raise
+    event RaiseBoxRefunds_refundContribution_Refunded(
+        uint256 indexed refundedAt,
+        address refundedTo,
+        uint256 indexed amountRefunded,
+        bytes32 indexed raiseId
+    );
 }

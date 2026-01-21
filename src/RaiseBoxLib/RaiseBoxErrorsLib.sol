@@ -6,6 +6,8 @@ pragma solidity ^0.8.19;
 /// @custom:contact tech.codemojo@gmail.com
 /// @notice Library exposing custom errors.
 
+import {IRaiseBoxCore} from "src/interfaces/IRaiseBoxCore.sol";
+
 library RaiseBoxErrorsLib {
 
     /// @notice thrown when zero address is passed or used as caller
@@ -247,5 +249,14 @@ library RaiseBoxErrorsLib {
 
     /// @notice thrown when unauthorized caller tries to add raiseId to storage
     error RaiseBoxCore_addRaiseId_UnauthorizedCaller(address caller);
+
+    error RaiseBoxCore_RaiseAlreadyFailed(bytes32 raiseId_);
+
+    /// @notice thrown when drip is attempted when raise is not dripping:
+    error RaiseBoxDripHandler_dripFunds_NotInDrippingState(bytes32 raiseId_, IRaiseBoxCore.RaiseState raiseState);
+
+    error RaiseBoxDripHandler_refund_NotFailedRaise(bytes32 raiseId_, IRaiseBoxCore.RaiseState raiseState);
+
+    error RaiseBoxRefunds_refundContribution_RefundFailed(bytes32 raiseId_, address refundClaimer);
 
 }
