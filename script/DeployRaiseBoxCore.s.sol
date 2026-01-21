@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.30;
 
 import {RaiseBoxCreation} from "../src/RaiseBoxRaiseCreation.sol";
 import {Script} from "forge-std/Script.sol";
