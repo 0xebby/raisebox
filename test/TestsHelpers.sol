@@ -87,6 +87,8 @@ contract TestsHelpers is Test {
 
     address contributor5 = makeAddr("contributor 5");
 
+    address creator = makeAddr("creator");
+
     
     /// @notice raise targets for small, medium and large:
     uint256 RAISE_TARGET_SMALL = 10 ether;
@@ -213,6 +215,7 @@ contract TestsHelpers is Test {
         raiseBoxCore.verifyAndAddToWhitelist(max);
         raiseBoxCore.verifyAndAddToWhitelist(sally);
         raiseBoxCore.verifyAndAddToWhitelist(carl);
+        raiseBoxCore.verifyAndAddToWhitelist(creator);
 
         // warp time
         advanceBlockTime(10 days);
@@ -400,11 +403,14 @@ contract TestsHelpers is Test {
 
             
         for (uint a = 1; a < milestoneInfo.length; a++) {
+            (bool upkeepNeeded, bytes memory performData) = raiseBoxCore.checkUpkeep("");
+            raiseBoxCore.performUpkeep(performData);
             vm.prank(arbitrum);
             raiseBoxProposalContract.hostProposal(raiseId_, milestoneInfo[a]);
 
             // simulate delay before voting begins - 48 hours
             advanceBlockTime(2 days);
+            raiseBoxCore.syncRaiseState(raiseId_);
 
             // proposals in this branch will fail since `againstVotes` > `ForVotes`
             if ( 

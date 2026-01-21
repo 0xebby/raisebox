@@ -26,6 +26,11 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
         uint256 initialBalance = uche.balance;
         uint256 initialDripBalance = address(raiseBoxDripHandler).balance;
 
+        // upkeep or sync raise state
+        advanceBlockTime(12 hours);
+        (bool upkeepNeeded, bytes memory performData) = raiseBoxCore.checkUpkeep("");
+        raiseBoxCore.performUpkeep(performData);
+
         // contribute:
         vm.startPrank(uche);
         vm.expectEmit(true, true, true, false);
@@ -85,6 +90,9 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
         console.log("\n=== TEST 2: Multiple contributors to small raise ===");
 
         uint256 contributionAmount = 2 ether;
+
+        advanceBlockTime(12 hours);
+        raiseBoxCore.syncRaiseState(raiseIdSmall);
 
         // uche contributes
         vm.startPrank(uche);
@@ -146,6 +154,9 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
         uint256 secondContribution = 1 ether;
         uint256 thirdContribution = 0.3 ether;
 
+        advanceBlockTime(12 hours);
+        raiseBoxCore.syncRaiseState(raiseIdSmall);
+
         vm.startPrank(uche);
         raiseBoxContributionContract.contribute{value: firstContribution}(firstContribution, raiseIdSmall);
         vm.stopPrank();
@@ -201,6 +212,9 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
     function test_Integration_05_RejectValueMismatchForContribution() public {
         console.log("test 5: reject value mismatch for contribution");
 
+        advanceBlockTime(12 hours);
+        raiseBoxCore.syncRaiseState(raiseIdSmall);
+
         vm.startPrank(uche);
         vm.expectRevert(RaiseBoxErrorsLib.RaiseBoxContribution_ValueSentMismatch.selector);
         raiseBoxContributionContract.contribute{value: 10 ether}(20 ether, raiseIdSmall);
@@ -233,6 +247,9 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
 
         address smallRaiseCreator = ebby;
 
+        advanceBlockTime(12 hours);
+        raiseBoxCore.syncRaiseState(raiseIdSmall);
+
         vm.startPrank(smallRaiseCreator);
         vm.expectRevert(
                 RaiseBoxErrorsLib.RaiseBoxContribution_SelfContributionForbidden.selector
@@ -254,17 +271,22 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
             abi.encodePacked(
                 "Cannot over contribute: you can contribute only: ",
                 ((maxContribution) / 1e18).toString(),
-                " ether more to this project"
+                " more ether to this project"
             )
         );
 
+        advanceBlockTime(12 hours);
+
+        (bool upkeepNeeded, bytes memory performData) = raiseBoxCore.checkUpkeep("");
+        raiseBoxCore.performUpkeep(performData);
+
         vm.startPrank(whale);
         vm.expectRevert(
-            // abi.encodeWithSelector(
-            //     RaiseBoxErrorsLib.RaiseBoxContribution_contribute_AboveMaxAllowed.selector, 
-            //     maxContribution,
-            //     reason
-            //     )
+            abi.encodeWithSelector(
+                RaiseBoxErrorsLib.RaiseBoxContribution_contribute_AboveMaxAllowed.selector, 
+                maxContribution,
+                reason
+                )
         );
         raiseBoxContributionContract.contribute{value: overMax}(overMax, raiseIdMedium);
         vm.stopPrank();
@@ -318,10 +340,10 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
         /// get latest raise state:
         IRaiseBoxCore.RaiseState raiseStateAfterRaiseCreation = raiseBoxCore.getRaiseState(endToEndRaiseId);
 
-        /// assert raise state change INACTIVE -> CONTRIBUTION
+        /// assert raise state change INACTIVE -> ACTIVE
         assertEq(
             uint256(raiseStateAfterRaiseCreation), 
-            uint256(IRaiseBoxCore.RaiseState.CONTRIBUTION),
+            uint256(IRaiseBoxCore.RaiseState.ACTIVE),
             "raise state has to change from 0 (inactive) to 1 (contribution)"
             );
 
@@ -330,6 +352,9 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
         /// eth
 
         /// each now contributes 20 ether to raise in any other and frequency:
+
+        advanceBlockTime(12 hours);
+        raiseBoxCore.syncRaiseState(endToEndRaiseId);
 
         /// 1:
         vm.startPrank(contributor1);
@@ -479,11 +504,11 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
     );
     vm.stopPrank();
 
-    /// assert raise state change from PROPOSAL -> VOTING
+    /// assert raise state change from PROPOSAL -> DELEGATING
     assertEq(
         uint256(raiseBoxCore.getRaiseState(endToEndRaiseId)), 
-        uint256(IRaiseBoxCore.RaiseState.VOTING),
-        "raise state has to change from 2 (PROPOSAL) to 3 (VOTING)"
+        uint256(IRaiseBoxCore.RaiseState.DELEGATING),
+        "raise state has to change from 2 (PROPOSAL) to 3 (DELEGATING)"
     );
 
     /// assert proposal state is ACTIVE:
@@ -605,6 +630,7 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
     /// adavance time so voting can begin
     /// voting starts after 2 days of proposal hosting, allows for delegation and confirming milestone completion claims
     advanceBlockTime(2 days); 
+    raiseBoxCore.syncRaiseState(endToEndRaiseId);
 
     /// nonContributor tries to vote and fails:
     vm.startPrank(nonContributor);
@@ -696,6 +722,13 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
     vm.startPrank(raiseCreator);
     raiseBoxVoting.triggerVoteTally(endToEndRaiseId, proposalId1);
     vm.stopPrank();
+
+
+
+
+
+    raiseBoxCore.getRaiseInfo(endToEndRaiseId);
+    console.log("where the hell is the bu?????!!!!");
 
     // raiseCreator tries to trigger vote tallying of same proposal twice and fails:
     vm.startPrank(raiseCreator);
