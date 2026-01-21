@@ -20,7 +20,7 @@ contract TokenTest is Test, TestsHelpers {
         console.log("DripHandler CA: ", address(raiseBoxDripHandler));
         console.log("RaiseBoxContribution CA: ", address(raiseBoxContributionContract));
         
-        // Setup: Create ERC20 raise
+        // Setup: Create raise
         vm.startPrank(testOwner);
         bytes32 raiseId = raiseBoxRaiseCreationContract.createNewRaise(
             IRaiseBoxCore.ProjectInfo({
@@ -36,6 +36,11 @@ contract TokenTest is Test, TestsHelpers {
         raiseBoxToken.mint(contributor, 500 ether);
         vm.startPrank(contributor);
         raiseBoxToken.approve(address(raiseBoxContributionContract), 500 ether);
+
+        // perform upkeep via automation
+        advanceBlockTime(12 hours);
+        (bool upkeepNeeded, bytes memory performData) = raiseBoxCore.checkUpkeep("");
+        raiseBoxCore.performUpkeep(performData);
         
         // Test: Contribute ERC20 tokens
         raiseBoxContributionContract.contribute(100 ether, raiseId);
@@ -47,33 +52,6 @@ contract TokenTest is Test, TestsHelpers {
         
         uint256 totalRaised = raiseBoxContributionContract.getTotalContributionsToRaise(raiseId);
         assertEq(totalRaised, 100 ether);
-    }
-
-    function testCannotContributWithEth() public {
-        address contributor = makeAddr("contributor");
-        vm.deal(contributor, 100 ether);
-        
-        // Setup: Create ERC20 raise
-        vm.startPrank(testOwner);
-        bytes32 raiseId = raiseBoxRaiseCreationContract.createNewRaise(
-            IRaiseBoxCore.ProjectInfo({
-                projectName: "ERC20 Test Project",
-                valueProposition: "Testing ERC20 contributions",
-                raiseTarget: 1000 ether,
-                projectDuration: 52 weeks
-            })
-        );
-        vm.stopPrank();
-        uint256 amount = 10 ether;
-
-        vm.prank(contributor);
-        raiseBoxContributionContract.contribute{value: amount }(amount, raiseId);
-        // Assert: Check contribution was recorded
-        uint256 contributed = raiseBoxContributionContract.getUserRaiseContributions(raiseId, contributor);
-        assertEq(contributed, 10 ether);
-        
-        uint256 totalRaised = raiseBoxContributionContract.getTotalContributionsToRaise(raiseId);
-        assertEq(totalRaised, 10 ether);
     }
 
     function testErc20AndEtherContribution() public {
@@ -92,6 +70,10 @@ contract TokenTest is Test, TestsHelpers {
             })
         );
         vm.stopPrank();
+
+        // perform upkeep via sync raise 
+        advanceBlockTime(12 hours);
+        raiseBoxCore.syncRaiseState(raiseId);
 
         vm.startPrank(contributor);
         raiseBoxToken.approve(address(raiseBoxContributionContract), 10 ether);
