@@ -317,51 +317,33 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     }
 
-    function _tallyVotes(bytes32 raiseId, uint256 proposalId) internal returns (uint256, uint256) {
-        (uint256 forVotes, uint256 againstVotes, uint256 totalVotes) = _getProposalVotes(raiseId, proposalId);
+    function _tallyVotes(bytes32 raiseId_, uint256 proposalId_) internal returns (uint256, uint256) {
+        (uint256 forVotes_, uint256 againstVotes_, uint256 totalVotes_) = _getProposalVotes(raiseId_, proposalId_);
 
-        bool quorumReached = _isQuorumReached(
-            raiseId,
-            proposalId,
-            forVotes,
-            againstVotes
-        );
+    IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId_);
 
+    // Update proposal info
+    raiseBoxProposal.updateProposalInfo(raiseId_, proposalId_);
 
-        // if for is greater than against, proposal passed and % of funds will be dripped
-        if (forVotes > againstVotes) {
+    // Update raise info
+    raiseBoxCore.updateRaiseInfo(
+        raiseInfo.raiseCreationInfo.projectInfo,
+        0,
+        0,
+        raiseInfo.raiseCreationInfo.doesRaiseExist,
+        raiseId_,
+        raiseInfo.raiseCreationInfo.raiseOwner,
+        forVotes_,
+        againstVotes_,
+        proposalId_
+    );
 
-            raiseBoxProposal.updateProposalInfo(raiseId, proposalId);
+    // Handle proposal outcome
+    if (forVotes_ > againstVotes_) raiseBoxDripHandler.dripFundsForProposal(raiseId_, proposalId_);
 
-            emit RaiseBoxEventsLib.RaiseBoxVoting_tallyVotes_ProposalPassed(
-                proposalId,
-                forVotes,
-                againstVotes,
-                totalVotes,
-                block.timestamp
-            );
+    emit VotesTallied(raiseId_, proposalId_, forVotes_, againstVotes_, totalVotes_, block.timestamp);
 
-            // delegate call to dripHandler since proposal has passed
-            raiseBoxDripHandler.dripFundsForProposal(raiseId, proposalId);
-        } else {
-
-            raiseBoxProposal.updateProposalInfo(raiseId, proposalId);
-
-            emit RaiseBoxEventsLib.RaiseBoxVoting_tallyVotes_ProposalFailed(
-                proposalId,
-                forVotes,
-                againstVotes,
-                totalVotes,
-                block.timestamp
-            );
-
-            s_raiseFailedProposals[raiseId]++;
-            // revert RaiseBoxVoting_ProposalFailed();
-        }
-
-        emit VotesTallied(raiseId, proposalId, forVotes, againstVotes, totalVotes);
-
-        return (forVotes, againstVotes);
+    return (forVotes_, againstVotes_);
 
     }
 
@@ -373,22 +355,6 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     function _endVoting(bytes32 raiseId_, uint256 proposalId_) internal {
 
         s_votingEnded[raiseId_][proposalId_] = true;
-
-        IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId_);
-
-        (uint forVotes_, uint againstVotes_, ) = _getProposalVotes(raiseId_, proposalId_);
-
-        raiseBoxCore.updateRaiseInfo(
-        raiseInfo.raiseCreationInfo.projectInfo,
-        raiseInfo.raiseCreationInfo.raiseCreatedAt,
-        raiseInfo.raiseContributionInfo.amountRaisedByProject,
-        raiseInfo.raiseCreationInfo.doesRaiseExist,
-        raiseId_,
-        raiseInfo.raiseCreationInfo.raiseOwner,
-        forVotes_,
-        againstVotes_,
-        proposalId_
-        );
 
         // raiseBoxProposal.updateProposalState(
         //     raiseId_, 
