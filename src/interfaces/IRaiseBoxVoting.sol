@@ -21,7 +21,8 @@ interface IRaiseBoxVoting {
         uint256 indexed proposalId,
         uint256 forVotes,
         uint256 againstVotes,
-        uint256 totalProposalVotes
+        uint256 totalProposalVotes,
+        uint256 talliedAt
     );
     event VotingStartTimeSet(
         bytes32 indexed raiseId, 
