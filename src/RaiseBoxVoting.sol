@@ -149,7 +149,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
             if (support_) {
 
-                s_votesForProposal[raiseId_][proposalId_] += (s_delegatedVotes[msg.sender][raiseId_][proposalId_] + 1); // votes delegated to voter plus his vote
+                votesForProposal[raiseId_][proposalId_] += (s_delegatedVotes[msg.sender][raiseId_][proposalId_] + 1); // votes delegated to voter plus his vote
 
             } else {
 
@@ -160,7 +160,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
             if (support_) {
 
-                s_votesForProposal[raiseId_][proposalId_] += 1;
+                votesForProposal[raiseId_][proposalId_] += 1;
 
             } else {
 
@@ -219,7 +219,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     mapping(address => mapping(bytes32 => mapping(uint256 => address))) public s_delegatedVoteTo;
 
-    mapping(bytes32 => mapping(uint256 => uint256)) public s_votesForProposal;
+    mapping(bytes32 => mapping(uint256 => uint256)) public votesForProposal;
 
     mapping(bytes32 => mapping(uint256 => uint256)) public votesAgainstProposal; 
 
@@ -260,11 +260,16 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         // checks: Will revert if proposal is an invalid one
         raiseBoxProposal.isValidProposal(raiseId, proposalId);
 
-        uint256 forVotes = s_votesForProposal[raiseId][proposalId];
+        uint256 forVotes = votesForProposal[raiseId][proposalId];
         uint256 againstVotes = votesAgainstProposal[raiseId][proposalId];
         uint256 totalVotes = (forVotes + againstVotes);
 
         return (forVotes, againstVotes, totalVotes);
+    }
+
+    function _voteStartTime(bytes32 raiseId, uint256 proposalId) internal view returns(uint256 voteStartTime) {
+        raiseBoxProposal.isValidProposal(raiseId, proposalId);
+        return s_votingStartTime[raiseId][proposalId];
     }
 
     function getAbsenteeVoters(bytes32 raiseId, uint256 proposalId) external view returns (uint256) {
@@ -276,11 +281,6 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     function getVotingStartTime(bytes32 raiseId, uint256 proposalId) external view returns (uint256 voteStartTime) {
         return _voteStartTime(raiseId, proposalId);
-    }
-
-    function _voteStartTime(bytes32 raiseId, uint256 proposalId) internal view returns(uint256 voteStartTime) {
-        raiseBoxProposal.isValidProposal(raiseId, proposalId);
-        return s_votingStartTime[raiseId][proposalId];
     }
 
     function hasVotedForProposal(address contributor, bytes32 raiseId, uint256 proposalId)
@@ -296,7 +296,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     /// @notice any attempt to end just after voting duration exceeds will fail
     /// @dev ends voting if voting hasn't already been ended by another call
     /// @dev can only end if voting duration has been exceeded by atleast 12 hours
-    function triggerVoteTally(bytes32 raiseId_, uint256 proposalId_) external onlyRaiseCreator(raiseId_) {
+    function triggerVoteTally(bytes32 raiseId_, uint256 proposalId_) external /**onlyRaiseCreator(raiseId_)*/ {
 
         uint256 _start = s_votingStartTime[raiseId_][proposalId_];
 
