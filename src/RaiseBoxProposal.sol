@@ -219,7 +219,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         // ensure that the proposalState for `rasieId_` and `proposalId_` is INACTIVE
         if (_getProposalState(raiseId_, proposalId_) == IRaiseBoxProposal.ProposalState.ACTIVE) {
                 (
-                    uint256 forVotes_, uint256 againstVotes_, 
+                    uint256 forVotes_, uint256 againstVotes_
                 ) = raiseBoxVoting.getProposalVotes(raiseId_, proposalId_);
 
                 if (forVotes_ > againstVotes_) {

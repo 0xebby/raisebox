@@ -37,7 +37,7 @@ contract TokenTest is Test, TestsHelpers {
         vm.startPrank(contributor);
         raiseBoxToken.approve(address(raiseBoxContributionContract), 500 ether);
 
-        // perform upkeep via automation
+        // perform upkeep via automation to transition raise state to contribution before contributions can happen
         advanceBlockTime(12 hours);
         (bool upkeepNeeded, bytes memory performData) = raiseBoxCore.checkUpkeep("");
         raiseBoxCore.performUpkeep(performData);

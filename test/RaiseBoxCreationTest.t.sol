@@ -68,42 +68,19 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
             vitalik, arbitrum, ethereum
             ];
 
-        // erc contributors:
+            
 
-
-        // mint test tokens for each contributor:
-        address seddy = makeAddr("seddy");
-        address guy = makeAddr("guy");
-        address james = makeAddr("james");
-        address figo = makeAddr("figo");
-        address hale = makeAddr("hale");
-        address edward = makeAddr("edward");
-        address walter = makeAddr("walter");
-        address gal = makeAddr("gal");
-        address cassidy = makeAddr("cassidy");
-        address benny = makeAddr("benny");
-
-        address[10] memory erc20Contributors = [
-            seddy, guy, james, figo, hale, edward, walter, gal, cassidy, benny
-
-        ];
-
-        for (uint256 j = 0; j < erc20Contributors.length; j++ ) {
-            vm.startPrank(erc20Contributors[j]);
-            raiseBoxToken.mint(erc20Contributors[j], 0.5 ether /* test tokens 2000 */);
-            raiseBoxToken.approve(address(raiseBoxContributionContract), 0.5 ether);
-            vm.stopPrank();
-        }
-
-        for (uint256 i = 0; i < erc20Contributors.length; i++) {
-            vm.startPrank(erc20Contributors[i]);
-            raiseBoxContributionContract.contribute(0.5 ether, raiseId);
-            vm.stopPrank();
-        }
-
+        // when i is even, contributors contribute eth and when not even, they contribute with the mock erc token
         for (uint256 i = 0; i < contributors.length; i++) {
             vm.startPrank(contributors[i]);
-            raiseBoxContributionContract.contribute{value: 0.5 ether}(0.5 ether, raiseId);
+            if (i % 2 == 0) {
+                raiseBoxContributionContract.contribute{value: 1 ether}(1 ether, raiseId);
+            } else {
+                raiseBoxToken.mint(contributors[i], 1 ether /* test tokens 1 */);
+                raiseBoxToken.approve(address(raiseBoxContributionContract), 1 ether);
+                raiseBoxContributionContract.contribute(1 ether, raiseId);
+            }
+            
             vm.stopPrank();
         }
 
