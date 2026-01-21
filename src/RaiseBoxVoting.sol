@@ -243,7 +243,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
 
 
-    function getProposalVotes(bytes32 raiseId_, uint256 proposalId_) external view returns (uint256, uint256, uint256) {
+    function getProposalVotes(bytes32 raiseId_, uint256 proposalId_) external view returns (uint256, uint256) {
         return _getProposalVotes(raiseId_, proposalId_);
     }
 
@@ -253,18 +253,16 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
      *     @param proposalId unique id of a proposal within the project.
      *     @return forVotes total in favor.
      *     @return againstVotes total against.
-     *     @return totalVotes aggregate (for + against).
      *
      */
-    function _getProposalVotes(bytes32 raiseId, uint256 proposalId) internal view returns (uint256, uint256, uint256) {
+    function _getProposalVotes(bytes32 raiseId, uint256 proposalId) internal view returns (uint256, uint256) {
         // checks: Will revert if proposal is an invalid one
         raiseBoxProposal.isValidProposal(raiseId, proposalId);
 
         uint256 forVotes = votesForProposal[raiseId][proposalId];
         uint256 againstVotes = votesAgainstProposal[raiseId][proposalId];
-        uint256 totalVotes = (forVotes + againstVotes);
 
-        return (forVotes, againstVotes, totalVotes);
+        return (forVotes, againstVotes);
     }
 
     function _voteStartTime(bytes32 raiseId, uint256 proposalId) internal view returns(uint256 voteStartTime) {
@@ -274,9 +272,9 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
 
     function getAbsenteeVoters(bytes32 raiseId, uint256 proposalId) external view returns (uint256) {
         uint256 totalContributors = raiseBoxContribution.getTotalContributors(raiseId);
-        (,, uint256 totalVotes) = _getProposalVotes(raiseId, proposalId);
+        (uint256 forVotes, uint256 againstVotes) = _getProposalVotes(raiseId, proposalId);
 
-        return (totalContributors - totalVotes);
+        return (totalContributors - (forVotes + againstVotes));
     }
 
     function getVotingStartTime(bytes32 raiseId, uint256 proposalId) external view returns (uint256 voteStartTime) {
@@ -318,7 +316,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     }
 
     function _tallyVotes(bytes32 raiseId_, uint256 proposalId_) internal returns (uint256, uint256) {
-        (uint256 forVotes_, uint256 againstVotes_, uint256 totalVotes_) = _getProposalVotes(raiseId_, proposalId_);
+        (uint256 forVotes_, uint256 againstVotes_) = _getProposalVotes(raiseId_, proposalId_);
 
     IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId_);
 
@@ -341,7 +339,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
     // Handle proposal outcome
     if (forVotes_ > againstVotes_) raiseBoxDripHandler.dripFundsForProposal(raiseId_, proposalId_);
 
-    emit VotesTallied(raiseId_, proposalId_, forVotes_, againstVotes_, totalVotes_, block.timestamp);
+    emit VotesTallied(raiseId_, proposalId_, forVotes_, againstVotes_, (forVotes_ + againstVotes_), block.timestamp);
 
     return (forVotes_, againstVotes_);
 

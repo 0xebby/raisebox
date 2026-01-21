@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.30;
 
 /*
     Note: this is the interface for the RaiseBox Voting contract
@@ -65,7 +65,7 @@ interface IRaiseBoxVoting {
     function getProposalVotes(bytes32 raiseId, uint256 proposalId)
         external
         view
-        returns (uint256 forVotes, uint256 againstVotes, uint256 totalVotes);
+        returns (uint256 forVotes, uint256 againstVotes);
         
     function getFailedProposalsCount(bytes32 raiseId) external view returns (uint256);
 
