@@ -104,7 +104,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
                     abi.encodePacked(
                         "Cannot over contribute: you can contribute only: ",
                         ((maxContribution - userPrevContribution) / 1e18).toString(),
-                        " more to this project"
+                        " more ether to this project"
                     )
                 )
             );
@@ -258,6 +258,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     }
 
     function getContributors(bytes32 raiseId_) external view returns (address[] memory) {
+        raiseBoxCore.doesRaiseExist(raiseId_);
         return contributors[raiseId_];
     }
 
