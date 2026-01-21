@@ -65,8 +65,6 @@ interface IRaiseBoxVoting {
         external
         view
         returns (uint256 forVotes, uint256 againstVotes, uint256 totalVotes);
-        
-    function getFailedProposalsCount(bytes32 raiseId) external view returns (uint256);
 
     function setVotingStartTime(bytes32 raiseId, uint256 proposalId, uint256 startTime) external;
 
