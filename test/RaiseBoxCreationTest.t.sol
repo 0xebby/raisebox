@@ -597,6 +597,224 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
         
    }
 
+   function testAllowedProposalsCanRequestMoreThan100PercentInTotalDrips() public {
+        vm.startPrank(sally);
+        bytes32 raiseId = raiseBoxRaiseCreationContract.createNewRaise(
+            IRaiseBoxCore.ProjectInfo({
+                projectName: "sally allowed drip overflow",
+                valueProposition: "test raise for allowed proposal drip percentages",
+                raiseTarget: 20 ether,
+                projectDuration: 60 weeks
+            })
+        );
+        vm.stopPrank();
+
+        advanceBlockTime(12 hours);
+        raiseBoxCore.syncRaiseState(raiseId);
+
+        address[20] memory contributors = [
+            ebby, uche, max, mark, alice,
+            joe, testOwner, sam, vitalik, arbitrum,
+            ethereum, polymarket, elon, trump, tether,
+            base, magiceden, gowagr, openseas, carl
+        ];
+
+        for (uint256 i = 0; i < contributors.length; i++) {
+            vm.startPrank(contributors[i]);
+            raiseBoxContributionContract.contribute{value: 1 ether}(1 ether, raiseId);
+            vm.stopPrank();
+        }
+
+        vm.startPrank(sally);
+        uint256 proposalId1 = raiseBoxProposalContract.hostProposal(
+            raiseId,
+            IRaiseBoxProposal.MilestoneInfo({
+                description: "first allowed drip",
+                milestone: "initial milestone",
+                dripPercent: 10
+            })
+        );
+        vm.stopPrank();
+
+        advanceBlockTime(2 days);
+        raiseBoxCore.syncRaiseState(raiseId);
+
+        vm.startPrank(ebby);
+        raiseBoxVoting.vote(raiseId, proposalId1, true);
+        vm.stopPrank();
+
+        vm.startPrank(max);
+        raiseBoxVoting.vote(raiseId, proposalId1, true);
+        vm.stopPrank();
+
+        advanceBlockTime(7 days);
+        vm.startPrank(sally);
+        raiseBoxVoting.triggerVoteTally(raiseId, proposalId1);
+        vm.stopPrank();
+
+        raiseBoxCore.syncRaiseState(raiseId);
+        advanceBlockTime(4 weeks);
+
+        vm.startPrank(sally);
+        uint256 proposalId2 = raiseBoxProposalContract.hostProposal(
+            raiseId,
+            IRaiseBoxProposal.MilestoneInfo({
+                description: "second allowed drip",
+                milestone: "followup milestone",
+                dripPercent: 25
+            })
+        );
+        vm.stopPrank();
+
+        advanceBlockTime(2 days);
+        raiseBoxCore.syncRaiseState(raiseId);
+
+        vm.startPrank(ebby);
+        raiseBoxVoting.vote(raiseId, proposalId2, true);
+        vm.stopPrank();
+
+        vm.startPrank(max);
+        raiseBoxVoting.vote(raiseId, proposalId2, true);
+        vm.stopPrank();
+
+        advanceBlockTime(7 days);
+        vm.startPrank(sally);
+        raiseBoxVoting.triggerVoteTally(raiseId, proposalId2);
+        vm.stopPrank();
+
+        raiseBoxCore.syncRaiseState(raiseId);
+        advanceBlockTime(4 weeks);
+
+        vm.startPrank(sally);
+        uint256 proposalId3 = raiseBoxProposalContract.hostProposal(
+            raiseId,
+            IRaiseBoxProposal.MilestoneInfo({
+                description: "third allowed drip",
+                milestone: "third milestone",
+                dripPercent: 20
+            })
+        );
+        vm.stopPrank();
+
+        advanceBlockTime(2 days);
+        raiseBoxCore.syncRaiseState(raiseId);
+
+        vm.startPrank(ebby);
+        raiseBoxVoting.vote(raiseId, proposalId3, true);
+        vm.stopPrank();
+
+        vm.startPrank(max);
+        raiseBoxVoting.vote(raiseId, proposalId3, true);
+        vm.stopPrank();
+
+        advanceBlockTime(7 days);
+        vm.startPrank(sally);
+        raiseBoxVoting.triggerVoteTally(raiseId, proposalId3);
+        vm.stopPrank();
+
+        raiseBoxCore.syncRaiseState(raiseId);
+        advanceBlockTime(4 weeks);
+
+        vm.startPrank(sally);
+        uint256 proposalId4 = raiseBoxProposalContract.hostProposal(
+            raiseId,
+            IRaiseBoxProposal.MilestoneInfo({
+                description: "fourth allowed drip",
+                milestone: "fourth milestone",
+                dripPercent: 25
+            })
+        );
+        vm.stopPrank();
+
+        advanceBlockTime(2 days);
+        raiseBoxCore.syncRaiseState(raiseId);
+
+        vm.startPrank(ebby);
+        raiseBoxVoting.vote(raiseId, proposalId4, true);
+        vm.stopPrank();
+
+        vm.startPrank(max);
+        raiseBoxVoting.vote(raiseId, proposalId4, true);
+        vm.stopPrank();
+
+        advanceBlockTime(7 days);
+        vm.startPrank(sally);
+        raiseBoxVoting.triggerVoteTally(raiseId, proposalId4);
+        vm.stopPrank();
+
+        raiseBoxCore.syncRaiseState(raiseId);
+        advanceBlockTime(4 weeks);
+
+        vm.startPrank(sally);
+        uint256 proposalId5 = raiseBoxProposalContract.hostProposal(
+            raiseId,
+            IRaiseBoxProposal.MilestoneInfo({
+                description: "fifth allowed drip",
+                milestone: "fifth milestone",
+                dripPercent: 20
+            })
+        );
+        vm.stopPrank();
+
+        advanceBlockTime(2 days);
+        raiseBoxCore.syncRaiseState(raiseId);
+
+        vm.startPrank(ebby);
+        raiseBoxVoting.vote(raiseId, proposalId5, true);
+        vm.stopPrank();
+
+        vm.startPrank(max);
+        raiseBoxVoting.vote(raiseId, proposalId5, true);
+        vm.stopPrank();
+
+        advanceBlockTime(7 days);
+        vm.startPrank(sally);
+        raiseBoxVoting.triggerVoteTally(raiseId, proposalId5);
+        vm.stopPrank();
+
+        raiseBoxCore.syncRaiseState(raiseId);
+        advanceBlockTime(4 weeks);
+
+        vm.startPrank(sally);
+        uint256 proposalId6 = raiseBoxProposalContract.hostProposal(
+            raiseId,
+            IRaiseBoxProposal.MilestoneInfo({
+                description: "sixth allowed drip",
+                milestone: "sixth milestone",
+                dripPercent: 10
+            })
+        );
+        vm.stopPrank();
+
+        uint256 totalRequestedDripPercent = 10 + 25 + 20 + 25 + 20 + 10;
+        assertGt(totalRequestedDripPercent, 100, "Total requested drip percent should exceed 100");
+
+        assertEq(
+            raiseBoxProposalContract.getProposalInfo(raiseId, proposalId1).milestoneInfo.dripPercent,
+            10
+        );
+        assertEq(
+            raiseBoxProposalContract.getProposalInfo(raiseId, proposalId2).milestoneInfo.dripPercent,
+            25
+        );
+        assertEq(
+            raiseBoxProposalContract.getProposalInfo(raiseId, proposalId3).milestoneInfo.dripPercent,
+            20
+        );
+        assertEq(
+            raiseBoxProposalContract.getProposalInfo(raiseId, proposalId4).milestoneInfo.dripPercent,
+            25
+        );
+        assertEq(
+            raiseBoxProposalContract.getProposalInfo(raiseId, proposalId5).milestoneInfo.dripPercent,
+            20
+        );
+        assertEq(
+            raiseBoxProposalContract.getProposalInfo(raiseId, proposalId6).milestoneInfo.dripPercent,
+            10
+        );
+    }
+
 //    function testCreateARaiseWithoutWhitelist() public {
 //         vm.startPrank(max);
 //         vm.expectRevert();
