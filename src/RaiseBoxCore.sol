@@ -437,7 +437,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
         /// @dev creation info update:
         _raiseInfo.raiseCreationInfo.projectInfo = _projectInfo;
         _raiseInfo.raiseCreationInfo.raiseId = raiseId_;
-        _raiseInfo.raiseCreationInfo.doesRaiseExist = _requireRaiseExist;
+        _raiseInfo.raiseCreationInfo.requireRaiseExist = _requireRaiseExist;
         _raiseInfo.raiseCreationInfo.raiseCreatedAt = _createdAt;
         _raiseInfo.raiseCreationInfo.raiseOwner = raiseOwner_;
 
@@ -604,10 +604,10 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
      /**
      * @notice method to check if a raise exists, returns true if raise is found in storage
      * @param raiseId id of the raise to check if exist
-     * @dev internal but exposed by it's external counterpart `doesRaiseExist` which simply calls this
+     * @dev internal but exposed by it's external counterpart `requireRaiseExist` which simply calls this
      */
      function _requireRaiseExist(bytes32 raiseId) internal view {
-        if (!raiseInfo[raiseId].raiseCreationInfo.doesRaiseExist) {
+        if (!raiseInfo[raiseId].raiseCreationInfo.requireRaiseExist) {
             revert RaiseBoxErrorsLib.RaiseBoxCore_doesRaiseExist_RaiseDoesNotExist();
         }
     }
@@ -695,7 +695,7 @@ contract RaiseBoxCore is IRaiseBoxCore, ERC20, Ownable, AutomationCompatibleInte
         return address(iRBTInstance);
     }
 
-    function doesRaiseExist(bytes32 raiseId_) external view {
+    function requireRaiseExist(bytes32 raiseId_) external view {
        _requireRaiseExist(raiseId_);
     }
 

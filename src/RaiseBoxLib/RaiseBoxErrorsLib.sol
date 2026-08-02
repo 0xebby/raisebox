@@ -83,6 +83,10 @@ library RaiseBoxErrorsLib {
     /// @param raiseId id of the failed raise
     error RaiseBox_RaiseFailed(bytes32 raiseId);
 
+    /// @notice thrown when trying to host a proposal but the raise has no remaining funds to drip
+    /// @param raiseId id of the drained raise
+    error RaiseBoxProposal_hostProposal_RaiseDrained(bytes32 raiseId);
+
     /// @notice thrown creator attempts to host a proposal for a raise that has ended
     /// @param raiseId `raiseId` of the ended raise
     error RaiseBoxProposal_hostProposal_RaiseEnded(bytes32 raiseId);

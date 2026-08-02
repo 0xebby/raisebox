@@ -151,6 +151,8 @@ contract TestsHelpers is Test {
         raiseBoxCore.setVotingContract(address(raiseBoxVoting));
 
         raiseBoxProposalContract.setVotingContract(address(raiseBoxVoting));
+        // let proposal contract know the drip handler so it can read dripped totals
+        raiseBoxProposalContract.setDripHandlerContract(address(raiseBoxDripHandler));
 
         raiseBoxDripHandler.setVoting(address(raiseBoxVoting));
         raiseBoxDripHandler.setContribution(address(raiseBoxContributionContract));

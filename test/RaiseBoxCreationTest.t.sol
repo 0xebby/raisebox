@@ -258,6 +258,62 @@ contract RaiseBoxCreationTest is Test, TestsHelpers {
         // // raiseBoxCore.getRaiseState(raiseId);
     }
 
+    function test_hostProposalRevertsWhenRaiseDrained() public {
+        // create and fund a raise
+        vm.startPrank(creator);
+        bytes32 raiseId = raiseBoxRaiseCreationContract.createNewRaise(
+            IRaiseBoxCore.ProjectInfo({
+                projectName: "drain test",
+                valueProposition: "ensure hosting blocked when drained",
+                raiseTarget: 10 ether,
+                projectDuration: 52 weeks
+            })
+        );
+        vm.stopPrank();
+
+        // move to contribution state
+        advanceBlockTime(12 hours);
+        (bool upkeepNeeded, bytes memory performData) = raiseBoxCore.checkUpkeep("");
+        raiseBoxCore.performUpkeep(performData);
+
+        // contribute full target using multiple contributors (max per user is 20% of target)
+        address[5] memory contributors = [ebby, max, mark, alice, joe];
+        for (uint256 i = 0; i < contributors.length; i++) {
+            vm.prank(contributors[i]);
+            raiseBoxContributionContract.contribute{value: 2 ether}(2 ether, raiseId);
+        }
+
+        // ensure raise recorded as passed
+        assertEq(raiseBoxCore.getAmtRaisedByProject(raiseId), 10 ether);
+
+        // simulate that all funds have already been dripped by writing into drip handler storage
+        // probe mapping storage slots to find the correct slot index for totalEthDrippedForProject
+        bool wrote = false;
+        for (uint256 slot = 0; slot < 50; slot++) {
+            bytes32 mappingSlot = keccak256(abi.encodePacked(raiseId, uint256(slot)));
+            vm.store(address(raiseBoxDripHandler), mappingSlot, bytes32(uint256(10 ether)));
+            // read back through public getter
+            if (raiseBoxDripHandler.totalEthDrippedForProject(raiseId) == 10 ether) {
+                wrote = true;
+                break;
+            }
+        }
+        assertTrue(wrote, "failed to write dripped total into drip handler storage");
+
+        // now attempting to host a proposal should revert due to drained raise
+        vm.startPrank(creator);
+        vm.expectRevert();
+        raiseBoxProposalContract.hostProposal(
+            raiseId,
+            IRaiseBoxProposal.MilestoneInfo({
+                description: "should fail",
+                milestone: "no funds left",
+                dripPercent: 5
+            })
+        );
+        vm.stopPrank();
+    }
+
     function testCreate5ConcurrentRaises() public {
    
 
@@ -1183,7 +1239,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
 //         raiseBoxCore.getRaiseState(projectId);
 //         raiseBoxCore.getRaiseCreator(projectId);
 //         raiseBoxCore.getAmountToRaise(projectId);
-//         raiseBoxCore.doesRaiseExist(projectId);
+//         raiseBoxCore.requireRaiseExist(projectId);
 //         raiseBoxCore.getRaiseBoxOwner();
 //         raiseBoxCore.isRaiseCreator(ben, projectId);
 //         raiseBoxCore.getRaiseDeadline();
@@ -1208,7 +1264,7 @@ raiseBoxContributionContract.getMaxContributionAllowedForARaise(raiseId1);
 
 //         // raiseBoxCore.getRaiseState(projectId);
 //         // raiseBoxProposalContract.isValidProposal(0x0ef765bb5612bfab35f0518fdb194eb02394c410530030a57d2fecaabd944ef8, 1);
-//         // raiseBoxCore.doesRaiseExist(0x0ef765bb5612bfab35f0518fdb194eb02394c410530030a57d2fecaabd944ef8);
+//         // raiseBoxCore.requireRaiseExist(0x0ef765bb5612bfab35f0518fdb194eb02394c410530030a57d2fecaabd944ef8);
 //         // raiseBoxProposalContract.getProposalInfo(projectId, 6);
 //         // raiseBoxCore.getProposalState(0x0ef765bb5612bfab35f0518fdb194eb02394c410530030a57d2fecaabd944ef8, 6);
 

@@ -779,6 +779,54 @@ contract RaiseBoxIntegrationTests is Test, TestsHelpers {
 
     }
 
+    function test_integration_preventHostingAfterDrained() public {
+        // create raise and fund
+        vm.startPrank(creator);
+        bytes32 raiseId = raiseBoxRaiseCreationContract.createNewRaise(
+            IRaiseBoxCore.ProjectInfo({
+                projectName: "integration drain",
+                valueProposition: "integration check",
+                raiseTarget: 5 ether,
+                projectDuration: 52 weeks
+            })
+        );
+        vm.stopPrank();
+
+        // move to contribution
+        advanceBlockTime(12 hours);
+        (bool upkeepNeeded, bytes memory performData) = raiseBoxCore.checkUpkeep("");
+        raiseBoxCore.performUpkeep(performData);
+
+        // contribute using multiple contributors to respect per-user cap (20% of raiseTarget)
+        address[5] memory contributors = [alice, joe, ben, max, ebby];
+        for (uint256 i = 0; i < contributors.length; i++) {
+            vm.prank(contributors[i]);
+            raiseBoxContributionContract.contribute{value: 1 ether}(1 ether, raiseId);
+        }
+
+        // mark dripped to full by probing mapping storage slots and writing the dripped total
+        bool wrote = false;
+        for (uint256 slot = 0; slot < 50; slot++) {
+            bytes32 mappingSlot = keccak256(abi.encodePacked(raiseId, uint256(slot)));
+            vm.store(address(raiseBoxDripHandler), mappingSlot, bytes32(uint256(5 ether)));
+            if (raiseBoxDripHandler.totalEthDrippedForProject(raiseId) == 5 ether) { wrote = true; break; }
+        }
+        assertTrue(wrote, "failed to write dripped total into drip handler storage");
+
+        // attempt to host proposal should revert
+        vm.startPrank(creator);
+        vm.expectRevert();
+        raiseBoxProposalContract.hostProposal(
+            raiseId,
+            IRaiseBoxProposal.MilestoneInfo({
+                description: "integration should fail",
+                milestone: "no funds",
+                dripPercent: 5
+            })
+        );
+        vm.stopPrank();
+    }
+
 
 
 

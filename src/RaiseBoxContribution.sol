@@ -65,7 +65,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
         }
 
         /// @notice ascertain that raise exist busing the raiseId further down
-        /// @dev getRaiseInfo has a doesRaiseExist check embedded in it call stack that reverts early if an invalid raiseId is passed
+        /// @dev getRaiseInfo has a requireRaiseExist check embedded in it call stack that reverts early if an invalid raiseId is passed
         IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId);
 
         
@@ -164,7 +164,7 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
                 raiseInfo.raiseCreationInfo.projectInfo,
                 raiseInfo.raiseCreationInfo.raiseCreatedAt,
                 totalContributionsToProject[raiseId],
-                raiseInfo.raiseCreationInfo.doesRaiseExist,
+                raiseInfo.raiseCreationInfo.requireRaiseExist,
                 raiseId,
                 raiseInfo.raiseCreationInfo.raiseOwner,
                 0,
@@ -248,34 +248,34 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     // EXTERNAL/GETTER FUNCTIONS
 
     function getEthAndErcRaisedByProject(bytes32 raiseId_) external view returns (uint256 ethRaised, uint256 erc20Raised) {
-        raiseBoxCore.doesRaiseExist(raiseId_);
+        raiseBoxCore.requireRaiseExist(raiseId_);
         return (ethContributionsToProject[raiseId_], erc20ContributionsToProject[raiseId_]);
     }
 
     function getMaxContributionAllowedForARaise(bytes32 raiseId_) external returns (uint256) {
-            raiseBoxCore.doesRaiseExist(raiseId_);
+            raiseBoxCore.requireRaiseExist(raiseId_);
             return _calMaxContribution(raiseId_);
     }
 
     function getContributors(bytes32 raiseId_) external view returns (address[] memory) {
-        raiseBoxCore.doesRaiseExist(raiseId_);
+        raiseBoxCore.requireRaiseExist(raiseId_);
         return contributors[raiseId_];
     }
 
     function getTotalContributors(bytes32 raiseId_) external view returns (uint256) {
-        raiseBoxCore.doesRaiseExist(raiseId_);
+        raiseBoxCore.requireRaiseExist(raiseId_);
         return raisers[raiseId_];
     }
 
     function getContributionHistory(address user, bytes32 raiseId_) external view returns (uint256[] memory) {
 
-            raiseBoxCore.doesRaiseExist(raiseId_);
+            raiseBoxCore.requireRaiseExist(raiseId_);
             require(user != address(0), "zero address cannot contribute");
             return contributionsToProjectArray[user][raiseId_];
     }
 
     function getUserRaiseContributions(bytes32 raiseId_, address user) external view returns(uint256) {
-        raiseBoxCore.doesRaiseExist(raiseId_);
+        raiseBoxCore.requireRaiseExist(raiseId_);
         require(user != address(0), "zero address cannot contribute");
         return amountContributedToRaise[user][raiseId_];
         
@@ -286,12 +286,12 @@ contract RaiseBoxContribution is ReentrancyGuard, IRaiseBoxContribution {
     /// @return uint256 all contributions made to raise so far
     function getTotalContributionsToRaise(bytes32 raiseId) external view returns (uint256) {
 
-            raiseBoxCore.doesRaiseExist(raiseId);
+            raiseBoxCore.requireRaiseExist(raiseId);
             return totalContributionsToProject[raiseId];
     }
 
     function hasUserContributed(bytes32 raiseId, address user) external view returns (bool) {
-        raiseBoxCore.doesRaiseExist(raiseId);
+        raiseBoxCore.requireRaiseExist(raiseId);
         return hasContributed[raiseId][user];
     }
 

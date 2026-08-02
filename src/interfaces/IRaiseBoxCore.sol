@@ -28,7 +28,7 @@ interface IRaiseBoxCore {
         ProjectInfo projectInfo;
         bytes32 raiseId;
         uint256 raiseCreatedAt;
-        bool doesRaiseExist;
+        bool requireRaiseExist;
         address raiseOwner;
     }
 
@@ -102,7 +102,7 @@ interface IRaiseBoxCore {
 
     function getRaiseState(bytes32 raiseId) external view returns(RaiseState) ;
 
-    function doesRaiseExist(bytes32 raiseId) external view;
+    function requireRaiseExist(bytes32 raiseId) external view;
 
     function getRaiseBoxOwner() external view returns (address);
 

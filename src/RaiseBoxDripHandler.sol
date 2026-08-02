@@ -74,7 +74,7 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
 
         // get raise info:
         /// @notice ascertain that raise exist using the raiseId_ further down
-        /// @dev getRaiseInfo has a doesRaiseExist check embedded in it call stack that reverts early if an invalid raiseId_ is passed
+        /// @dev getRaiseInfo has a requireRaiseExist check embedded in it call stack that reverts early if an invalid raiseId_ is passed
         IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId_);
 
 
@@ -132,7 +132,7 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     modifier onlyContributor(bytes32 raiseId_) {
 
         // valid raise check
-        raiseBoxCore.doesRaiseExist(raiseId_);
+        raiseBoxCore.requireRaiseExist(raiseId_);
 
         // sender is contributor
         bool contributed = raiseBoxContribution.hasUserContributed(raiseId_, msg.sender);
@@ -144,7 +144,7 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
         // actually processes refund to contributors for failed raises
         // get raise info:
         /// @notice ascertain that raise exist busing the raiseId further down
-        /// @dev getRaiseInfo has a doesRaiseExist check embedded in it call stack that reverts early if an invalid raiseId is passed
+        /// @dev getRaiseInfo has a requireRaiseExist check embedded in it call stack that reverts early if an invalid raiseId is passed
         IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId_);
 
         if (raiseInfo.raiseState != IRaiseBoxCore.RaiseState.FAILED) {
@@ -190,7 +190,7 @@ contract RaiseBoxDripHandler is Ownable, ReentrancyGuard, IRaiseBoxDripHandler {
     }
 
     function _drippedForRaise(bytes32 raiseId_) internal view returns (bool) {
-        raiseBoxCore.doesRaiseExist(raiseId_);
+        raiseBoxCore.requireRaiseExist(raiseId_);
         return dripped[raiseId_];
     }
 

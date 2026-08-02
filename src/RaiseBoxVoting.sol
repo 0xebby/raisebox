@@ -328,7 +328,7 @@ contract RaiseBoxVoting is IRaiseBoxVoting {
         raiseInfo.raiseCreationInfo.projectInfo,
         0,
         0,
-        raiseInfo.raiseCreationInfo.doesRaiseExist,
+        raiseInfo.raiseCreationInfo.requireRaiseExist,
         raiseId_,
         raiseInfo.raiseCreationInfo.raiseOwner,
         forVotes_,

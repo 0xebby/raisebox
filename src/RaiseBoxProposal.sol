@@ -6,6 +6,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {console} from "../lib/forge-std/src/Test.sol";
 import {IRaiseBoxCore} from "../src/interfaces/IRaiseBoxCore.sol";
 import {IRaiseBoxVoting} from "../src/interfaces/IRaiseBoxVoting.sol";
+import {IRaiseBoxDripHandler} from "../src/interfaces/IRaiseBoxDripHandler.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {RaiseBoxErrorsLib} from "src/RaiseBoxLib/RaiseBoxErrorsLib.sol";
 import {RaiseBoxEventsLib} from "src/RaiseBoxLib/RaiseBoxEventsLib.sol";
@@ -13,6 +14,7 @@ import {RaiseBoxEventsLib} from "src/RaiseBoxLib/RaiseBoxEventsLib.sol";
 contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     IRaiseBoxCore public immutable raiseBoxCore; 
     IRaiseBoxVoting public raiseBoxVoting; 
+    IRaiseBoxDripHandler public raiseBoxDripHandler;
 
     constructor(address raiseBoxCoreAddress) Ownable(msg.sender) {
         raiseBoxCore = IRaiseBoxCore(raiseBoxCoreAddress);
@@ -26,7 +28,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         // sanitize inputs:
         require(proposalHost_ != address(0), "zero address cannot host");
 
-        raiseBoxCore.doesRaiseExist(raiseId_);
+        raiseBoxCore.requireRaiseExist(raiseId_);
 
         // get valid project from storage
         IRaiseBoxCore.RaiseInfo memory raiseInfo = raiseBoxCore.getRaiseInfo(raiseId_);
@@ -55,6 +57,18 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
                     revert RaiseBoxProposal_hostProposal_ProposalCoolDownOn();
                 } 
             }  
+
+            // prevent hosting if the raise has no remaining undripped funds
+            if (address(raiseBoxDripHandler) != address(0)) {
+                uint256 totalRaised = raiseBoxCore.getAmtRaisedByProject(raiseId_);
+                uint256 totalEthDripped = raiseBoxDripHandler.totalEthDrippedForProject(raiseId_);
+                uint256 totalErc20Dripped = raiseBoxDripHandler.totalErc20DrippedForProject(raiseId_);
+                uint256 totalDripped = totalEthDripped + totalErc20Dripped;
+
+                if (totalRaised > 0 && totalDripped >= totalRaised) {
+                    revert RaiseBoxErrorsLib.RaiseBoxProposal_hostProposal_RaiseDrained(raiseId_);
+                }
+            }
         }
 
         _;
@@ -173,6 +187,10 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
         raiseBoxVoting = IRaiseBoxVoting(contractToSet);
     }
 
+    function setDripHandlerContract(address contractToSet) external onlyOwner {
+        raiseBoxDripHandler = IRaiseBoxDripHandler(contractToSet);
+    }
+
     // types:
 
     using Strings for uint256;
@@ -247,7 +265,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
 
     function _isValidProposal(bytes32 raiseId_, uint256 proposalId_) internal view returns (bool) {
 
-            raiseBoxCore.doesRaiseExist(raiseId_);
+            raiseBoxCore.requireRaiseExist(raiseId_);
 
             // get proposalDetails
             ProposalInfo memory proposalInfo =  proposalInfo[raiseId_][proposalId_];
@@ -270,7 +288,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     function isValidProposal(bytes32 raiseId, uint256 proposalId) external view returns (bool) { return _isValidProposal(raiseId, proposalId); }
 
     function getProposalCount(bytes32 raiseId) external view returns (uint256) {
-        raiseBoxCore.doesRaiseExist(raiseId);
+        raiseBoxCore.requireRaiseExist(raiseId);
         return proposalsHostedByProject[raiseId];
     }
 
@@ -337,7 +355,7 @@ contract RaiseBoxProposal is IRaiseBoxProposal, Ownable {
     }
 
     function _getLastProposalDripPercent(bytes32 raiseId_) internal returns (uint8) {
-        raiseBoxCore.doesRaiseExist(raiseId_);
+        raiseBoxCore.requireRaiseExist(raiseId_);
         return lastDripPercent[raiseId_];
     }
 
